@@ -17,10 +17,9 @@ CREATE TABLE "public"."accounts" (
   CONSTRAINT "accounts_pkey" PRIMARY KEY (id),
   CONSTRAINT "accounts_user_id_key" UNIQUE (user_id),
   CONSTRAINT "accounts_user_id_fkey" FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL,
+  CONSTRAINT "accounts_handle_key" UNIQUE (handle),
   CONSTRAINT "accounts_handle_format_check" CHECK (handle ~ '^[a-z0-9_]{3,30}$')
 );
-
-CREATE UNIQUE INDEX "accounts_handle_lower_key" ON "public"."accounts" (lower(handle));
 
 GRANT SELECT, INSERT, UPDATE ON TABLE "public"."accounts" TO "authenticated";
 
@@ -44,9 +43,9 @@ ALTER TABLE "public"."accounts" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "accounts_insert_own" ON "public"."accounts"
   FOR INSERT
   TO "authenticated"
-  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
+  WITH CHECK (((SELECT auth.uid()) = user_id));
 
-CREATE POLICY "accounts_select_all" ON "public"."accounts"
+CREATE POLICY "accounts_select_any" ON "public"."accounts"
   FOR SELECT
   TO "authenticated"
   USING (true);
@@ -54,8 +53,8 @@ CREATE POLICY "accounts_select_all" ON "public"."accounts"
 CREATE POLICY "accounts_update_own" ON "public"."accounts"
   FOR UPDATE
   TO "authenticated"
-  USING ((( SELECT auth.uid() AS uid) = user_id))
-  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
+  USING (((SELECT auth.uid()) = user_id))
+  WITH CHECK (((SELECT auth.uid()) = user_id));
 
 -- ============================================================
 -- SESSIONS & ACCESS
@@ -80,6 +79,8 @@ CREATE TABLE "public"."sessions" (
 );
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "public"."sessions" TO "authenticated";
+
+CREATE INDEX "sessions_organiser_id_idx" ON "public"."sessions" (organiser_id);
 
 CREATE TABLE "public"."session_access" (
   "id"           uuid                     NOT NULL DEFAULT gen_random_uuid(),
@@ -185,13 +186,13 @@ CREATE POLICY "session_access_delete_accessor" ON "public"."session_access"
 
 -- schema ------------------------------------------------------
 
-CREATE TYPE "public"."match_types" AS ENUM ('MS', 'WS', 'XS', 'MD', 'WD', 'XD', 'PRACTICE', 'OTHER');
+CREATE TYPE "public"."match_type" AS ENUM ('MS', 'WS', 'XS', 'MD', 'WD', 'XD', 'PRACTICE', 'OTHER');
 
 CREATE TABLE "public"."matches" (
   "id"           uuid                     NOT NULL DEFAULT gen_random_uuid(),
   "label"        text                     NOT NULL,
   "session_id"   uuid                     NOT NULL,
-  "match_type"   "public"."match_types"   NOT NULL,
+  "match_type"   "public"."match_type"    NOT NULL,
   "created_at"   timestamp with time zone NOT NULL DEFAULT now(),
   "created_by"   uuid                     NOT NULL,
   "updated_at"   timestamp with time zone,
@@ -223,7 +224,7 @@ GRANT EXECUTE ON FUNCTION public.session_id_for_match(uuid) TO "authenticated";
 
 ALTER TABLE "public"."matches" ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "matches_open_to_accessors" ON "public"."matches"
+CREATE POLICY "matches_all_accessor" ON "public"."matches"
   FOR ALL
   TO "authenticated"
   USING (public.has_session_access(session_id))
@@ -270,7 +271,7 @@ GRANT EXECUTE ON FUNCTION public.session_id_for_team(uuid) TO "authenticated";
 
 ALTER TABLE "public"."match_teams" ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "match_teams_open_to_accessors" ON "public"."match_teams"
+CREATE POLICY "match_teams_all_accessor" ON "public"."match_teams"
   FOR ALL
   TO "authenticated"
   USING (public.has_session_access(public.session_id_for_match(match_id)))
@@ -320,7 +321,7 @@ GRANT EXECUTE ON FUNCTION public.session_id_for_game(uuid) TO "authenticated";
 
 ALTER TABLE "public"."match_games" ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "match_games_open_to_accessors" ON "public"."match_games"
+CREATE POLICY "match_games_all_accessor" ON "public"."match_games"
   FOR ALL
   TO "authenticated"
   USING (public.has_session_access(public.session_id_for_match(match_id)))
@@ -356,7 +357,7 @@ CREATE INDEX "match_players_account_id_idx" ON "public"."match_players" (account
 
 ALTER TABLE "public"."match_players" ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "match_players_open_to_accessors" ON "public"."match_players"
+CREATE POLICY "match_players_all_accessor" ON "public"."match_players"
   FOR ALL
   TO "authenticated"
   USING (public.has_session_access(public.session_id_for_team(match_team_id)))
@@ -394,7 +395,7 @@ CREATE INDEX "match_game_scores_match_game_id_idx" ON "public"."match_game_score
 
 ALTER TABLE "public"."match_game_scores" ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "match_game_scores_open_to_accessors" ON "public"."match_game_scores"
+CREATE POLICY "match_game_scores_all_accessor" ON "public"."match_game_scores"
   FOR ALL
   TO "authenticated"
   USING (public.has_session_access(public.session_id_for_team(match_team_id)))
@@ -429,7 +430,7 @@ CREATE INDEX "videos_match_game_id_idx" ON "public"."videos" (match_game_id);
 
 ALTER TABLE "public"."videos" ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "videos_open_to_accessors" ON "public"."videos"
+CREATE POLICY "videos_all_accessor" ON "public"."videos"
   FOR ALL
   TO "authenticated"
   USING (public.has_session_access(public.session_id_for_game(match_game_id)))
