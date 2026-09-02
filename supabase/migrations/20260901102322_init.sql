@@ -200,18 +200,45 @@ GRANT ALL ON TABLE smackosoft.match_game_scores TO smackosoft_service;
 CREATE INDEX match_game_scores_match_game_id_idx ON smackosoft.match_game_scores (match_game_id);
 
 -- ============================================================
+-- MATCH_GAME_HIGHLIGHTS
+-- ============================================================
+
+CREATE TABLE smackosoft.match_game_highlights (
+  id               uuid        NOT NULL DEFAULT gen_random_uuid(),
+  match_game_id    uuid        NOT NULL,
+  match_player_id  uuid        NOT NULL,
+  canonical_offset interval    NOT NULL,
+  skill_used       text        NOT NULL,
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  created_by       uuid        NOT NULL,
+  updated_at       timestamptz,
+  updated_by       uuid,
+  CONSTRAINT match_game_highlights_pkey PRIMARY KEY (id),
+  CONSTRAINT match_game_highlights_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id),
+  CONSTRAINT match_game_highlights_match_player_id_fkey FOREIGN KEY (match_player_id) REFERENCES smackosoft.match_players(id),
+  CONSTRAINT match_game_highlights_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
+  CONSTRAINT match_game_highlights_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
+);
+
+GRANT ALL ON TABLE smackosoft.match_game_highlights TO smackosoft_service;
+
+CREATE INDEX match_game_highlights_match_game_id_idx ON smackosoft.match_game_highlights (match_game_id);
+CREATE INDEX match_game_highlights_match_player_id_idx ON smackosoft.match_game_highlights (match_player_id);
+
+-- ============================================================
 -- VIDEOS
 -- ============================================================
 
 CREATE TABLE smackosoft.videos (
-  id            uuid        NOT NULL DEFAULT gen_random_uuid(),
-  label         text        NOT NULL,
-  match_game_id uuid        NOT NULL,
-  video_url     text        NOT NULL,
-  created_at    timestamptz NOT NULL DEFAULT now(),
-  created_by    uuid        NOT NULL,
-  updated_at    timestamptz,
-  updated_by    uuid,
+  id               uuid        NOT NULL DEFAULT gen_random_uuid(),
+  label            text        NOT NULL,
+  match_game_id    uuid        NOT NULL,
+  video_url        text        NOT NULL,
+  canonical_offset interval    NOT NULL,
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  created_by       uuid        NOT NULL,
+  updated_at       timestamptz,
+  updated_by       uuid,
   CONSTRAINT videos_pkey PRIMARY KEY (id),
   CONSTRAINT videos_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id),
   CONSTRAINT videos_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
