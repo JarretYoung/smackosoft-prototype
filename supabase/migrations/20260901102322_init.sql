@@ -12,26 +12,54 @@ GRANT USAGE ON SCHEMA smackosoft TO smackosoft_service;
 -- ACCOUNTS
 -- ============================================================
 
+CREATE TYPE smackosoft.account_type AS ENUM ('STANDARD', 'GUEST');
+
 CREATE TABLE smackosoft.accounts (
-  id           uuid        NOT NULL DEFAULT gen_random_uuid(),
+  id           uuid                    NOT NULL DEFAULT gen_random_uuid(),
   user_id      uuid,
-  display_name text        NOT NULL,
-  handle       text        NOT NULL,
+  account_type smackosoft.account_type NOT NULL DEFAULT 'STANDARD',
+  display_name text                    NOT NULL,
+  handle       text                    NOT NULL,
   avatar_url   text,
-  created_at   timestamptz NOT NULL DEFAULT now(),
-  created_by   uuid,
+  deleted      boolean                 NOT NULL DEFAULT false,
+  created_at   timestamptz             NOT NULL DEFAULT now(),
+  created_by   uuid                    NOT NULL, -- has write access to guest accounts
   updated_at   timestamptz,
   updated_by   uuid,
   CONSTRAINT accounts_pkey PRIMARY KEY (id),
   CONSTRAINT accounts_user_id_key UNIQUE (user_id),
-  CONSTRAINT accounts_handle_key UNIQUE (handle),
   CONSTRAINT accounts_handle_format_check CHECK (handle ~ '^[a-z0-9_]{3,30}$'),
   CONSTRAINT accounts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL,
   CONSTRAINT accounts_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT accounts_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
 
+CREATE UNIQUE INDEX accounts_handle_key ON smackosoft.accounts (handle) WHERE NOT deleted;
+
 GRANT ALL ON TABLE smackosoft.accounts TO smackosoft_service;
+
+-- ------------------------------------------------------------
+-- Handling supabase user transitions
+-- ------------------------------------------------------------
+
+CREATE FUNCTION smackosoft.handle_deleted_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  UPDATE smackosoft.accounts
+  SET deleted = true
+  WHERE user_id = OLD.id;
+  RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER on_auth_user_deleted
+  BEFORE DELETE ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION smackosoft.handle_deleted_user();
 
 -- ============================================================
 -- SESSIONS
