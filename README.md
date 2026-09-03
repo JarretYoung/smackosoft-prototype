@@ -2,7 +2,7 @@
 
 Next.js App Router prototype with Supabase auth, running against a local Supabase stack in Docker.
 
-Tech stack decisions: [docs/architecture.md](docs/architecture.md).
+Tech stack decisions: [docs/architecture.md](docs/architecture.md). First-deploy steps: [docs/runbook.md](docs/runbook.md).
 
 | Component | Technology |
 |-----------|-----------|
@@ -124,6 +124,7 @@ supabase/
   config.toml           local stack configuration
 docs/
   architecture.md
+  runbook.md
 ```
 
 `src/proxy.ts` runs on every request to refresh the session cookie. Server code must build a fresh client per request via `src/lib/supabase/server.ts` — never share one across requests.
