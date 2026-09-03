@@ -19,12 +19,16 @@ CREATE TABLE smackosoft.accounts (
   handle       text        NOT NULL,
   avatar_url   text,
   created_at   timestamptz NOT NULL DEFAULT now(),
+  created_by   uuid,
   updated_at   timestamptz,
+  updated_by   uuid,
   CONSTRAINT accounts_pkey PRIMARY KEY (id),
   CONSTRAINT accounts_user_id_key UNIQUE (user_id),
   CONSTRAINT accounts_handle_key UNIQUE (handle),
   CONSTRAINT accounts_handle_format_check CHECK (handle ~ '^[a-z0-9_]{3,30}$'),
-  CONSTRAINT accounts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL
+  CONSTRAINT accounts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL,
+  CONSTRAINT accounts_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
+  CONSTRAINT accounts_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
 
 GRANT ALL ON TABLE smackosoft.accounts TO smackosoft_service;
