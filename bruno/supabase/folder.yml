@@ -1,0 +1,10 @@
+info:
+  name: supabase
+  type: folder
+  seq: 1
+
+request:
+  auth: inherit
+  headers:
+    - name: apikey
+      value: "{{supabaseAnonKey}}"

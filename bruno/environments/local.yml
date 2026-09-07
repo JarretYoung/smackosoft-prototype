@@ -1,0 +1,10 @@
+name: local
+variables:
+  - name: supabaseUrl
+    value: http://127.0.0.1:54321
+  - secret: true
+    name: supabaseAnonKey
+  - secret: true
+    name: userEmail
+  - secret: true
+    name: userPassword

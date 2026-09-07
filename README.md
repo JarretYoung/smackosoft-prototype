@@ -66,6 +66,22 @@ Tech stack decisions: [docs/architecture.md](docs/architecture.md). First-deploy
 
 ---
 
+## Bruno OpenAPI Documentation
+
+We maintain a [bruno/](bruno/) collection. It is compatible with Bruno v4.1.0.
+
+1. Ensure your Supabase stack is running locally.
+2. Ensure you have created your first authenticated user in Supabase Studio.
+3. Open `bruno/` as a collection in Bruno.
+4. Select the `local` environment and fill its secret variables. These remain uncommitted by default.
+    - `supabaseAnonKey`
+    - `userEmail`
+    - `userPassword`
+5. Run the `POST /token` to sign in. It stores `accessToken` for the other authenticated requests.
+6. For example, you can run `GET /user` to fetch the current user.
+
+---
+
 ## Local Supabase services
 
 Configured in [supabase/config.toml](supabase/config.toml) under project id `smackosoft-prototype`.
@@ -122,6 +138,7 @@ src/
 
 supabase/
   config.toml           local stack configuration
+bruno/                  Bruno OpenAPI documentation
 docs/
   architecture.md
   runbook.md

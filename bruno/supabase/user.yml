@@ -1,0 +1,9 @@
+info:
+  name: user
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{supabaseUrl}}/auth/v1/user"
+  auth: inherit
