@@ -1,0 +1,38 @@
+info:
+  name: token
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{supabaseUrl}}/auth/v1/token?grant_type=password"
+  headers:
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: grant_type
+      value: password
+      type: query
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{userEmail}}",
+        "password": "{{userPassword}}"
+      }
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        if (res.status === 200) {
+          bru.setVar("accessToken", res.body.access_token);
+          bru.setVar("refreshToken", res.body.refresh_token);
+        }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

@@ -1,0 +1,15 @@
+opencollection: 1.0.0
+
+info:
+  name: smackosoft
+bundled: false
+
+request:
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
+extensions:
+  bruno:
+    ignore:
+      - node_modules
+      - .git
