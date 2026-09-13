@@ -1,35 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isPublicRoute } from "../auth-routes";
 import { hasEnvVars } from "../utils";
-
-/**
- * Routes reachable without a session while the UI is being prototyped. The
- * pages behind these are placeholders with no user data on them yet; move a
- * route out of this list as soon as it starts rendering real account data.
- *
- * A route matches its own path and everything nested under it, so "/match"
- * also covers "/match/arrange".
- */
-const PUBLIC_ROUTES = [
-  "/",
-  "/v2",
-  "/activities",
-  "/booking",
-  "/review",
-  "/more",
-  "/stats",
-  "/friends",
-  "/match",
-];
-
-/** Auth pages must stay reachable signed out, or login itself would loop. */
-const AUTH_ROUTES = ["/auth", "/login"];
-
-function IsPublicRoute(pathname: string) {
-  return [...PUBLIC_ROUTES, ...AUTH_ROUTES].some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  );
-}
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -76,14 +48,12 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  // if (
-  //   request.nextUrl.pathname !== "/" &&
-  //   !user &&
-  //   !request.nextUrl.pathname.startsWith("/login") &&
-  //   !request.nextUrl.pathname.startsWith("/auth")
-  // ) {
-  if (!user && !IsPublicRoute(request.nextUrl.pathname)) {
-    // no user, potentially respond by redirecting the user to the login page
+  // An optimistic redirect, for UX only: it saves a signed out visitor from
+  // rendering a page they cannot use. It is deliberately not the access
+  // control boundary — pages call the data access layer (`src/lib/dal.ts`)
+  // themselves, so a gap in this check or in the proxy matcher costs a late
+  // redirect rather than exposing data.
+  if (!user && !isPublicRoute(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);

@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/src/components/ui/card";
-import { SPORT_LABELS, Sport } from "@/src/lib/types/sport";
+import { Sport } from "@/src/lib/types/sport";
 
 /**
  * Placeholder profile summary. Values are hardcoded until the database and
@@ -40,10 +40,7 @@ export function ProfileCard() {
         </div>
 
         <p className="mt-auto text-sm text-muted-foreground">
-          Main sport:{" "}
-          <span className="text-foreground">
-            {SPORT_LABELS[Sport.Badminton]}
-          </span>
+          Main sport: <span className="text-foreground">{Sport.Badminton}</span>
         </p>
       </CardContent>
     </Card>

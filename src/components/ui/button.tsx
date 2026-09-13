@@ -43,7 +43,6 @@ export interface ButtonProps
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
-    // eslint-disable-next-line @typescript-eslint/naming-convention -- rendered as a JSX tag, so it must stay PascalCase
     const Comp = asChild ? Slot : "button";
     return (
       <Comp

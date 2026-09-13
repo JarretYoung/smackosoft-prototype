@@ -3,6 +3,7 @@ import { FriendActivityCard } from "@/src/components/home/friend-activity-card";
 import { ProfileCard } from "@/src/components/home/profile-card";
 import { QuickActions } from "@/src/components/home/quick-actions";
 import { StatsChartCard } from "@/src/components/home/stats-chart-card";
+import { LogoutButton } from "../components/logout-button";
 
 export default function Home() {
   return (
@@ -10,7 +11,10 @@ export default function Home() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 p-3 sm:gap-4 sm:p-4 lg:gap-6 lg:p-6">
         <header className="flex items-center justify-between gap-3">
           <h1 className="truncate text-xl font-semibold">Smackosoft</h1>
-          <DesignVersionSwitcher />
+          <div className="flex items-center justify-between gap-4">
+            <DesignVersionSwitcher />
+            <LogoutButton />
+          </div>
         </header>
 
         {/*

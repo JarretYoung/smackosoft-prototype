@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
@@ -6,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": import.meta.dirname,
+      "server-only": join(import.meta.dirname, "vitest.server-only-stub.mts"),
     },
   },
   test: {

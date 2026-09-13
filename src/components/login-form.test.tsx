@@ -49,7 +49,7 @@ describe("LoginForm", () => {
         password: "password123",
       });
     });
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/protected"));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/"));
   });
 
   it("shows an error message and does not redirect when login fails", async () => {

@@ -11,7 +11,7 @@ import { cn } from "@/src/lib/utils";
  */
 const DESIGN_VERSIONS = [
   { label: "V1", href: "/", description: "Original home screen" },
-  { label: "V2", href: "/v2", description: "shadcn home screen" },
+  { label: "V2", href: "/home", description: "shadcn home screen" },
 ];
 
 /**

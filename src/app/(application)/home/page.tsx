@@ -3,6 +3,7 @@ import { FriendActivityCardV2 } from "@/src/components/home/friend-activity-card
 import { ProfileCardV2 } from "@/src/components/home/profile-card-v2";
 import { QuickActionsV2 } from "@/src/components/home/quick-actions-v2";
 import { StatsChartCardV2 } from "@/src/components/home/stats-chart-card-v2";
+import { LogoutButton } from "@/src/components/logout-button";
 
 /**
  * Alternative home screen, built on shadcn primitives (Avatar, Badge,
@@ -15,7 +16,10 @@ export default function HomeV2() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 p-3 sm:gap-4 sm:p-4 lg:gap-6 lg:p-6">
         <header className="flex items-center justify-between gap-3">
           <h1 className="truncate text-xl font-semibold">Smackosoft</h1>
-          <DesignVersionSwitcher />
+          <div className="flex items-center justify-between gap-4">
+            <DesignVersionSwitcher />
+            <LogoutButton />
+          </div>
         </header>
 
         {/* Row 1 — profile and friend activity, 40/60 from lg up. */}

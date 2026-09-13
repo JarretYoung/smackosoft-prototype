@@ -3,7 +3,7 @@ import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Progress } from "@/src/components/ui/progress";
 import { Separator } from "@/src/components/ui/separator";
-import { SPORT_LABELS, Sport } from "@/src/lib/types/sport";
+import { Sport } from "@/src/lib/types/sport";
 
 /**
  * V2 profile summary — a wider "hero" treatment built from shadcn Avatar,
@@ -31,7 +31,7 @@ export function ProfileCardV2() {
             <p className="truncate text-lg font-semibold">Player Name</p>
             <p className="truncate text-sm text-muted-foreground">@username</p>
             <Badge variant="secondary" className="mt-2">
-              {SPORT_LABELS[Sport.Badminton]}
+              {Sport.Badminton}
             </Badge>
           </div>
         </div>
