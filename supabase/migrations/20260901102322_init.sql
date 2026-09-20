@@ -264,19 +264,46 @@ CREATE INDEX match_game_highlights_match_player_id_idx ON smackosoft.match_game_
 CREATE TABLE smackosoft.videos (
   id               uuid        NOT NULL DEFAULT gen_random_uuid(),
   label            text        NOT NULL,
-  match_game_id    uuid        NOT NULL,
   video_url        text        NOT NULL,
-  canonical_offset interval    NOT NULL,
   created_at       timestamptz NOT NULL DEFAULT now(),
   created_by       uuid        NOT NULL,
   updated_at       timestamptz,
   updated_by       uuid,
   CONSTRAINT videos_pkey PRIMARY KEY (id),
-  CONSTRAINT videos_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id),
   CONSTRAINT videos_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT videos_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
 
 GRANT ALL ON TABLE smackosoft.videos TO smackosoft_service;
 
-CREATE INDEX videos_match_game_id_idx ON smackosoft.videos (match_game_id);
+CREATE INDEX videos_created_by_idx ON smackosoft.videos (created_by);
+
+-- ============================================================
+-- VIDEO_LINKAGES
+-- ============================================================
+
+CREATE TABLE smackosoft.video_linkages (
+  id               uuid        NOT NULL DEFAULT gen_random_uuid(),
+  video_id         uuid        NOT NULL,
+  session_id       uuid        NOT NULL,
+  match_game_id    uuid,
+  canonical_offset interval    NOT NULL,
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  created_by       uuid        NOT NULL,
+  updated_at       timestamptz,
+  updated_by       uuid,
+  CONSTRAINT video_linkages_pkey PRIMARY KEY (id),
+  CONSTRAINT video_linkages_video_id_session_id_match_game_id_key UNIQUE (video_id, session_id, match_game_id),
+  CONSTRAINT video_linkages_video_id_fkey FOREIGN KEY (video_id) REFERENCES smackosoft.videos(id),
+  CONSTRAINT video_linkages_session_id_fkey FOREIGN KEY (session_id) REFERENCES smackosoft.sessions(id),
+  CONSTRAINT video_linkages_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id),
+  CONSTRAINT video_linkages_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
+  CONSTRAINT video_linkages_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
+);
+
+GRANT ALL ON TABLE smackosoft.video_linkages TO smackosoft_service;
+
+CREATE INDEX video_linkages_video_id_idx ON smackosoft.video_linkages (video_id);
+CREATE INDEX video_linkages_session_id_match_game_id_idx ON smackosoft.video_linkages (session_id, match_game_id);
+
+CREATE UNIQUE INDEX video_linkages_video_id_session_id_key ON smackosoft.video_linkages (video_id, session_id) WHERE match_game_id IS NULL;
