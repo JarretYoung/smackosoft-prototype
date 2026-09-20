@@ -89,12 +89,15 @@ CREATE INDEX sessions_organiser_id_idx ON smackosoft.sessions (organiser_id);
 -- SESSION_ACCESS
 -- ============================================================
 
+CREATE TYPE smackosoft.role_type AS ENUM ('VIEWER', 'EDITOR', 'MANAGER', 'OWNER');
+
 CREATE TABLE smackosoft.session_access (
-  id         uuid        NOT NULL DEFAULT gen_random_uuid(),
-  session_id uuid        NOT NULL,
-  account_id uuid        NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  created_by uuid        NOT NULL,
+  id         uuid                 NOT NULL DEFAULT gen_random_uuid(),
+  session_id uuid                 NOT NULL,
+  account_id uuid                 NOT NULL,
+  role_type  smackosoft.role_type NOT NULL DEFAULT 'VIEWER',
+  created_at timestamptz          NOT NULL DEFAULT now(),
+  created_by uuid                 NOT NULL,
   updated_at timestamptz,
   updated_by uuid,
   CONSTRAINT session_access_pkey PRIMARY KEY (id),
