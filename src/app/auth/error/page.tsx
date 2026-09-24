@@ -1,4 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
 import { Suspense } from "react";
 
 async function ErrorContent({

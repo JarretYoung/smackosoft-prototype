@@ -12,6 +12,8 @@ import {
 } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
+import { Separator } from "@/src/components/ui/separator";
+import { GoogleSignInButton } from "@/src/components/google-sign-in-button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -39,7 +41,7 @@ export function LoginForm({
       });
       if (error) throw error;
       // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push("/protected");
+      router.push("/");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
@@ -56,7 +58,13 @@ export function LoginForm({
             Enter your email below to login to your account
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-6">
+          <GoogleSignInButton />
+          <div className="flex items-center gap-4">
+            <Separator className="flex-1" />
+            <span className="text-xs uppercase text-muted-foreground">or</span>
+            <Separator className="flex-1" />
+          </div>
           <form onSubmit={handleLogin}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">

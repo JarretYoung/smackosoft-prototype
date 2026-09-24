@@ -3,8 +3,21 @@ import { EnvVarWarning } from "@/src/components/env-var-warning";
 import { AuthButton } from "@/src/components/auth-button";
 import { ThemeSwitcher } from "@/src/components/theme-switcher";
 import { hasEnvVars } from "@/src/lib/utils";
+import { requireSession } from "@/src/lib/dal";
 import Link from "next/link";
 import { Suspense } from "react";
+
+/**
+ * Defence in depth: keeps the subtree from rendering without a session even if
+ * the proxy matcher misses this route. It is not the primary boundary — Next
+ * may render this layout and the page in parallel, so each protected page must
+ * still call the data access layer for its own data.
+ */
+async function RequireAuth({ children }: { children: React.ReactNode }) {
+  await requireSession();
+
+  return <>{children}</>;
+}
 
 export default function ProtectedLayout({
   children,
@@ -32,7 +45,9 @@ export default function ProtectedLayout({
           </div>
         </nav>
         <div className="flex-1 flex flex-col gap-20 max-w-5xl p-5">
-          {children}
+          <Suspense>
+            <RequireAuth>{children}</RequireAuth>
+          </Suspense>
         </div>
 
         <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">

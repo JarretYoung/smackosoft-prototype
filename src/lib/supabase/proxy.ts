@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isPublicRoute } from "../auth-routes";
 import { hasEnvVars } from "../utils";
 
 export async function updateSession(request: NextRequest) {
@@ -47,13 +48,12 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  // An optimistic redirect, for UX only: it saves a signed out visitor from
+  // rendering a page they cannot use. It is deliberately not the access
+  // control boundary — pages call the data access layer (`src/lib/dal.ts`)
+  // themselves, so a gap in this check or in the proxy matcher costs a late
+  // redirect rather than exposing data.
+  if (!user && !isPublicRoute(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);

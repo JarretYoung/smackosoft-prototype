@@ -12,6 +12,8 @@ import {
 } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
+import { Separator } from "@/src/components/ui/separator";
+import { GoogleSignInButton } from "@/src/components/google-sign-in-button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -63,7 +65,13 @@ export function SignUpForm({
           <CardTitle className="text-2xl">Sign up</CardTitle>
           <CardDescription>Create a new account</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-6">
+          <GoogleSignInButton />
+          <div className="flex items-center gap-4">
+            <Separator className="flex-1" />
+            <span className="text-xs uppercase text-muted-foreground">or</span>
+            <Separator className="flex-1" />
+          </div>
           <form onSubmit={handleSignUp}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
