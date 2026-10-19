@@ -1,0 +1,9 @@
+{
+  "dialect": "postgres",
+  "defaultSchemas": ["smackosoft"],
+  "includePattern": "smackosoft.*",
+  "dateParser": "string",
+  "numericParser": "number",
+  "typeMapping": { "interval": "string" },
+  "outFile": "src/server/db/types.ts"
+}
