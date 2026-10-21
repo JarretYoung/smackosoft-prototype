@@ -2,7 +2,7 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { MonthCalendar } from "@/src/components/month-calendar";
 import { AvatarStack, PersonAvatar } from "@/src/components/avatar-stack";
-import { LogoutButton } from "@/src/components/logout-button";
+import { LocalTimeRange } from "@/src/components/local-time";
 import { dayOf, monthShort, today } from "@/src/lib/format";
 import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";
@@ -20,13 +20,15 @@ export default async function HomePage() {
 
   return (
     <main className="space-y-5 px-5 pb-6 pt-8">
-      <header className="flex items-center gap-3">
-        <PersonAvatar person={me.account} className="size-12 text-base" />
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-semibold leading-tight">{me.account.displayName}</h1>
-          <p className="text-sm text-muted-foreground">@{me.account.handle}</p>
-        </div>
-        <LogoutButton />
+      <header>
+        <Link href="/profile" className="flex items-center gap-3">
+          <PersonAvatar person={me.account} className="size-12 text-base" />
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-lg font-semibold leading-tight">{me.account.displayName}</h1>
+            <p className="text-sm text-muted-foreground">@{me.account.handle}</p>
+          </div>
+          <ChevronRight className="size-5 text-muted-foreground" />
+        </Link>
       </header>
 
       <section className="grid grid-cols-3 gap-3">
@@ -54,7 +56,7 @@ export default async function HomePage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{s.label}</p>
-                  <p className="truncate text-xs text-muted-foreground">{s.location ?? "No location"}</p>
+                  <p className="truncate text-xs text-muted-foreground"><LocalTimeRange start={s.startTime} end={s.endTime} suffix={s.location ? " · " : ""} />{s.location ?? (s.startTime ? "" : "No details")}</p>
                 </div>
                 <AvatarStack people={s.members} max={2} />
                 <ChevronRight className="size-4 text-muted-foreground" />

@@ -129,6 +129,20 @@ export function write<S extends z.ZodType>(
     });
 }
 
+/** A write use case that returns a value. One transaction. */
+export function act<S extends z.ZodType, T>(
+  schema: S,
+  handler: Handler<S, T>,
+): (input: z.input<S>) => Promise<Result<T>> {
+  return (input) =>
+    guard(async () => {
+      const parsed = parse(schema, input);
+      const db = getDb();
+      const actor = await actorOrStop(db);
+      return db.transaction().execute((tx) => handler({ db: tx, actor }, parsed));
+    });
+}
+
 // ------------------------------------------------------------------ helpers
 
 /** Throws CONFLICT for every input item whose key was not written. */

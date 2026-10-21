@@ -81,3 +81,27 @@ describe("sessions", () => {
     expect(Object.values(left.rows[0]).map(Number)).toEqual([0, 0, 0, 1]);
   });
 });
+
+describe("session details", () => {
+  test("keeps the planned times, the maps link and the cover image", async ({ world: w }) => {
+    const base = { id: id(), label: "Evening", date: "2026-10-30" };
+    const full = {
+      ...base,
+      startTime: "2026-10-30T20:00:00.000Z",
+      endTime: "2026-10-30T22:30:00.000Z",
+      location: "Bukit Jalil",
+      locationUrl: "https://maps.example.com/bukit-jalil",
+      coverUrl: "https://img.example.com/court.jpg",
+    };
+    ok(await w.b.sessions.save([full]));
+    expect(ok(await w.b.sessions.get({ sessionId: base.id }))).toMatchObject({
+      startTime: full.startTime,
+      endTime: full.endTime,
+      locationUrl: full.locationUrl,
+      coverUrl: full.coverUrl,
+    });
+
+    const backwards = await w.b.sessions.save([{ ...full, endTime: "2026-10-30T19:00:00.000Z" }]);
+    expect(failure(backwards)).toEqual({ code: "VALIDATION", paths: [[0, "endTime"]] });
+  });
+});

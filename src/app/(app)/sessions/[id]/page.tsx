@@ -1,8 +1,9 @@
 import { ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import Link from "next/link";
 import { AvatarStack } from "@/src/components/avatar-stack";
-import { CourtArt } from "@/src/components/court-art";
+import { SessionCover } from "@/src/components/court-art";
 import { SessionMenu } from "@/src/components/session-menu";
+import { LocalTimeRange } from "@/src/components/local-time";
 import { longDate, money, plural } from "@/src/lib/format";
 import { summarize } from "@/src/lib/matches";
 import { unwrap } from "@/src/lib/result";
@@ -13,6 +14,7 @@ import { backend } from "@/src/server";
 export default async function SessionDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = unwrap(await backend.sessions.get({ sessionId: id }));
+  const me = unwrap(await backend.accounts.getCurrent());
   const fee = money(session.courtFee, session.currency);
   const canScore = can(session.myRole, "EDITOR");
 
@@ -27,17 +29,22 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
           <SessionMenu
             sessionId={session.id}
             label={session.label}
+            myAccountId={me.account.id}
             canEdit={can(session.myRole, "MANAGER")}
             canDelete={session.myRole === "OWNER"}
+            canLeave={session.myRole !== "OWNER"}
           />
         </div>
-        <p className="text-sm text-primary-foreground/80">{longDate(session.date)}</p>
+        <p className="text-sm text-primary-foreground/80">
+          {longDate(session.date)}
+          <LocalTimeRange start={session.startTime} end={session.endTime} prefix=" · " />
+        </p>
         <h1 className="mt-1 text-3xl font-bold leading-tight tracking-tight">{session.label}</h1>
-        <CourtArt className="mt-5 h-44 rounded-3xl shadow-xl" />
+        <SessionCover url={session.coverUrl} className="mt-5 h-44 rounded-3xl shadow-xl" />
       </section>
 
       <section className="grid grid-cols-2 gap-4 border-b px-5 py-5">
-        <Fact label="Location" value={session.location ?? "Not set"} />
+        <Fact label="Location" value={session.location ?? "Not set"} href={session.locationUrl} />
         <Fact label="Court fee" value={fee ?? "Not set"} />
       </section>
 
@@ -91,11 +98,19 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
   );
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
+function Fact({ label, value, href }: { label: string; value: string; href?: string | null }) {
   return (
     <div>
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="mt-1 font-semibold">{value}</p>
+      <p className="mt-1 font-semibold">
+        {href ? (
+          <a href={href} target="_blank" rel="noreferrer" className="text-primary underline-offset-2 hover:underline">
+            {value}
+          </a>
+        ) : (
+          value
+        )}
+      </p>
     </div>
   );
 }

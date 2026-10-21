@@ -1,7 +1,8 @@
 import { describe, expect } from "vitest";
+import type { Backend } from "../src/contract";
 import { endTime, newSession, scoredMatch, startTime } from "./support/builders";
 import { id, test } from "./support/fixtures";
-import { code, failure, ok } from "./support/helpers";
+import { code, failure, ok, whileLocked } from "./support/helpers";
 
 describe("matches, teams, games and scores", () => {
   test("an account plays for one team per match", async ({ world: w }) => {
@@ -9,6 +10,80 @@ describe("matches, teams, games and scores", () => {
     // The owner already plays for team 1 of this match.
     const result = await w.b.matches.savePlayers([{ teamId: team2, accountId: w.owner.accountId }]);
     expect(failure(result)).toEqual({ code: "CONFLICT", paths: [[0, "accountId"]] });
+  });
+
+  test("a match has one or two teams", async ({ world: w }) => {
+    const { matchId, team1, team2 } = await scoredMatch(w);
+    const third = await w.b.matches.saveTeams([{ id: id(), matchId, label: "Team 3" }]);
+    expect(failure(third)).toEqual({ code: "CONFLICT", paths: [[0, "matchId"]] });
+
+    expect(code(await w.b.matches.removeTeams([team2]))).toBe("ok");
+    const last = await w.b.matches.removeTeams([team1]);
+    expect(failure(last)).toEqual({ code: "CONFLICT", paths: [[0]] });
+
+    // The freed slot can be used again.
+    expect(code(await w.b.matches.saveTeams([{ id: id(), matchId, label: "Team 2 again" }]))).toBe("ok");
+  });
+
+  describe("parallel calls cannot break the limits", () => {
+    const emptyMatch = async (w: { b: Backend }) => {
+      const sessionId = await newSession(w);
+      const matchId = id();
+      ok(await w.b.matches.save([{ id: matchId, sessionId, label: "Race", matchType: "MD" }]));
+      return matchId;
+    };
+    const lockTeams = (teamIds: string[]): [string, unknown[]] => [
+      "select 1 from smackosoft.match_teams where id = any($1) for update",
+      [teamIds],
+    ];
+
+    test("two teams added at once leave at most two", async ({ world: w }) => {
+      const matchId = await emptyMatch(w);
+      ok(await w.b.matches.saveTeams([{ id: id(), matchId, label: "Team 1" }]));
+
+      const results = await whileLocked(
+        w.admin,
+        "select 1 from smackosoft.matches where id = $1 for update",
+        [matchId],
+        () =>
+          Promise.all([
+            w.b.matches.saveTeams([{ id: id(), matchId, label: "A" }]),
+            w.b.matches.saveTeams([{ id: id(), matchId, label: "B" }]),
+          ]),
+      );
+      expect(results.map(code).sort()).toEqual(["CONFLICT", "ok"]);
+    });
+
+    test("two teams removed at once leave one", async ({ world: w }) => {
+      const matchId = await emptyMatch(w);
+      const [team1, team2] = [id(), id()];
+      ok(await w.b.matches.saveTeams([
+        { id: team1, matchId, label: "Team 1" },
+        { id: team2, matchId, label: "Team 2" },
+      ]));
+
+      const results = await whileLocked(w.admin, ...lockTeams([team1, team2]), () =>
+        Promise.all([w.b.matches.removeTeams([team1]), w.b.matches.removeTeams([team2])]),
+      );
+      expect(results.map(code).sort()).toEqual(["CONFLICT", "ok"]);
+    });
+
+    test("an account added to both teams at once ends up on one", async ({ world: w }) => {
+      const matchId = await emptyMatch(w);
+      const [team1, team2] = [id(), id()];
+      ok(await w.b.matches.saveTeams([
+        { id: team1, matchId, label: "Team 1" },
+        { id: team2, matchId, label: "Team 2" },
+      ]));
+
+      const results = await whileLocked(w.admin, ...lockTeams([team1, team2]), () =>
+        Promise.all([
+          w.b.matches.savePlayers([{ teamId: team1, accountId: w.mate.accountId }]),
+          w.b.matches.savePlayers([{ teamId: team2, accountId: w.mate.accountId }]),
+        ]),
+      );
+      expect(results.map(code).sort()).toEqual(["CONFLICT", "ok"]);
+    });
   });
 
   test("a score needs a team and a game from the same match", async ({ world: w }) => {

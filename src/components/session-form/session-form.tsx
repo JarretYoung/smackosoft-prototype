@@ -3,7 +3,7 @@
 import { MoreHorizontal, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { removeMembers, saveGuests, saveMembers, saveSessions } from "@/src/app/actions";
 import { PersonAvatar } from "@/src/components/avatar-stack";
@@ -24,6 +24,7 @@ import { Label } from "@/src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { SessionSave, type Account, type GrantableRole, type Role } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
+import { isoToTimeInput, localToIso } from "@/src/lib/format";
 import { AddParticipantsSheet, type NewGuest } from "./add-participants-sheet";
 
 export type Participant = {
@@ -39,6 +40,12 @@ export type SessionFormInitial = {
   label: string;
   date: string;
   location: string;
+  locationUrl: string;
+  /** An ISO timestamp, or "" when not set. */
+  startTime: string;
+  /** An ISO timestamp, or "" when not set. */
+  endTime: string;
+  coverUrl: string;
   courtFee: string;
   currency: string;
   participants: Participant[];
@@ -65,6 +72,15 @@ export function SessionForm({
   const [label, setLabel] = useState(initial.label);
   const [date, setDate] = useState(initial.date);
   const [location, setLocation] = useState(initial.location);
+  const [locationUrl, setLocationUrl] = useState(initial.locationUrl);
+  // The inputs hold local "HH:mm". The server cannot know the browser's timezone, so fill them after mount.
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  useEffect(() => {
+    setStartTime(initial.startTime ? isoToTimeInput(initial.startTime) : "");
+    setEndTime(initial.endTime ? isoToTimeInput(initial.endTime) : "");
+  }, [initial.startTime, initial.endTime]);
+  const [coverUrl, setCoverUrl] = useState(initial.coverUrl);
   const [courtFee, setCourtFee] = useState(initial.courtFee);
   const [currency, setCurrency] = useState(initial.currency || "MYR");
   const [participants, setParticipants] = useState<Participant[]>(initial.participants);
@@ -99,6 +115,10 @@ export function SessionForm({
       label,
       date,
       location: location.trim() === "" ? null : location,
+      locationUrl: locationUrl.trim() === "" ? null : locationUrl.trim(),
+      startTime: startTime === "" ? null : localToIso(date, startTime),
+      endTime: endTime === "" ? null : localToIso(date, endTime),
+      coverUrl: coverUrl.trim() === "" ? null : coverUrl.trim(),
       courtFee: fee,
       currency: fee === null ? null : currency,
     };
@@ -196,6 +216,38 @@ export function SessionForm({
         <Label htmlFor="location">Location</Label>
         <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Sunway Serene" />
         {errors.location && <p className="text-sm text-destructive">{errors.location}</p>}
+        <Input
+          aria-label="Maps link"
+          inputMode="url"
+          value={locationUrl}
+          onChange={(e) => setLocationUrl(e.target.value)}
+          placeholder="Maps link (optional)"
+        />
+        {errors.locationUrl && <p className="text-sm text-destructive">{errors.locationUrl}</p>}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="start">Starts</Label>
+          <Input id="start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="end">Ends</Label>
+          <Input id="end" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+          {errors.endTime && <p className="text-sm text-destructive">{errors.endTime}</p>}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="cover">Cover image</Label>
+        <Input
+          id="cover"
+          inputMode="url"
+          value={coverUrl}
+          onChange={(e) => setCoverUrl(e.target.value)}
+          placeholder="Link to an image (optional)"
+        />
+        {errors.coverUrl && <p className="text-sm text-destructive">{errors.coverUrl}</p>}
       </div>
 
       <section className="space-y-3">

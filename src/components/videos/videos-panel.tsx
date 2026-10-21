@@ -38,6 +38,15 @@ function parseOffset(text: string): number | null {
   return Number(match[1] ?? 0) * 60 + Number(match[2]);
 }
 
+function Thumb({ url }: { url: string | null }) {
+  return (
+    <div className="h-10 w-16 shrink-0 overflow-hidden rounded-md bg-muted">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {url && <img src={url} alt="" className="size-full object-cover" />}
+    </div>
+  );
+}
+
 /**
  * Videos for one session. Add a video record, link your videos to the whole session
  * or to one game, and unlink them. Linking is replay safe. Linking the same target
@@ -62,6 +71,7 @@ export function VideosPanel({
   const [linking, setLinking] = useState<OwnVideo | null>(null);
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
+  const [thumbnail, setThumbnail] = useState("");
   const [target, setTarget] = useState(focus ?? SESSION);
   const [offset, setOffset] = useState("");
   const [pending, start] = useTransition();
@@ -89,12 +99,21 @@ export function VideosPanel({
 
   function addVideo() {
     run(
-      () => saveVideos([{ id: crypto.randomUUID(), label, videoUrl: url.trim() }]),
+      () =>
+        saveVideos([
+          {
+            id: crypto.randomUUID(),
+            label,
+            videoUrl: url.trim(),
+            thumbnailUrl: thumbnail.trim() === "" ? null : thumbnail.trim(),
+          },
+        ]),
       "Video added",
       () => {
         setAdding(false);
         setLabel("");
         setUrl("");
+        setThumbnail("");
       },
     );
   }
@@ -135,6 +154,7 @@ export function VideosPanel({
             <ul className="divide-y rounded-2xl border bg-card">
               {groups.get(key)!.map((item) => (
                 <li key={`${item.videoId}:${item.matchGameId}`} className="flex items-center gap-3 p-3">
+                  <Thumb url={item.video.thumbnailUrl} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{item.video.label}</p>
                     <p className="text-xs text-muted-foreground">Starts at {clock(item.offsetSeconds)}</p>
@@ -186,6 +206,7 @@ export function VideosPanel({
         <ul className="divide-y rounded-2xl border bg-card empty:hidden">
           {own.map((video) => (
             <li key={video.id} className="flex items-center gap-3 p-3">
+              <Thumb url={video.thumbnailUrl} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{video.label}</p>
                 <p className="truncate text-xs text-muted-foreground">{video.videoUrl}</p>
@@ -224,6 +245,16 @@ export function VideosPanel({
             <div className="space-y-2">
               <Label htmlFor="video-url">Link</Label>
               <Input id="video-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" inputMode="url" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="video-thumb">Thumbnail</Label>
+              <Input
+                id="video-thumb"
+                value={thumbnail}
+                onChange={(e) => setThumbnail(e.target.value)}
+                placeholder="Link to an image (optional)"
+                inputMode="url"
+              />
             </div>
           </div>
           <DialogFooter>

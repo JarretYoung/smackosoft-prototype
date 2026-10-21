@@ -6,6 +6,11 @@ export const UUID = z.uuid();
 export const AccountHandle = z.string().regex(/^[a-z0-9_]{3,30}$/, "3 to 30 characters: a-z, 0-9, _");
 
 export const DateOnly = z.iso.date();
+
+/** Links we store for images and maps. Never `javascript:` or `data:`. */
+export const HttpUrl = z.url({ protocol: /^https?$/ });
+
+/** An instant, ISO 8601 with an offset. Clients show it in the viewer's timezone. */
 export const Timestamp = z.iso.datetime({ offset: true });
 
 export const Role = z.enum(["VIEWER", "EDITOR", "MANAGER", "OWNER"]);

@@ -22,6 +22,7 @@ export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 export interface Accounts {
   account_type: Generated<AccountType>;
   avatar_url: string | null;
+  claim_token: string | null;
   created_at: Generated<Timestamp>;
   created_by: string;
   deleted: Generated<boolean>;
@@ -113,14 +114,18 @@ export interface SessionAccess {
 
 export interface Sessions {
   court_fee: Numeric | null;
+  cover_url: string | null;
   created_at: Generated<Timestamp>;
   created_by: string;
   currency: string | null;
   date: string;
+  end_time: Timestamp | null;
   id: Generated<string>;
   label: string;
   location: string | null;
+  location_url: string | null;
   organiser_id: string | null;
+  start_time: Timestamp | null;
   updated_at: Timestamp | null;
   updated_by: string | null;
 }
@@ -142,6 +147,7 @@ export interface Videos {
   created_by: string;
   id: Generated<string>;
   label: string;
+  thumbnail_url: string | null;
   updated_at: Timestamp | null;
   updated_by: string | null;
   video_url: string;

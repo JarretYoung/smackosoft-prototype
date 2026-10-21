@@ -1,8 +1,9 @@
 import { ChevronRight, MapPin } from "lucide-react";
 import Link from "next/link";
 import { AvatarStack } from "@/src/components/avatar-stack";
-import { CourtArt } from "@/src/components/court-art";
+import { SessionCover } from "@/src/components/court-art";
 import { Button } from "@/src/components/ui/button";
+import { LocalTimeRange } from "@/src/components/local-time";
 import { dayOf, monthShort, plural, today } from "@/src/lib/format";
 import { unwrap } from "@/src/lib/result";
 import type { SessionListItem } from "@/src/contract";
@@ -56,7 +57,7 @@ function TodayCard({ session }: { session: SessionListItem }) {
       className="block overflow-hidden rounded-2xl bg-card shadow-md transition active:scale-[0.99]"
     >
       <div className="relative h-36">
-        <CourtArt className="absolute inset-0" />
+        <SessionCover url={session.coverUrl} className="absolute inset-0" />
         <h3 className="absolute inset-x-4 bottom-3 text-xl font-bold leading-tight text-white drop-shadow">
           {session.label}
         </h3>
@@ -109,7 +110,10 @@ function SessionRow({ session }: { session: SessionListItem }) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate font-semibold">{session.label}</p>
-        <p className="truncate text-sm text-muted-foreground">{subtitle}</p>
+        <p className="truncate text-sm text-muted-foreground">
+          <LocalTimeRange start={session.startTime} startOnly suffix=" · " />
+          {subtitle}
+        </p>
       </div>
       <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
     </Link>

@@ -112,6 +112,7 @@ There is no `reason` field. Every error points at the input item that caused it 
 | Saving a match player makes the account a `VIEWER` member if it is not one. It never lowers an existing role. | `matches.savePlayers` |
 | Removing a match player does not remove membership. | `matches.removePlayers` |
 | Removing a member who is still a player fails with `CONFLICT`. Remove the player first. | `members.remove` |
+| Anyone can remove themselves from a session, which is how a member leaves. The owner cannot. | `members.remove` |
 | Exactly one `OWNER`, the creator. No transfer, no demotion. `members.save` cannot grant `OWNER` or touch the owner's row. | `members.save`, `members.remove` |
 | Every account may change its handle twice after it is first set. Saving the same handle is not a change. Backed by `accounts.handle_change_count`. | `accounts.saveGuests`, later the profile |
 | Handles are free for anyone once released. | Accounts |
@@ -123,7 +124,8 @@ There is no `reason` field. Every error points at the input item that caused it 
 | Adding a member gives instant access. No acceptance step. | `members.save` |
 | A `VIEWER` reads everything in the session. | All reads |
 | Only the creator of a guest account can edit it. | `accounts.saveGuests` |
-| Non-guest handles never change. | `accounts.saveGuests` and account updates |
+| Removing a guest is a soft delete. Past matches keep it. The handle becomes free. | `accounts.removeGuests` |
+| A guest is claimed with a code the creator made. The guest row becomes the claimer's account, with its history. Only someone with no account can claim. | `accounts.createClaim`, `accounts.claim` |
 | Scores are stored as entered. Operational reads never mark winners. The frontend decides. | Operational reads |
 | Only the analytics surface defines "win". See below. | Analytics reads |
 
@@ -197,7 +199,7 @@ Reads are one per screen or lookup. Writes follow one pattern: `save` and `remov
 | Match player | `matches.savePlayers` | `matches.removePlayers` | team, account | `EDITOR` | Also makes the account a `VIEWER` member if missing. Adding a new member takes `MANAGER`. |
 | Game | `matches.saveGames` | `matches.removeGames` | client UUID | `EDITOR` | Frontend supplies start and end time. |
 | Game score | `matches.saveScores` | none | team, game | `EDITOR` | Removing a game removes its scores. |
-| Guest account | `accounts.saveGuests` | none | client UUID | signed in | Creator edits it. Handle changes twice at most. |
+| Guest account | `accounts.saveGuests` | `accounts.removeGuests` (soft delete) | client UUID | signed in | Creator edits it. Handle changes twice at most. `accounts.listGuests` reads them. |
 | Video | `videos.save` | none | client UUID | own videos only | Record only. No storage upload. |
 | Video linkage | `videos.saveLinkages` | `videos.removeLinkages` | video, session, game or none | `EDITOR` | The video is the actor's own, or already linked in the session |
 
@@ -228,8 +230,8 @@ Foreign keys fix the order. Replaying the whole sequence is always safe.
 |---|---|
 | `match_games.start_time` and `end_time` are `NOT NULL`. | The frontend must send them. |
 | `video_linkages` uniqueness splits on `NULL` game. | Two statements per batch. |
-| Deletes have no cascade, and the schema stays as is. | Delete helpers remove dependents in order. |
-| No column recorded how often a handle changed. | Added `accounts.handle_change_count` with a check of 0 to 2. Migration written, not applied. |
+| Child tables now cascade on delete. | The delete helpers still remove dependents in order. They can be simplified later. |
+| `accounts.handle_change_count` counts handle changes. The database only checks it is not negative. The limit of 2 lives in the backend. | In the init migration. |
 | Nothing creates an `accounts` row when someone signs up. | `accounts.saveCurrent`, called from an onboarding step. See "Account creation and handles". |
 
 ## Account creation and handles
@@ -270,7 +272,7 @@ What the code does that the tables above do not say.
 
 | Limit | Impact | Fix when needed |
 |---|---|---|
-| Swapping `gameNumber` between two games in one `matches.saveGames` call fails on the unique constraint | `CONFLICT` | Save through a temporary number, or make the constraint deferrable |
+| Swapping `gameNumber` between two games in one `matches.saveGames` call fails on the unique constraint | `CONFLICT` | Nothing renumbers games today. Add a deferrable constraint or a temporary number if a screen needs it. |
 | `date` windows use UTC | Up to one day off at month edges | Accept a timezone from the client |
 | No React `cache` around reads | A layout and a page calling the same read query twice | Wrap the read in `cache` where a screen needs it |
 | Stats load all of the actor's matches | Slow with thousands of matches | Move to SQL |

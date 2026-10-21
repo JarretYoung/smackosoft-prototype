@@ -29,6 +29,9 @@ export type Member = Account & {
 
 export interface MembersApi {
   save(input: SaveMembersInput): Promise<Ack>;
-  /** Fails with CONFLICT while the account is still a player in the session. */
+  /**
+   * Fails with CONFLICT while the account is still a player in the session.
+   * Anyone can remove themselves, which is how a member leaves. The owner cannot leave.
+   */
   remove(input: RemoveMembersInput): Promise<Ack>;
 }

@@ -18,6 +18,8 @@ import { removeSessionRows } from "./remove";
 
 // ------------------------------------------------------------------ shared
 
+const isoOrNull = (time: Date | null) => (time ? time.toISOString() : null);
+
 /** Members of the given sessions, in the order they were added. */
 export async function loadMembers(db: Db, sessionIds: string[]): Promise<Map<string, Member[]>> {
   const bySession = new Map<string, Member[]>();
@@ -79,6 +81,10 @@ export const saveSessions = write(SaveSessionsInput, async ({ db, actor }, items
         date: s.date,
         organiser_id: s.organiserId ?? null,
         location: s.location ?? null,
+        location_url: s.locationUrl ?? null,
+        start_time: s.startTime ?? null,
+        end_time: s.endTime ?? null,
+        cover_url: s.coverUrl ?? null,
         court_fee: s.courtFee ?? null,
         currency: s.currency ?? null,
         created_by: actor.accountId,
@@ -92,6 +98,10 @@ export const saveSessions = write(SaveSessionsInput, async ({ db, actor }, items
           date: eb.ref("excluded.date"),
           organiser_id: eb.ref("excluded.organiser_id"),
           location: eb.ref("excluded.location"),
+          location_url: eb.ref("excluded.location_url"),
+          start_time: eb.ref("excluded.start_time"),
+          end_time: eb.ref("excluded.end_time"),
+          cover_url: eb.ref("excluded.cover_url"),
           court_fee: eb.ref("excluded.court_fee"),
           currency: eb.ref("excluded.currency"),
           updated_at: sql`now()`,
@@ -161,7 +171,10 @@ export const listSessions = read(ListSessionsInput, async ({ db, actor }, input)
       "sessions.id",
       "sessions.label",
       "sessions.date",
+      "sessions.start_time",
+      "sessions.end_time",
       "sessions.location",
+      "sessions.cover_url",
       "session_access.role_type",
     ])
     .where("session_access.account_id", "=", actor.accountId)
@@ -187,7 +200,10 @@ export const listSessions = read(ListSessionsInput, async ({ db, actor }, input)
       id: s.id,
       label: s.label,
       date: s.date,
+      startTime: isoOrNull(s.start_time),
+      endTime: isoOrNull(s.end_time),
       location: s.location,
+      coverUrl: s.cover_url,
       matchCount: matchCount.get(s.id) ?? 0,
       myRole: s.role_type,
       members: members.get(s.id) ?? [],
@@ -206,7 +222,11 @@ export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { s
       "sessions.id",
       "sessions.label",
       "sessions.date",
+      "sessions.start_time",
+      "sessions.end_time",
       "sessions.location",
+      "sessions.location_url",
+      "sessions.cover_url",
       "sessions.court_fee",
       "sessions.currency",
       "sessions.organiser_id",
@@ -271,7 +291,11 @@ export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { s
     id: session.id,
     label: session.label,
     date: session.date,
+    startTime: isoOrNull(session.start_time),
+    endTime: isoOrNull(session.end_time),
     location: session.location,
+    locationUrl: session.location_url,
+    coverUrl: session.cover_url,
     courtFee: session.court_fee,
     currency: session.currency,
     organiserId: session.organiser_id,

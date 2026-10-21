@@ -20,6 +20,7 @@ import { Label } from "@/src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { MatchType, type Account, type Match } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
+import { isoToTimeInput, timeInputToIso } from "@/src/lib/format";
 import { TeamPlayersSheet } from "./team-players-sheet";
 
 type TeamState = { id: string; label: string; playerIds: Set<string> };
@@ -33,6 +34,9 @@ type GameState = {
 };
 
 const MATCH_TYPES = MatchType.options;
+
+/** A new game is assumed to last this long. The times are editable on each game. */
+const DEFAULT_GAME_MINUTES = 20;
 
 function initialGames(match: Match): GameState[] {
   return match.games.map((game) => ({
@@ -78,19 +82,28 @@ export function MatchEditor({
     );
   }
 
+  function setGameTime(gameId: string, field: "startTime" | "endTime", time: string) {
+    if (!time) return;
+    setGames((list) => list.map((g) => (g.id === gameId ? { ...g, [field]: timeInputToIso(g[field], time) } : g)));
+  }
+
   function addGame() {
-    const start = new Date();
-    setGames((list) => [
-      ...list,
-      {
-        id: crypto.randomUUID(),
-        // Numbers are never reused, so a removed game leaves a gap nobody sees.
-        gameNumber: Math.max(0, ...list.map((g) => g.gameNumber), ...match.games.map((g) => g.gameNumber)) + 1,
-        startTime: start.toISOString(),
-        endTime: new Date(start.getTime() + 20 * 60_000).toISOString(),
-        scores: {},
-      },
-    ]);
+    setGames((list) => {
+      // The next game starts when the last one ended, or now for the first.
+      const start = list.length ? new Date(list[list.length - 1].endTime) : new Date();
+      return [...list, newGame(list, start)];
+    });
+  }
+
+  function newGame(list: GameState[], start: Date): GameState {
+    return {
+      id: crypto.randomUUID(),
+      // Numbers are never reused, so a removed game leaves a gap nobody sees.
+      gameNumber: Math.max(0, ...list.map((g) => g.gameNumber), ...match.games.map((g) => g.gameNumber)) + 1,
+      startTime: start.toISOString(),
+      endTime: new Date(start.getTime() + DEFAULT_GAME_MINUTES * 60_000).toISOString(),
+      scores: {},
+    };
   }
 
   function winnerOf(game: GameState): string | null {
@@ -235,6 +248,23 @@ export function MatchEditor({
                   <Minus />
                 </Button>
                 <span className="text-sm font-semibold">Game {index + 1}</span>
+                <div className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <input
+                    type="time"
+                    aria-label={`Start time for game ${index + 1}`}
+                    className="h-8 rounded-md border bg-background px-1.5 text-xs"
+                    value={isoToTimeInput(game.startTime)}
+                    onChange={(e) => setGameTime(game.id, "startTime", e.target.value)}
+                  />
+                  to
+                  <input
+                    type="time"
+                    aria-label={`End time for game ${index + 1}`}
+                    className="h-8 rounded-md border bg-background px-1.5 text-xs"
+                    value={isoToTimeInput(game.endTime)}
+                    onChange={(e) => setGameTime(game.id, "endTime", e.target.value)}
+                  />
+                </div>
               </div>
               {teams.map((team) => (
                 <div key={team.id} className="flex items-center gap-3 pl-10">

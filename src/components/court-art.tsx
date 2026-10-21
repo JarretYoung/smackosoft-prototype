@@ -1,5 +1,17 @@
 import { cn } from "@/src/lib/utils";
 
+/** The session cover when it has one, otherwise the drawn court. */
+export function SessionCover({ url, className }: { url: string | null; className?: string }) {
+  if (!url) return <CourtArt className={className} />;
+  return (
+    <div className={cn("relative overflow-hidden bg-muted", className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={url} alt="" className="absolute inset-0 size-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+    </div>
+  );
+}
+
 /** A stand-in for the court photo: a green court with white lines, seen from above. */
 export function CourtArt({ className }: { className?: string }) {
   return (

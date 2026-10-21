@@ -4,7 +4,8 @@ import { OnboardingForm } from "./onboarding-form";
 
 export const instant = false;
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ claim?: string }> }) {
+  const { claim } = await searchParams;
   // Already onboarded: nothing to do here.
   const me = await backend.accounts.getCurrent();
   if (me.ok) redirect("/home");
@@ -20,7 +21,7 @@ export default async function OnboardingPage() {
           Pick a name and a handle. Friends find you by your handle.
         </p>
       </div>
-      <OnboardingForm />
+      <OnboardingForm claimCode={claim ?? ""} />
     </main>
   );
 }

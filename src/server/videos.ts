@@ -17,6 +17,7 @@ const videoColumns = [
   "videos.id",
   "videos.label",
   "videos.video_url",
+  "videos.thumbnail_url",
   "videos.created_by",
   "videos.created_at",
 ] as const;
@@ -25,12 +26,14 @@ const toVideo = (row: {
   id: string;
   label: string;
   video_url: string;
+  thumbnail_url: string | null;
   created_by: string;
   created_at: Date;
 }): Video => ({
   id: row.id,
   label: row.label,
   videoUrl: row.video_url,
+  thumbnailUrl: row.thumbnail_url,
   createdBy: row.created_by,
   createdAt: row.created_at.toISOString(),
 });
@@ -94,13 +97,22 @@ export const listSessionVideos = read(ListSessionVideosInput, async ({ db, actor
 export const saveVideos = write(SaveVideosInput, async ({ db, actor }, items) => {
   const written = await db
     .insertInto("videos")
-    .values(items.map((v) => ({ id: v.id, label: v.label, video_url: v.videoUrl, created_by: actor.accountId })))
+    .values(
+      items.map((v) => ({
+        id: v.id,
+        label: v.label,
+        video_url: v.videoUrl,
+        thumbnail_url: v.thumbnailUrl ?? null,
+        created_by: actor.accountId,
+      })),
+    )
     .onConflict((oc) =>
       oc
         .column("id")
         .doUpdateSet((eb) => ({
           label: eb.ref("excluded.label"),
           video_url: eb.ref("excluded.video_url"),
+          thumbnail_url: eb.ref("excluded.thumbnail_url"),
           updated_at: sql`now()`,
           updated_by: actor.accountId,
         }))

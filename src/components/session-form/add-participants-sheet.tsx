@@ -18,15 +18,10 @@ import {
 } from "@/src/components/ui/sheet";
 import type { Account } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
+import { guestHandle } from "@/src/lib/guest";
 
 /** A guest that does not exist yet. It is created when the session is saved. */
 export type NewGuest = Account & { isNew: true };
-
-function guestHandle(name: string) {
-  const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12) || "player";
-  const suffix = crypto.randomUUID().replace(/-/g, "").slice(0, 4);
-  return `guest_${slug}_${suffix}`;
-}
 
 /**
  * Stage people to add: look up a real account by handle, or make a guest by name.

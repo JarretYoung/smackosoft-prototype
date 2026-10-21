@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { removeSessions } from "@/src/app/actions";
+import { removeMembers, removeSessions } from "@/src/app/actions";
 import { Button } from "@/src/components/ui/button";
 import {
   Dialog,
@@ -28,16 +28,21 @@ import { errorMessage } from "@/src/lib/errors";
 export function SessionMenu({
   sessionId,
   label,
+  myAccountId,
   canEdit,
   canDelete,
+  canLeave,
 }: {
   sessionId: string;
   label: string;
+  myAccountId: string;
   canEdit: boolean;
   canDelete: boolean;
+  canLeave: boolean;
 }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [pending, start] = useTransition();
 
   function remove() {
@@ -48,6 +53,15 @@ export function SessionMenu({
         return;
       }
       toast.success("Session deleted");
+      router.replace("/sessions");
+    });
+  }
+
+  function leave() {
+    start(async () => {
+      const result = await removeMembers([{ sessionId, accountId: myAccountId }]);
+      if (!result.ok) return void toast.error(errorMessage(result.error));
+      toast.success("You left the session");
       router.replace("/sessions");
     });
   }
@@ -69,6 +83,9 @@ export function SessionMenu({
           <DropdownMenuItem asChild>
             <Link href={`/sessions/${sessionId}/videos`}>Videos</Link>
           </DropdownMenuItem>
+          {canLeave && (
+            <DropdownMenuItem onSelect={() => setLeaving(true)}>Leave session</DropdownMenuItem>
+          )}
           {canDelete && (
             <>
               <DropdownMenuSeparator />
@@ -79,6 +96,25 @@ export function SessionMenu({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Dialog open={leaving} onOpenChange={setLeaving}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave this session?</DialogTitle>
+            <DialogDescription>
+              You will no longer see {label}. A manager can add you back. If you play in a match, ask to be taken off it first.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLeaving(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={leave} disabled={pending}>
+              {pending ? "Leaving" : "Leave"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={confirming} onOpenChange={setConfirming}>
         <DialogContent>

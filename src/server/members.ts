@@ -55,12 +55,14 @@ export const saveMembers = write(SaveMembersInput, async ({ db, actor }, items) 
 });
 
 export const removeMembers = write(RemoveMembersInput, async ({ db, actor }, items) => {
+  const isSelf = (member: { accountId: string }) => member.accountId === actor.accountId;
   const roles = await rolesIn(db, actor, items.map((m) => m.sessionId));
   const visible = items
     .map((member, index) => ({ member, index }))
     .filter(({ member, index }) => {
       if (!roles.has(member.sessionId)) return false;
-      requireRole(roles, member.sessionId, "MANAGER", [index, "sessionId"]);
+      // Anyone may remove themselves. Removing someone else takes MANAGER.
+      requireRole(roles, member.sessionId, isSelf(member) ? "VIEWER" : "MANAGER", [index, "sessionId"]);
       return true;
     });
   if (!visible.length) return;
@@ -90,7 +92,7 @@ export const removeMembers = write(RemoveMembersInput, async ({ db, actor }, ite
   visible.forEach(({ member, index }) => {
     const existing = currentRole.get(key(member));
     if (existing === "OWNER") stop("CONFLICT", [index, "accountId"], "The owner cannot be removed");
-    if (existing === "MANAGER") requireRole(roles, member.sessionId, "OWNER", [index, "accountId"]);
+    if (existing === "MANAGER" && !isSelf(member)) requireRole(roles, member.sessionId, "OWNER", [index, "accountId"]);
     if (playing.has(key(member))) stop("CONFLICT", [index, "accountId"], "Still a player. Remove the player first");
   });
 

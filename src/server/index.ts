@@ -4,7 +4,16 @@
  * Never import this from a Client Component.
  */
 import type { Backend } from "../contract";
-import { findAccountByHandle, getCurrentAccount, saveCurrentAccount, saveGuests } from "./accounts";
+import {
+  claimGuest,
+  createGuestClaim,
+  findAccountByHandle,
+  getCurrentAccount,
+  listGuests,
+  removeGuests,
+  saveCurrentAccount,
+  saveGuests,
+} from "./accounts";
 import { removeMatches, removeMatchPlayers, removeGames, removeTeams, saveGames, saveGameScores, saveMatches, saveMatchPlayers, saveTeams } from "./matches";
 import { removeMembers, saveMembers } from "./members";
 import { getSessionDetails, listSessions, removeSessions, saveSessions } from "./sessions";
@@ -17,6 +26,10 @@ export const backend: Backend = {
     saveCurrent: saveCurrentAccount,
     findByHandle: findAccountByHandle,
     saveGuests,
+    listGuests,
+    removeGuests,
+    createClaim: createGuestClaim,
+    claim: claimGuest,
   },
   sessions: {
     list: listSessions,

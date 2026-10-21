@@ -108,3 +108,18 @@ describe("membership rules", () => {
     expect(result.error).toEqual({ code: "CONFLICT", issues: [{ path: [], message: "Conflicts with existing data" }] });
   });
 });
+
+describe("leaving a session", () => {
+  test("a member can remove themselves, the owner cannot", async ({ world: w }) => {
+    const sessionId = await newSession(w);
+    ok(await w.b.members.save([{ sessionId, accountId: w.mate.accountId, role: "VIEWER" }]));
+
+    w.as(w.mate);
+    expect(code(await w.b.members.remove([{ sessionId, accountId: w.mate.accountId }]))).toBe("ok");
+    expect(code(await w.b.sessions.get({ sessionId }))).toBe("NOT_FOUND");
+
+    w.as(w.owner);
+    const leave = await w.b.members.remove([{ sessionId, accountId: w.owner.accountId }]);
+    expect(failure(leave)).toEqual({ code: "CONFLICT", paths: [[0, "accountId"]] });
+  });
+});

@@ -7,6 +7,9 @@
 import { revalidatePath } from "next/cache";
 import type {
   Ack,
+  ClaimInput,
+  CreateClaimInput,
+  RemoveGuestsInput,
   FindAccountByHandleInput,
   RemoveGamesInput,
   RemoveMatchesInput,
@@ -40,6 +43,17 @@ export async function saveCurrentAccount(input: SaveCurrentAccountInput) {
 }
 export async function saveGuests(input: SaveGuestsInput) {
   return refreshed(backend.accounts.saveGuests(input));
+}
+export async function removeGuests(input: RemoveGuestsInput) {
+  return refreshed(backend.accounts.removeGuests(input));
+}
+export async function createClaim(input: CreateClaimInput) {
+  const result = await backend.accounts.createClaim(input);
+  if (result.ok) revalidatePath("/", "layout");
+  return result;
+}
+export async function claimGuest(input: ClaimInput) {
+  return refreshed(backend.accounts.claim(input));
 }
 export async function findAccountByHandle(input: FindAccountByHandleInput) {
   return backend.accounts.findByHandle(input);

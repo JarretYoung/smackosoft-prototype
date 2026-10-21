@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { batch, DateOnly, Role, UUID } from "./common";
+import { batch, DateOnly, HttpUrl, Role, Timestamp, UUID } from "./common";
 import type { Match } from "./matches";
 import type { Member } from "./members";
 import type { Ack, Result } from "./result";
@@ -13,12 +13,22 @@ export const SessionSave = z
     date: DateOnly,
     organiserId: UUID.nullish(),
     location: z.string().trim().min(1).nullish(),
+    /** A maps link for the location. */
+    locationUrl: HttpUrl.nullish(),
+    /** The plan, not what happened. Games carry their own times. */
+    startTime: Timestamp.nullish(),
+    endTime: Timestamp.nullish(),
+    coverUrl: HttpUrl.nullish(),
     courtFee: z.number().min(0).max(99_999_999.99).nullish(),
     currency: z.string().regex(/^[A-Z]{3}$/, "ISO 4217 code, for example MYR").nullish(),
   })
   .refine((s) => (s.courtFee == null) === (s.currency == null), {
     message: "Set courtFee and currency together, or neither",
     path: ["currency"],
+  })
+  .refine((s) => !s.startTime || !s.endTime || Date.parse(s.endTime) > Date.parse(s.startTime), {
+    message: "endTime must be after startTime",
+    path: ["endTime"],
   });
 export const SaveSessionsInput = batch(SessionSave, (s) => s.id);
 export type SaveSessionsInput = z.input<typeof SaveSessionsInput>;
@@ -50,7 +60,10 @@ export type SessionListItem = {
   id: string;
   label: string;
   date: string;
+  startTime: string | null;
+  endTime: string | null;
   location: string | null;
+  coverUrl: string | null;
   matchCount: number;
   myRole: Role;
   members: Member[];
@@ -60,7 +73,11 @@ export type SessionDetails = {
   id: string;
   label: string;
   date: string;
+  startTime: string | null;
+  endTime: string | null;
   location: string | null;
+  locationUrl: string | null;
+  coverUrl: string | null;
   courtFee: number | null;
   currency: string | null;
   organiserId: string | null;

@@ -21,6 +21,10 @@ export default async function EditSessionPage({ params }: { params: Promise<{ id
           label: session.label,
           date: session.date,
           location: session.location ?? "",
+          locationUrl: session.locationUrl ?? "",
+          startTime: session.startTime ?? "",
+          endTime: session.endTime ?? "",
+          coverUrl: session.coverUrl ?? "",
           courtFee: session.courtFee == null ? "" : String(session.courtFee),
           currency: session.currency ?? "MYR",
           participants: session.members.map((m) => ({

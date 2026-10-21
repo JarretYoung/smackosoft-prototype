@@ -22,7 +22,18 @@ import {
   sessionsOfTeams,
 } from "./access";
 import { expectAll, stop, unique, write } from "./core";
+import type { Db } from "./db/client";
 import { removeGameRows, removeMatchRows, removePlayerRows, removeTeamRows } from "./remove";
+
+/**
+ * Serialises writers of the same matches until the transaction ends. Rules that count
+ * teams or players read, then write, so two parallel calls would both pass. Taking
+ * this lock first makes the second call count after the first has committed.
+ * Ids are locked in sorted order so two calls cannot deadlock.
+ */
+async function lockMatches(db: Db, matchIds: string[]) {
+  await db.selectFrom("matches").select("id").where("id", "in", unique(matchIds)).orderBy("id").forUpdate().execute();
+}
 
 // ------------------------------------------------------------------ matches
 
@@ -70,6 +81,22 @@ export const saveTeams = write(SaveTeamsInput, async ({ db, actor }, items) => {
   const lookup = await sessionsOfMatches(db, items.map((t) => t.matchId));
   await requireOnParents(db, actor, items, (t) => t.matchId, lookup, "EDITOR", "matchId");
 
+  // A match has one or two teams. The database does not enforce it, so count here.
+  await lockMatches(db, items.map((t) => t.matchId));
+  const existing = await db
+    .selectFrom("match_teams")
+    .select(["id", "match_id"])
+    .where("match_id", "in", unique(items.map((t) => t.matchId)))
+    .execute();
+  const teamsOf = new Map<string, Set<string>>();
+  for (const team of existing) teamsOf.set(team.match_id, (teamsOf.get(team.match_id) ?? new Set()).add(team.id));
+  items.forEach((team, index) => {
+    const known = teamsOf.get(team.matchId) ?? new Set<string>();
+    known.add(team.id);
+    teamsOf.set(team.matchId, known);
+    if (known.size > 2) stop("CONFLICT", [index, "matchId"], "A match has at most two teams");
+  });
+
   const written = await db
     .insertInto("match_teams")
     .values(items.map((t) => ({ id: t.id, match_id: t.matchId, label: t.label, created_by: actor.accountId })))
@@ -91,6 +118,29 @@ export const saveTeams = write(SaveTeamsInput, async ({ db, actor }, items) => {
 export const removeTeams = write(RemoveTeamsInput, async ({ db, actor }, teamIds) => {
   const lookup = await sessionsOfTeams(db, teamIds);
   const allowed = await removableOnParents(db, actor, teamIds, (id) => id, lookup, "EDITOR", "id");
+  if (!allowed.length) return;
+
+  // A match keeps at least one team. Delete the match to remove them all.
+  const matchIds = unique(allowed.map((id) => lookup.get(id)!.matchId));
+  await lockMatches(db, matchIds);
+  const counts = await db
+    .selectFrom("match_teams")
+    .select(["match_id", (eb) => eb.fn.countAll<string>().as("count")])
+    .where("match_id", "in", matchIds)
+    .groupBy("match_id")
+    .execute();
+  const left = new Map(counts.map((c) => [c.match_id, Number(c.count)]));
+  for (const id of allowed) {
+    const matchId = lookup.get(id)!.matchId;
+    left.set(matchId, (left.get(matchId) ?? 0) - 1);
+  }
+  teamIds.forEach((id, index) => {
+    const ref = lookup.get(id);
+    if (ref && allowed.includes(id) && (left.get(ref.matchId) ?? 0) < 1) {
+      stop("CONFLICT", [index], "A match keeps at least one team");
+    }
+  });
+
   await removeTeamRows(db, allowed);
 });
 
@@ -102,6 +152,7 @@ export const saveMatchPlayers = write(SaveMatchPlayersInput, async ({ db, actor 
 
   // An account plays for one team per match. Check inside the call, then against saved players.
   const matchOf = (p: { teamId: string }) => lookup.get(p.teamId)!.matchId;
+  await lockMatches(db, items.map(matchOf));
   const teamByMatchAccount = new Map<string, string>();
   items.forEach((p, index) => {
     const slot = `${matchOf(p)}:${p.accountId}`;

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { batch, UUID } from "./common";
+import { batch, HttpUrl, UUID } from "./common";
 import type { Ack, Result } from "./result";
 
 // ------------------------------------------------------------------ inputs
@@ -10,6 +10,7 @@ export const VideoSave = z.object({
   label: z.string().trim().min(1),
   // Not decided: the storage scheme. `r2` is a placeholder. Never allow `javascript:` or `data:`.
   videoUrl: z.url({ protocol: /^(https?|r2)$/ }),
+  thumbnailUrl: HttpUrl.nullish(),
 });
 export const SaveVideosInput = batch(VideoSave, (v) => v.id);
 export type SaveVideosInput = z.input<typeof SaveVideosInput>;
@@ -47,6 +48,7 @@ export type Video = {
   id: string;
   label: string;
   videoUrl: string;
+  thumbnailUrl: string | null;
   createdBy: string;
   createdAt: string;
 };
