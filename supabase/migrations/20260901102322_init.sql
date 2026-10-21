@@ -15,24 +15,32 @@ GRANT USAGE ON SCHEMA smackosoft TO smackosoft_service;
 CREATE TYPE smackosoft.account_type AS ENUM ('STANDARD', 'GUEST');
 
 CREATE TABLE smackosoft.accounts (
-  id           uuid                    NOT NULL DEFAULT gen_random_uuid(),
-  user_id      uuid,
-  account_type smackosoft.account_type NOT NULL DEFAULT 'STANDARD',
-  display_name text                    NOT NULL,
-  handle       text                    NOT NULL,
-  avatar_url   text,
-  deleted      boolean                 NOT NULL DEFAULT false,
-  created_at   timestamptz             NOT NULL DEFAULT now(),
-  created_by   uuid                    NOT NULL, -- has write access to guest accounts
-  updated_at   timestamptz,
-  updated_by   uuid,
+  id                  uuid                    NOT NULL DEFAULT gen_random_uuid(),
+  user_id             uuid,
+  account_type        smackosoft.account_type NOT NULL DEFAULT 'STANDARD',
+  display_name        text                    NOT NULL,
+  handle              text                    NOT NULL,
+  handle_change_count integer                 NOT NULL DEFAULT 0,
+  avatar_url          text,
+  claim_token         text,                             -- used to claim a guest account
+  deleted             boolean                 NOT NULL DEFAULT false,
+  created_at          timestamptz             NOT NULL DEFAULT now(),
+  created_by          uuid                    NOT NULL, -- has write access to guest accounts
+  updated_at          timestamptz,
+  updated_by          uuid,
   CONSTRAINT accounts_pkey PRIMARY KEY (id),
   CONSTRAINT accounts_user_id_key UNIQUE (user_id),
+  CONSTRAINT accounts_claim_token_key UNIQUE (claim_token),
+  CONSTRAINT accounts_guest_has_no_user_check CHECK (account_type = 'STANDARD' OR user_id IS NULL),
+  CONSTRAINT accounts_claim_token_guest_check CHECK (claim_token IS NULL OR account_type = 'GUEST'),
   CONSTRAINT accounts_handle_format_check CHECK (handle ~ '^[a-z0-9_]{3,30}$'),
+  CONSTRAINT accounts_handle_change_count_check CHECK (handle_change_count >= 0),
   CONSTRAINT accounts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL,
   CONSTRAINT accounts_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT accounts_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
+
+CREATE INDEX accounts_created_by_guest_idx ON smackosoft.accounts (created_by) WHERE account_type = 'GUEST' AND NOT deleted;
 
 CREATE UNIQUE INDEX accounts_handle_key ON smackosoft.accounts (handle) WHERE NOT deleted;
 
@@ -71,11 +79,21 @@ CREATE TABLE smackosoft.sessions (
   date         date        NOT NULL,
   organiser_id uuid,
   location     text,
+  location_url text,
+  start_time   timestamptz,
+  end_time     timestamptz,
+  cover_url    text,
+  court_fee    numeric(10, 2),
+  currency     text,
   created_at   timestamptz NOT NULL DEFAULT now(),
   created_by   uuid        NOT NULL,
   updated_at   timestamptz,
   updated_by   uuid,
   CONSTRAINT sessions_pkey PRIMARY KEY (id),
+  CONSTRAINT sessions_time_order_check CHECK (start_time IS NULL OR end_time IS NULL OR end_time > start_time),
+  CONSTRAINT sessions_court_fee_check CHECK (court_fee IS NULL OR court_fee >= 0),
+  CONSTRAINT sessions_currency_format_check CHECK (currency IS NULL OR currency ~ '^[A-Z]{3}$'),
+  CONSTRAINT sessions_court_fee_currency_check CHECK ((court_fee IS NULL) = (currency IS NULL)),
   CONSTRAINT sessions_organiser_id_fkey FOREIGN KEY (organiser_id) REFERENCES smackosoft.accounts(id),
   CONSTRAINT sessions_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT sessions_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
@@ -112,6 +130,8 @@ GRANT ALL ON TABLE smackosoft.session_access TO smackosoft_service;
 
 CREATE INDEX session_access_account_id_idx ON smackosoft.session_access (account_id);
 
+CREATE UNIQUE INDEX session_access_one_owner_key ON smackosoft.session_access (session_id) WHERE role_type = 'OWNER';
+
 -- ============================================================
 -- MATCHES
 -- ============================================================
@@ -128,7 +148,7 @@ CREATE TABLE smackosoft.matches (
   updated_at timestamptz,
   updated_by uuid,
   CONSTRAINT matches_pkey PRIMARY KEY (id),
-  CONSTRAINT matches_session_id_fkey FOREIGN KEY (session_id) REFERENCES smackosoft.sessions(id),
+  CONSTRAINT matches_session_id_fkey FOREIGN KEY (session_id) REFERENCES smackosoft.sessions(id) ON DELETE CASCADE,
   CONSTRAINT matches_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT matches_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
@@ -150,7 +170,7 @@ CREATE TABLE smackosoft.match_teams (
   updated_at timestamptz,
   updated_by uuid,
   CONSTRAINT match_teams_pkey PRIMARY KEY (id),
-  CONSTRAINT match_teams_match_id_fkey FOREIGN KEY (match_id) REFERENCES smackosoft.matches(id),
+  CONSTRAINT match_teams_match_id_fkey FOREIGN KEY (match_id) REFERENCES smackosoft.matches(id) ON DELETE CASCADE,
   CONSTRAINT match_teams_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT match_teams_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
@@ -177,7 +197,7 @@ CREATE TABLE smackosoft.match_games (
   CONSTRAINT match_games_match_id_game_number_key UNIQUE (match_id, game_number),
   CONSTRAINT match_games_game_number_check CHECK (game_number > 0),
   CONSTRAINT match_games_time_order_check CHECK (end_time > start_time),
-  CONSTRAINT match_games_match_id_fkey FOREIGN KEY (match_id) REFERENCES smackosoft.matches(id),
+  CONSTRAINT match_games_match_id_fkey FOREIGN KEY (match_id) REFERENCES smackosoft.matches(id) ON DELETE CASCADE,
   CONSTRAINT match_games_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT match_games_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
@@ -198,7 +218,7 @@ CREATE TABLE smackosoft.match_players (
   updated_by    uuid,
   CONSTRAINT match_players_pkey PRIMARY KEY (id),
   CONSTRAINT match_players_match_team_id_account_id_key UNIQUE (match_team_id, account_id),
-  CONSTRAINT match_players_match_team_id_fkey FOREIGN KEY (match_team_id) REFERENCES smackosoft.match_teams(id),
+  CONSTRAINT match_players_match_team_id_fkey FOREIGN KEY (match_team_id) REFERENCES smackosoft.match_teams(id) ON DELETE CASCADE,
   CONSTRAINT match_players_account_id_fkey FOREIGN KEY (account_id) REFERENCES smackosoft.accounts(id),
   CONSTRAINT match_players_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT match_players_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
@@ -224,8 +244,8 @@ CREATE TABLE smackosoft.match_game_scores (
   CONSTRAINT match_game_scores_pkey PRIMARY KEY (id),
   CONSTRAINT match_game_scores_match_team_id_match_game_id_key UNIQUE (match_team_id, match_game_id),
   CONSTRAINT match_game_scores_score_check CHECK (score >= 0),
-  CONSTRAINT match_game_scores_match_team_id_fkey FOREIGN KEY (match_team_id) REFERENCES smackosoft.match_teams(id),
-  CONSTRAINT match_game_scores_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id),
+  CONSTRAINT match_game_scores_match_team_id_fkey FOREIGN KEY (match_team_id) REFERENCES smackosoft.match_teams(id) ON DELETE CASCADE,
+  CONSTRAINT match_game_scores_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id) ON DELETE CASCADE,
   CONSTRAINT match_game_scores_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT match_game_scores_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
@@ -249,8 +269,8 @@ CREATE TABLE smackosoft.match_game_highlights (
   updated_at       timestamptz,
   updated_by       uuid,
   CONSTRAINT match_game_highlights_pkey PRIMARY KEY (id),
-  CONSTRAINT match_game_highlights_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id),
-  CONSTRAINT match_game_highlights_match_player_id_fkey FOREIGN KEY (match_player_id) REFERENCES smackosoft.match_players(id),
+  CONSTRAINT match_game_highlights_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id) ON DELETE CASCADE,
+  CONSTRAINT match_game_highlights_match_player_id_fkey FOREIGN KEY (match_player_id) REFERENCES smackosoft.match_players(id) ON DELETE CASCADE,
   CONSTRAINT match_game_highlights_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT match_game_highlights_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
@@ -268,6 +288,7 @@ CREATE TABLE smackosoft.videos (
   id               uuid        NOT NULL DEFAULT gen_random_uuid(),
   label            text        NOT NULL,
   video_url        text        NOT NULL,
+  thumbnail_url    text,
   created_at       timestamptz NOT NULL DEFAULT now(),
   created_by       uuid        NOT NULL,
   updated_at       timestamptz,
@@ -297,9 +318,9 @@ CREATE TABLE smackosoft.video_linkages (
   updated_by       uuid,
   CONSTRAINT video_linkages_pkey PRIMARY KEY (id),
   CONSTRAINT video_linkages_video_id_session_id_match_game_id_key UNIQUE (video_id, session_id, match_game_id),
-  CONSTRAINT video_linkages_video_id_fkey FOREIGN KEY (video_id) REFERENCES smackosoft.videos(id),
-  CONSTRAINT video_linkages_session_id_fkey FOREIGN KEY (session_id) REFERENCES smackosoft.sessions(id),
-  CONSTRAINT video_linkages_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id),
+  CONSTRAINT video_linkages_video_id_fkey FOREIGN KEY (video_id) REFERENCES smackosoft.videos(id) ON DELETE CASCADE,
+  CONSTRAINT video_linkages_session_id_fkey FOREIGN KEY (session_id) REFERENCES smackosoft.sessions(id) ON DELETE CASCADE,
+  CONSTRAINT video_linkages_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id) ON DELETE CASCADE,
   CONSTRAINT video_linkages_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT video_linkages_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
