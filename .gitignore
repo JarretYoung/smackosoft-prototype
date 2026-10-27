@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# screenshot gallery output
+/gallery/screenshots/
+/gallery/.auth/
+/gallery/.results/
+/gallery/.manifest.jsonl
