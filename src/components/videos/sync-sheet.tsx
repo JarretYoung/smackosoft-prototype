@@ -68,7 +68,13 @@ function SyncForm({
   };
 
   return (
-    <>
+    <form
+      className="flex min-h-0 flex-1 flex-col gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!pending && !invalid) onSave(target, value);
+      }}
+    >
       <SheetHeader className="px-5 pt-2 pb-0">
         <SheetTitle>Sync video</SheetTitle>
         <SheetDescription>
@@ -82,13 +88,14 @@ function SyncForm({
             Sync point
           </FieldLabel>
           <div className="flex items-center gap-3">
-            <Button variant="secondary" size="icon" aria-label="One second earlier" onClick={() => set(value - 1)}>
+            <Button type="button" variant="secondary" size="icon" aria-label="One second earlier" onClick={() => set(value - 1)}>
               <Minus />
             </Button>
             <Input
               id="sync-offset"
               value={draft}
               inputMode="text"
+              enterKeyHint="done"
               autoComplete="off"
               aria-invalid={invalid}
               onChange={(e) => {
@@ -99,7 +106,7 @@ function SyncForm({
               onBlur={() => setDraft(formatOffset(value))}
               className="h-14 flex-1 text-center text-3xl font-bold tracking-tight tabular-nums"
             />
-            <Button variant="secondary" size="icon" aria-label="One second later" onClick={() => set(value + 1)}>
+            <Button type="button" variant="secondary" size="icon" aria-label="One second later" onClick={() => set(value + 1)}>
               <Plus />
             </Button>
           </div>
@@ -109,21 +116,27 @@ function SyncForm({
       </div>
 
       <SheetFooter className="px-5 pb-6">
-        <Button size="lg" disabled={pending || invalid} onClick={() => onSave(target, value)}>
+        <Button type="submit" size="lg" disabled={pending || invalid}>
           {pending && <Spinner />}
           {pending ? "Saving" : "Save"}
         </Button>
         <div className="flex justify-center gap-2">
-          <Button variant="ghost" onClick={onClose} disabled={pending}>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
             {synced ? "Cancel" : "Not now"}
           </Button>
           {synced && (
-            <Button variant="ghost" className="text-destructive hover:text-destructive" disabled={pending} onClick={() => onSave(target, null)}>
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              disabled={pending}
+              onClick={() => onSave(target, null)}
+            >
               Clear
             </Button>
           )}
         </div>
       </SheetFooter>
-    </>
+    </form>
   );
 }

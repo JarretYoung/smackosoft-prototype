@@ -88,6 +88,21 @@ export const findAccountByHandle = read(FindAccountByHandleInput, async ({ db },
   return row ? toAccount(row) : null;
 });
 
+/** Works without an account, like saveCurrentAccount, because onboarding asks for a handle first. */
+export const isHandleFree = (input: unknown) =>
+  guard(async () => {
+    const { handle } = parse(FindAccountByHandleInput, input);
+    const userId = await authSource.userId();
+    if (!userId) throw new Failure("UNAUTHENTICATED");
+    const holder = await getDb()
+      .selectFrom("accounts")
+      .select("user_id")
+      .where("handle", "=", handle)
+      .where("deleted", "=", false)
+      .executeTakeFirst();
+    return !holder || holder.user_id === userId;
+  });
+
 /** The only use case that works without an account. It creates the account on first call. */
 export const saveCurrentAccount = (input: unknown) =>
   guard(async () => {

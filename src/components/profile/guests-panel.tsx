@@ -25,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
-import { Field, FieldGroup, FieldLabel } from "@/src/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Input } from "@/src/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
 import { Spinner } from "@/src/components/ui/spinner";
@@ -48,14 +48,20 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
   const [name, setName] = useState("");
   const [handle, setHandle] = useState("");
   const [copied, setCopied] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, start] = useTransition();
 
   const close = () => setDialog(null);
 
+  /** A problem with what was typed shows in the form it came from. Other failures are a toast. */
   function run(action: () => Promise<{ ok: true } | { ok: false; error: Parameters<typeof errorMessage>[0] }>, done: string) {
     start(async () => {
       const result = await action();
-      if (!result.ok) return void toast.error(errorMessage(result.error));
+      if (!result.ok) {
+        if (dialog?.kind === "add" || dialog?.kind === "edit") setErrors({ form: errorMessage(result.error) });
+        else toast.error(errorMessage(result.error));
+        return;
+      }
       toast.success(done);
       close();
     });
@@ -63,11 +69,13 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
 
   function openAdd() {
     setName("");
+    setErrors({});
     setDialog({ kind: "add" });
   }
   function openEdit(guest: Guest) {
     setName(guest.displayName);
     setHandle(guest.handle);
+    setErrors({});
     setDialog({ kind: "edit", guest });
   }
   function makeClaim(guest: Guest) {
@@ -136,66 +144,111 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
 
       <Sheet open={dialog?.kind === "add"} onOpenChange={(open) => !open && close()}>
         <SheetContent side="bottom">
-          <SheetHeader className="px-5 pt-2 pb-0">
-            <SheetTitle>Add a guest</SheetTitle>
-            <SheetDescription>A guest can play in your sessions without signing up.</SheetDescription>
-          </SheetHeader>
-          <FieldGroup className="px-5">
-            <Field>
-              <FieldLabel htmlFor="guest-name">Name</FieldLabel>
-              <Input id="guest-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Aadit" />
-            </Field>
-          </FieldGroup>
-          <SheetFooter className="px-5 pb-6">
-            <Button
-              size="lg"
-              disabled={pending || !name.trim()}
-              onClick={() =>
-                run(
-                  () => saveGuests([{ id: crypto.randomUUID(), displayName: name.trim(), handle: guestHandle(name) }]),
-                  "Guest added",
-                )
-              }
-            >
-              {pending && <Spinner />}
-              Add guest
-            </Button>
-          </SheetFooter>
+          <form
+            className="flex min-h-0 flex-1 flex-col gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!name.trim() || pending) return;
+              run(() => saveGuests([{ id: crypto.randomUUID(), displayName: name.trim(), handle: guestHandle(name) }]), "Guest added");
+            }}
+          >
+            <SheetHeader className="px-5 pt-2 pb-0">
+              <SheetTitle>Add a guest</SheetTitle>
+              <SheetDescription>A guest can play in your sessions without signing up.</SheetDescription>
+            </SheetHeader>
+            <FieldGroup className="px-5">
+              <Field data-invalid={!!errors.form}>
+                <FieldLabel htmlFor="guest-name">Name</FieldLabel>
+                <Input
+                  id="guest-name"
+                  value={name}
+                  autoFocus
+                  autoComplete="off"
+                  enterKeyHint="done"
+                  aria-invalid={!!errors.form}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setErrors({});
+                  }}
+                  placeholder="Aadit"
+                />
+                <FieldError>{errors.form}</FieldError>
+              </Field>
+            </FieldGroup>
+            <SheetFooter className="px-5 pb-6">
+              <Button type="submit" size="lg" disabled={pending || !name.trim()}>
+                {pending && <Spinner />}
+                Add guest
+              </Button>
+              <Button type="button" variant="ghost" onClick={close} disabled={pending}>
+                Cancel
+              </Button>
+            </SheetFooter>
+          </form>
         </SheetContent>
       </Sheet>
 
       <Sheet open={dialog?.kind === "edit"} onOpenChange={(open) => !open && close()}>
         <SheetContent side="bottom">
-          <SheetHeader className="px-5 pt-2 pb-0">
-            <SheetTitle>Edit guest</SheetTitle>
-            <SheetDescription>A handle can change a few times in total, so pick it with care.</SheetDescription>
-          </SheetHeader>
-          <FieldGroup className="px-5">
-            <Field>
-              <FieldLabel htmlFor="edit-name">Name</FieldLabel>
-              <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="edit-handle">Handle</FieldLabel>
-              <Input id="edit-handle" value={handle} autoCapitalize="none" onChange={(e) => setHandle(e.target.value)} />
-            </Field>
-          </FieldGroup>
-          <SheetFooter className="px-5 pb-6">
-            <Button
-              size="lg"
-              disabled={pending || !name.trim()}
-              onClick={() =>
-                dialog?.kind === "edit" &&
-                run(
-                  () => saveGuests([{ id: dialog.guest.id, displayName: name.trim(), handle: handle.trim().toLowerCase() }]),
-                  "Guest saved",
-                )
-              }
-            >
-              {pending && <Spinner />}
-              Save changes
-            </Button>
-          </SheetFooter>
+          <form
+            className="flex min-h-0 flex-1 flex-col gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (dialog?.kind !== "edit" || !name.trim() || !handle.trim() || pending) return;
+              const guest = dialog.guest;
+              run(
+                () => saveGuests([{ id: guest.id, displayName: name.trim(), handle: handle.trim().toLowerCase() }]),
+                "Guest saved",
+              );
+            }}
+          >
+            <SheetHeader className="px-5 pt-2 pb-0">
+              <SheetTitle>Edit guest</SheetTitle>
+              <SheetDescription>A handle can change a few times in total, so pick it with care.</SheetDescription>
+            </SheetHeader>
+            <FieldGroup className="px-5">
+              <Field>
+                <FieldLabel htmlFor="edit-name">Name</FieldLabel>
+                <Input id="edit-name" value={name} autoComplete="off" onChange={(e) => setName(e.target.value)} />
+              </Field>
+              <Field data-invalid={!!errors.form}>
+                <FieldLabel htmlFor="edit-handle">Handle</FieldLabel>
+                <Input
+                  id="edit-handle"
+                  value={handle}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  autoComplete="off"
+                  enterKeyHint="done"
+                  aria-invalid={!!errors.form}
+                  onChange={(e) => {
+                    setHandle(e.target.value);
+                    setErrors({});
+                  }}
+                />
+                <FieldError>{errors.form}</FieldError>
+              </Field>
+            </FieldGroup>
+            <SheetFooter className="px-5 pb-6">
+              <Button
+                type="submit"
+                size="lg"
+                disabled={
+                  pending ||
+                  !name.trim() ||
+                  !handle.trim() ||
+                  (dialog?.kind === "edit" && name.trim() === dialog.guest.displayName && handle.trim() === dialog.guest.handle)
+                }
+              >
+                {pending && <Spinner />}
+                Save changes
+              </Button>
+              <Button type="button" variant="ghost" onClick={close} disabled={pending}>
+                Cancel
+              </Button>
+            </SheetFooter>
+          </form>
         </SheetContent>
       </Sheet>
 

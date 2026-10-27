@@ -2,10 +2,13 @@
 
 import { createClient } from "@/src/lib/supabase/client";
 import { AuthShell } from "@/src/components/auth-shell";
+import { PasswordInput } from "@/src/components/password-input";
 import { Button } from "@/src/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Input } from "@/src/components/ui/input";
 import { Spinner } from "@/src/components/ui/spinner";
+import { authMessage, emailProblem } from "@/src/lib/auth-errors";
+import { useRevealFirstError } from "@/src/lib/reveal-errors";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -13,26 +16,34 @@ import { useState } from "react";
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [left, setLeft] = useState<Record<string, boolean>>({});
+  const [rejections, setRejections] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  useRevealFirstError(rejections);
+
+  const show = (field: string) => left[field] || rejections > 0;
+  const emailError = show("email") ? emailProblem(email) : undefined;
+  const passwordError = show("password") && !password ? "Enter your password" : undefined;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (emailProblem(email) || !password) return setRejections((n) => n + 1);
     const supabase = createClient();
     setIsLoading(true);
     setError(null);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
       if (error) throw error;
-      // Update this route to redirect to an authenticated route. The user already has an active session.
       router.push("/");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      setError(authMessage(error));
+      setRejections((n) => n + 1);
     } finally {
       setIsLoading(false);
     }
@@ -40,21 +51,30 @@ export function LoginForm() {
 
   return (
     <AuthShell title="Welcome back" description="Log in to see your sessions.">
-      <form onSubmit={handleLogin} className="flex flex-col gap-6">
+      <form onSubmit={handleLogin} noValidate className="flex flex-col gap-6">
         <FieldGroup>
-          <Field>
+          <Field data-invalid={!!emailError}>
             <FieldLabel htmlFor="email">Email</FieldLabel>
             <Input
               id="email"
               type="email"
-              placeholder="m@example.com"
+              placeholder="you@example.com"
               autoComplete="email"
-              required
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="next"
+              aria-invalid={!!emailError}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError(null);
+              }}
+              onBlur={() => setLeft((l) => ({ ...l, email: true }))}
             />
+            <FieldError>{emailError}</FieldError>
           </Field>
-          <Field data-invalid={!!error}>
+          <Field data-invalid={!!passwordError || !!error}>
             <div className="flex items-center">
               <FieldLabel htmlFor="password">Password</FieldLabel>
               <Link
@@ -64,16 +84,19 @@ export function LoginForm() {
                 Forgot password?
               </Link>
             </div>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="current-password"
-              required
+              enterKeyHint="go"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              aria-invalid={!!error}
+              aria-invalid={!!passwordError || !!error}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError(null);
+              }}
+              onBlur={() => setLeft((l) => ({ ...l, password: true }))}
             />
-            <FieldError>{error}</FieldError>
+            <FieldError>{passwordError ?? error}</FieldError>
           </Field>
         </FieldGroup>
         <Button type="submit" size="lg" disabled={isLoading}>

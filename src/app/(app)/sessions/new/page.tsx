@@ -1,17 +1,19 @@
 import { PageHeader } from "@/src/components/page-header";
 import { SessionForm } from "@/src/components/session-form/session-form";
 import { today } from "@/src/lib/format";
+import { loadPeople } from "@/src/lib/people";
 import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";
 
 export default async function NewSessionPage() {
-  const me = unwrap(await backend.accounts.getCurrent());
+  const [me, people] = await Promise.all([backend.accounts.getCurrent().then(unwrap), loadPeople()]);
   return (
     <main>
       <PageHeader title="Create session" back="/sessions" />
       <SessionForm
         mode="create"
         viewerRole="OWNER"
+        people={people}
         initial={{
           // The client picks the id, so a retried save cannot create a second session.
           id: crypto.randomUUID(),

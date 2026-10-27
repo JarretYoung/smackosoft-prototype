@@ -10,6 +10,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/componen
 import { cn } from "@/src/lib/utils";
 import { longDate, money, plural } from "@/src/lib/format";
 import { summarize } from "@/src/lib/matches";
+import { MATCH_TYPE_LABEL } from "@/src/lib/match-type";
 import { unwrap } from "@/src/lib/result";
 import { can } from "@/src/lib/roles";
 import { attentionOf } from "@/src/lib/videos";
@@ -200,7 +201,7 @@ function MatchCard({ sessionId, match, index }: { sessionId: string; match: Matc
     >
       <div className="flex items-center justify-between">
         <span className="text-[0.8125rem] font-semibold tracking-wide text-muted-foreground uppercase">
-          {match.label || `Match ${index + 1}`} · {match.matchType}
+          {match.label || `Match ${index + 1}`} · {MATCH_TYPE_LABEL[match.matchType]}
         </span>
         <ChevronRight className="size-4 text-muted-foreground/70" />
       </div>

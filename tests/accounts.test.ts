@@ -42,6 +42,17 @@ describe("accounts", () => {
     expect(failure(result)).toEqual({ code: "CONFLICT", paths: [["handle"]] });
   });
 
+  test("a handle check works before onboarding, and your own handle counts as free", async ({ world: w }) => {
+    const fresh = await w.newUser();
+    w.as(fresh);
+    const check = async (handle: string) => ok(await w.b.accounts.isHandleFree({ handle }));
+    expect(await check(w.owner.handle)).toBe(false);
+    expect(await check(`free_${id().replace(/-/g, "").slice(0, 10)}`)).toBe(true);
+
+    w.as(w.owner);
+    expect(await check(w.owner.handle)).toBe(true);
+  });
+
   test("only the creator edits a guest", async ({ world: w }) => {
     const guest = { id: id(), displayName: "Aadit", handle: `g_${id().replace(/-/g, "").slice(0, 10)}` };
     expect(code(await w.b.accounts.saveGuests([guest]))).toBe("ok");

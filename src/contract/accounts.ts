@@ -65,6 +65,11 @@ export interface AccountsApi {
   saveCurrent(input: SaveCurrentAccountInput): Promise<Ack>;
   /** Data is null when no account has that handle. */
   findByHandle(input: FindAccountByHandleInput): Promise<Result<Account | null>>;
+  /**
+   * True when nobody else holds the handle. The caller's own handle counts as free.
+   * Works before onboarding, so the first form can check a handle as it is typed.
+   */
+  isHandleFree(input: FindAccountByHandleInput): Promise<Result<boolean>>;
   saveGuests(input: SaveGuestsInput): Promise<Ack>;
   /** Guests the actor created and has not removed. */
   listGuests(): Promise<Result<Guest[]>>;

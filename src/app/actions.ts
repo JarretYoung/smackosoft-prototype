@@ -58,6 +58,9 @@ export async function claimGuest(input: ClaimInput) {
 export async function findAccountByHandle(input: FindAccountByHandleInput) {
   return backend.accounts.findByHandle(input);
 }
+export async function isHandleFree(input: FindAccountByHandleInput) {
+  return backend.accounts.isHandleFree(input);
+}
 
 export async function saveSessions(input: SaveSessionsInput) {
   return refreshed(backend.sessions.save(input));

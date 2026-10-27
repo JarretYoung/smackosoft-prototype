@@ -15,10 +15,16 @@ const tabs = [
  * Floating tab bar. It is the functional layer, so it uses glass; the content scrolls beneath it.
  * The tabs navigate. "New session" is an action, so it sits apart as its own button.
  */
+/** Editing screens are a focused task with their own back and save, so the tab bar steps aside. */
+const isEditing = (pathname: string) =>
+  pathname === "/sessions/new" || /^\/sessions\/[^/]+\/(edit|matches\/edit)$/.test(pathname);
+
 export function BottomNav() {
   const pathname = usePathname();
   const isActive = (href: string) =>
     pathname === href || (href === "/sessions" && pathname.startsWith("/sessions/") && pathname !== "/sessions/new");
+
+  if (isEditing(pathname)) return null;
 
   return (
     <nav

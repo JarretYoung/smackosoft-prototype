@@ -9,6 +9,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/componen
 import { cn } from "@/src/lib/utils";
 import { gameWinnerId, scoreOf, summarize } from "@/src/lib/matches";
 import { plural } from "@/src/lib/format";
+import { MATCH_TYPE_LABEL } from "@/src/lib/match-type";
 import { unwrap } from "@/src/lib/result";
 import { can } from "@/src/lib/roles";
 import type { Team } from "@/src/contract";
@@ -45,7 +46,7 @@ export default async function MatchDetailsPage({ params }: { params: Promise<{ i
       {/* The one bold surface on this screen: the score. */}
       <section aria-label="Result" className="hero mx-4 rounded-[2rem] px-5 py-6 shadow-float">
         <p className="text-center text-[0.8125rem] font-semibold tracking-wider text-primary-foreground/90 uppercase">
-          {match.label} · {match.matchType}
+          {match.label} · {MATCH_TYPE_LABEL[match.matchType]}
         </p>
         {left && right ? (
           <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-2">

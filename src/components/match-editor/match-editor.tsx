@@ -14,14 +14,18 @@ import {
   saveTeams,
 } from "@/src/app/actions";
 import { AvatarStack } from "@/src/components/avatar-stack";
+import { LocalTimeRange } from "@/src/components/local-time";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { Field, FieldGroup, FieldLabel } from "@/src/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Spinner } from "@/src/components/ui/spinner";
 import { MatchType, type Account, type Match } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
 import { isoToTimeInput, timeInputToIso } from "@/src/lib/format";
+import { MATCH_TYPE_LABEL } from "@/src/lib/match-type";
+import { useRevealFirstError } from "@/src/lib/reveal-errors";
+import { useUnsavedChanges } from "@/src/lib/unsaved-changes";
 import { cn } from "@/src/lib/utils";
 import { TeamPlayersSheet } from "./team-players-sheet";
 
@@ -72,16 +76,56 @@ export function MatchEditor({
   );
   const [games, setGames] = useState<GameState[]>(initialGames(match));
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
+  const [openTimes, setOpenTimes] = useState<Set<string>>(new Set());
+  const [rejections, setRejections] = useState(0);
   const [pending, start] = useTransition();
+
+  // Dirty means "differs from what was last saved". Compared as text so any edit counts.
+  const snapshot = JSON.stringify([
+    label,
+    matchType,
+    teams.map((t) => [t.id, [...t.playerIds].sort()]),
+    games.map((g) => [g.id, g.startTime, g.endTime, teams.map((t) => g.scores[t.id] ?? "")]),
+  ]);
+  const [baseline, setBaseline] = useState(snapshot);
+  const dirty = snapshot !== baseline;
+  useUnsavedChanges(dirty && !pending);
+  useRevealFirstError(rejections);
+
+  // A saved score cannot be cleared, so a blank box over a saved score must be fixed, not skipped.
+  const savedScores = new Map(match.games.flatMap((g) => g.scores.map((s) => [`${g.id}:${s.teamId}`, s.score] as const)));
+  const scoreIssue = (gameId: string, teamId: string) =>
+    savedScores.has(`${gameId}:${teamId}`) && (games.find((g) => g.id === gameId)?.scores[teamId] ?? "") === ""
+      ? "A saved score can be changed, not removed"
+      : undefined;
+  const hasIssues = games.some((g) => teams.some((t) => scoreIssue(g.id, t.id)));
 
   const byId = new Map(members.map((m) => [m.id, m]));
   const playersOf = (team: TeamState) => [...team.playerIds].flatMap((id) => (byId.get(id) ? [byId.get(id)!] : []));
 
-  function setScore(gameId: string, teamId: string, value: string) {
+  function setScore(gameId: string, teamId: string, value: string, input: HTMLInputElement) {
     if (!/^\d{0,3}$/.test(value)) return;
+    const before = games.find((g) => g.id === gameId)?.scores[teamId] ?? "";
+    const typingForward = value.length === 2 && before.length < 2;
     setGames((list) =>
       list.map((g) => (g.id === gameId ? { ...g, scores: { ...g.scores, [teamId]: value } } : g)),
     );
+    // Two digits is a full badminton score, so move on to the next score box.
+    if (typingForward) {
+      const boxes = [...document.querySelectorAll<HTMLInputElement>("input[data-score]")];
+      boxes[boxes.indexOf(input) + 1]?.focus();
+    }
+  }
+
+  function removeGame(game: GameState, index: number) {
+    setGames((list) => list.filter((g) => g.id !== game.id));
+    toast(`Game ${index + 1} removed`, {
+      action: {
+        label: "Undo",
+        onClick: () =>
+          setGames((list) => (list.some((g) => g.id === game.id) ? list : [...list.slice(0, index), game, ...list.slice(index)])),
+      },
+    });
   }
 
   function setGameTime(gameId: string, field: "startTime" | "endTime", time: string) {
@@ -120,6 +164,7 @@ export function MatchEditor({
   }
 
   function saveAll() {
+    if (hasIssues) return setRejections((n) => n + 1);
     start(async () => {
       const fail = (error: Parameters<typeof errorMessage>[0]) => void toast.error(errorMessage(error));
 
@@ -178,6 +223,7 @@ export function MatchEditor({
         if (!result.ok) return fail(result.error);
       }
 
+      setBaseline(snapshot);
       toast.success("Match saved");
       router.replace(`/sessions/${sessionId}/matches/${match.id}`);
     });
@@ -190,27 +236,25 @@ export function MatchEditor({
     <div className="flex flex-col gap-6 px-4 pb-4">
       <section className="rounded-3xl bg-card p-4 shadow-card">
         <FieldGroup>
-          <div className="grid grid-cols-[1fr_7.5rem] gap-3">
-            <Field>
-              <FieldLabel htmlFor="match-label">Name</FieldLabel>
-              <Input id="match-label" value={label} onChange={(e) => setLabel(e.target.value)} />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="match-type">Type</FieldLabel>
-              <Select value={matchType} onValueChange={(v) => setMatchType(v as typeof matchType)}>
-                <SelectTrigger id="match-type" aria-label="Match type" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MATCH_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
+          <Field>
+            <FieldLabel htmlFor="match-label">Name</FieldLabel>
+            <Input id="match-label" value={label} autoComplete="off" onChange={(e) => setLabel(e.target.value)} />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="match-type">Type</FieldLabel>
+            <Select value={matchType} onValueChange={(v) => setMatchType(v as typeof matchType)}>
+              <SelectTrigger id="match-type" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MATCH_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {MATCH_TYPE_LABEL[t]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
         </FieldGroup>
       </section>
 
@@ -257,51 +301,75 @@ export function MatchEditor({
                   size="icon-sm"
                   className="ml-auto"
                   aria-label={`Remove game ${index + 1}`}
-                  onClick={() => setGames((list) => list.filter((g) => g.id !== game.id))}
+                  onClick={() => removeGame(game, index)}
                 >
                   <Minus />
                 </Button>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Input
-                  type="time"
-                  aria-label={`Start time for game ${index + 1}`}
-                  className="h-10 text-sm"
-                  value={isoToTimeInput(game.startTime)}
-                  onChange={(e) => setGameTime(game.id, "startTime", e.target.value)}
-                />
-                to
-                <Input
-                  type="time"
-                  aria-label={`End time for game ${index + 1}`}
-                  className="h-10 text-sm"
-                  value={isoToTimeInput(game.endTime)}
-                  onChange={(e) => setGameTime(game.id, "endTime", e.target.value)}
-                />
-              </div>
+              {openTimes.has(game.id) ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Input
+                    type="time"
+                    aria-label={`Start time for game ${index + 1}`}
+                    value={isoToTimeInput(game.startTime)}
+                    onChange={(e) => setGameTime(game.id, "startTime", e.target.value)}
+                  />
+                  to
+                  <Input
+                    type="time"
+                    aria-label={`End time for game ${index + 1}`}
+                    value={isoToTimeInput(game.endTime)}
+                    onChange={(e) => setGameTime(game.id, "endTime", e.target.value)}
+                  />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  aria-label={`Edit times for game ${index + 1}`}
+                  onClick={() => setOpenTimes((s) => new Set(s).add(game.id))}
+                  className="pressable -mt-2 flex min-h-11 items-center justify-between gap-2 rounded-xl text-left text-sm text-muted-foreground"
+                >
+                  <span>
+                    <LocalTimeRange start={game.startTime} end={game.endTime} />
+                    {" · "}
+                    {Math.max(0, Math.round((Date.parse(game.endTime) - Date.parse(game.startTime)) / 60_000))} min
+                  </span>
+                  <span className="font-semibold text-primary">Edit</span>
+                </button>
+              )}
               <div className="grid grid-cols-2 gap-3">
-                {teams.map((team) => (
-                  <div
-                    key={team.id}
-                    className={cn(
-                      "flex flex-col items-center gap-2 rounded-2xl p-3 transition-colors",
-                      winner === team.id ? "bg-accent" : "bg-muted",
-                    )}
-                  >
-                    <span className="flex w-full items-center justify-between gap-1 text-[0.75rem] font-semibold tracking-wide text-muted-foreground uppercase">
-                      <span className="truncate">{team.label}</span>
-                      {winner === team.id && <Crown aria-label="Winner" className="size-4 shrink-0 fill-gold text-gold" />}
-                    </span>
-                    <Input
-                      inputMode="numeric"
-                      aria-label={`${team.label} score for game ${index + 1}`}
-                      placeholder="0"
-                      className="score h-14 bg-card text-center text-3xl"
-                      value={game.scores[team.id] ?? ""}
-                      onChange={(e) => setScore(game.id, team.id, e.target.value)}
-                    />
-                  </div>
-                ))}
+                {teams.map((team) => {
+                  const issue = scoreIssue(game.id, team.id);
+                  return (
+                    <div key={team.id} className="flex flex-col gap-1.5">
+                      <div
+                        className={cn(
+                          "flex flex-col items-center gap-2 rounded-2xl p-3 transition-colors",
+                          winner === team.id ? "bg-accent" : "bg-muted",
+                        )}
+                      >
+                        <span className="flex w-full items-center justify-between gap-1 text-[0.75rem] font-semibold tracking-wide text-muted-foreground uppercase">
+                          <span className="truncate">{team.label}</span>
+                          {winner === team.id && <Crown aria-label="Winner" className="size-4 shrink-0 fill-gold text-gold" />}
+                        </span>
+                        <Input
+                          data-score
+                          inputMode="numeric"
+                          enterKeyHint="next"
+                          autoComplete="off"
+                          aria-label={`${team.label} score for game ${index + 1}`}
+                          aria-invalid={!!issue}
+                          placeholder="0"
+                          className="score h-14 bg-card text-center text-3xl"
+                          value={game.scores[team.id] ?? ""}
+                          onFocus={(e) => e.currentTarget.select()}
+                          onChange={(e) => setScore(game.id, team.id, e.target.value, e.currentTarget)}
+                        />
+                      </div>
+                      <FieldError>{issue}</FieldError>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
@@ -311,10 +379,13 @@ export function MatchEditor({
         </Button>
       </section>
 
-      <Button type="button" size="lg" disabled={pending} onClick={saveAll}>
-        {pending && <Spinner />}
-        {pending ? "Saving" : "Save all"}
-      </Button>
+      {/* Stays in reach however many games there are. */}
+      <div className="sticky bottom-0 -mx-4 bg-gradient-to-t from-background from-70% to-transparent px-4 pt-6 pb-4">
+        <Button type="button" size="lg" className="w-full" disabled={pending || !dirty} onClick={saveAll}>
+          {pending && <Spinner />}
+          {pending ? "Saving" : "Save match"}
+        </Button>
+      </div>
 
       <TeamPlayersSheet
         open={editing !== undefined}

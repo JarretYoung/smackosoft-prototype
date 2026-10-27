@@ -1,7 +1,6 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -18,6 +17,7 @@ import {
 } from "@/src/components/ui/alert-dialog";
 import { Button } from "@/src/components/ui/button";
 import { errorMessage } from "@/src/lib/errors";
+import { LeaveLink, useConfirmLeave } from "@/src/lib/unsaved-changes";
 import { cn } from "@/src/lib/utils";
 
 type Item = { id: string; label: string };
@@ -35,6 +35,7 @@ export function MatchSwitcher({
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [pending, start] = useTransition();
+  const { leave, dialog: leaveDialog } = useConfirmLeave();
 
   const base = `/sessions/${sessionId}/matches/edit`;
   const index = matches.findIndex((m) => m.id === currentId);
@@ -70,15 +71,15 @@ export function MatchSwitcher({
 
   const arrow = (target: Item | null, Icon: typeof ChevronLeft, label: string) =>
     target ? (
-      <Link
+      <LeaveLink
         href={`${base}?m=${target.id}`}
         aria-label={label}
-        className="pressable flex size-10 items-center justify-center rounded-full text-primary hover:bg-muted"
+        className="pressable flex size-11 items-center justify-center rounded-full text-primary hover:bg-muted"
       >
         <Icon className="size-5" strokeWidth={2.5} />
-      </Link>
+      </LeaveLink>
     ) : (
-      <span aria-hidden className="flex size-10 items-center justify-center rounded-full text-muted-foreground opacity-40">
+      <span aria-hidden className="flex size-11 items-center justify-center rounded-full text-muted-foreground opacity-40">
         <Icon className="size-5" strokeWidth={2.5} />
       </span>
     );
@@ -92,7 +93,8 @@ export function MatchSwitcher({
         </span>
         {arrow(next, ChevronRight, "Next match")}
       </div>
-      <Button type="button" variant="outline" size="icon" onClick={add} disabled={pending} aria-label="Add match">
+      {leaveDialog}
+      <Button type="button" variant="outline" size="icon" onClick={() => leave(add)} disabled={pending} aria-label="Add match">
         <Plus />
       </Button>
       <Button

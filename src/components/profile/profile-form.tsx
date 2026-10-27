@@ -4,14 +4,30 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { saveCurrentAccount } from "@/src/app/actions";
+import { HandleHint, handleProblem } from "@/src/components/handle-hint";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/src/components/ui/alert-dialog";
 import { Button } from "@/src/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Input } from "@/src/components/ui/input";
 import { Spinner } from "@/src/components/ui/spinner";
-import { SaveCurrentAccountInput } from "@/src/contract";
 import { errorMessage, fieldErrors } from "@/src/lib/errors";
+import { useRevealFirstError } from "@/src/lib/reveal-errors";
+import { useUnsavedChanges } from "@/src/lib/unsaved-changes";
+import { normalizeHandle, useHandleCheck } from "@/src/lib/use-handle-check";
 
-/** Edit your name and handle. A handle can change a few times in total, so the form says how many are left. */
+/**
+ * Edit your name and handle. A handle can change a few times in total, so the form says how many
+ * are left, checks the new one as you type, and asks before spending a change.
+ */
 export function ProfileForm({
   displayName,
   handle,
@@ -24,26 +40,39 @@ export function ProfileForm({
   const router = useRouter();
   const [name, setName] = useState(displayName);
   const [nextHandle, setNextHandle] = useState(handle);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [left, setLeft] = useState<Record<string, boolean>>({});
+  const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
+  const [rejections, setRejections] = useState(0);
+  const [confirming, setConfirming] = useState(false);
   const [pending, start] = useTransition();
 
-  const handleChanged = nextHandle.trim().toLowerCase() !== handle;
+  const wanted = normalizeHandle(nextHandle);
+  const check = useHandleCheck(nextHandle, handle);
+  const handleChanged = wanted !== handle;
   const dirty = name.trim() !== displayName || handleChanged;
+  useUnsavedChanges(dirty && !pending);
+  useRevealFirstError(rejections);
+
+  const nameError = (left.name || rejections > 0) && !name.trim() ? "Enter your name" : undefined;
+  const handleError = serverErrors.handle ?? handleProblem(check, !!left.handle || rejections > 0);
+  const handleOk = !handleChanged || check.status === "free";
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
-    const input = { displayName: name, handle: nextHandle.trim().toLowerCase() };
-    const checked = SaveCurrentAccountInput.safeParse(input);
-    if (!checked.success) {
-      setErrors(Object.fromEntries(checked.error.issues.map((i) => [String(i.path[0]), i.message])));
-      return;
-    }
-    setErrors({});
+    if (!name.trim() || !handleOk) return setRejections((n) => n + 1);
+    if (handleChanged) return setConfirming(true);
+    save();
+  }
+
+  function save() {
+    setServerErrors({});
     start(async () => {
-      const result = await saveCurrentAccount(input);
+      const result = await saveCurrentAccount({ displayName: name, handle: wanted });
       if (!result.ok) {
-        setErrors(fieldErrors(result.error));
-        if (!Object.keys(fieldErrors(result.error)).length) toast.error(errorMessage(result.error));
+        const inline = fieldErrors(result.error);
+        setServerErrors(inline);
+        if (Object.keys(inline).length) setRejections((n) => n + 1);
+        else toast.error(errorMessage(result.error));
         return;
       }
       toast.success("Profile saved");
@@ -52,40 +81,80 @@ export function ProfileForm({
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
+    <form onSubmit={submit} noValidate className="flex flex-col gap-4">
       <div className="rounded-3xl bg-card p-4 shadow-card">
         <FieldGroup>
-          <Field data-invalid={!!errors.displayName}>
+          <Field data-invalid={!!nameError}>
             <FieldLabel htmlFor="name">Display name</FieldLabel>
-            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} aria-invalid={!!errors.displayName} />
-            <FieldError>{errors.displayName}</FieldError>
+            <Input
+              id="name"
+              value={name}
+              autoComplete="name"
+              enterKeyHint="next"
+              aria-invalid={!!nameError}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={() => setLeft((l) => ({ ...l, name: true }))}
+            />
+            <FieldError>{nameError}</FieldError>
           </Field>
-          <Field data-invalid={!!errors.handle} data-disabled={changesLeft === 0}>
+          <Field data-invalid={!!handleError} data-disabled={changesLeft === 0}>
             <FieldLabel htmlFor="handle">Handle</FieldLabel>
             <div className="flex items-center gap-2">
-              <span className="text-lg font-semibold text-muted-foreground">@</span>
+              <span aria-hidden className="text-lg font-semibold text-muted-foreground">
+                @
+              </span>
               <Input
                 id="handle"
                 value={nextHandle}
                 autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="done"
                 disabled={changesLeft === 0}
-                onChange={(e) => setNextHandle(e.target.value)}
-                aria-invalid={!!errors.handle}
+                aria-invalid={!!handleError}
+                onChange={(e) => {
+                  setNextHandle(e.target.value);
+                  setServerErrors({});
+                }}
+                onBlur={() => setLeft((l) => ({ ...l, handle: true }))}
               />
             </div>
+            {handleError ? <FieldError>{handleError}</FieldError> : <HandleHint check={check} handle={wanted} />}
             <FieldDescription>
               {changesLeft === 0
                 ? "You have used all your handle changes."
                 : `You can change your handle ${changesLeft} more ${changesLeft === 1 ? "time" : "times"}.`}
             </FieldDescription>
-            <FieldError>{errors.handle}</FieldError>
           </Field>
         </FieldGroup>
       </div>
-      <Button type="submit" size="lg" disabled={pending || !dirty}>
+      <Button type="submit" size="lg" disabled={pending || !dirty || check.status === "checking"}>
         {pending && <Spinner />}
         {pending ? "Saving" : "Save changes"}
       </Button>
+
+      <AlertDialog open={confirming} onOpenChange={setConfirming}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change your handle to @{wanted}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This uses one of your {changesLeft} remaining handle {changesLeft === 1 ? "change" : "changes"}.
+              {changesLeft === 1 ? " It will be the last." : ` You will have ${changesLeft - 1} left.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel variant="secondary">Keep @{handle}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirming(false);
+                save();
+              }}
+            >
+              Change handle
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </form>
   );
 }

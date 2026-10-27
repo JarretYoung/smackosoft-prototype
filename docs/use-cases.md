@@ -183,6 +183,7 @@ Reads are one per screen or lookup. Writes follow one pattern: `save` and `remov
 | `accounts.getCurrent` | Dashboard header, onboarding check | signed in |
 | `sessions.list({ from?, to? })` | Sessions home, dashboard upcoming | signed in. Default window: last month through next month. The frontend may override. |
 | `accounts.findByHandle` | Add Participants | signed in |
+| `accounts.isHandleFree` | Onboarding and Profile, checks a handle as it is typed. Your own handle counts as free. | signed in. Works before onboarding. |
 | `videos.listBySession` | Videos page, session videos row, Match Details video counts. Each link carries `changedBy` and `changedAt` (the last editor of the offset, or the person who made the link). | `VIEWER` |
 | `videos.listOwn({ sessionId? })` | Video management UI with session context | signed in. With `sessionId`, each video also lists its linkages in that session. |
 
@@ -248,7 +249,7 @@ The frontend provides the handle and display name on an onboarding step after th
 - `accounts.saveCurrent({ displayName, handle })` creates the account on first call and updates it later. A changed handle counts against `handle_change_count`.
 - Every use case, including `accounts.getCurrent`, returns `UNAUTHENTICATED` when there is no session or no account. One rule, no exceptions.
 - The frontend already knows whether a Supabase session exists (`src/proxy.ts`). Session present plus `UNAUTHENTICATED` from `accounts.getCurrent` means onboarding.
-- `accounts.saveCurrent` is the one use case that works without an account.
+- `accounts.saveCurrent` and `accounts.isHandleFree` are the only use cases that work without an account.
 - Not decided: what happens when two sign-ups race for one handle. The unique index handles it.
 
 ## Implementation notes

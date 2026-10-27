@@ -1,13 +1,13 @@
 "use client";
 
 import { MoreHorizontal, Plus } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { removeMembers, saveGuests, saveMembers, saveSessions } from "@/src/app/actions";
 import { PersonAvatar } from "@/src/components/avatar-stack";
 import { Badge } from "@/src/components/ui/badge";
+import { OptionalTag } from "@/src/components/optional-tag";
 import { Button } from "@/src/components/ui/button";
 import {
   DropdownMenu,
@@ -26,6 +26,9 @@ import { Spinner } from "@/src/components/ui/spinner";
 import { SessionSave, type Account, type GrantableRole, type Role } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
 import { isoToTimeInput, localToIso } from "@/src/lib/format";
+import { useRevealFirstError } from "@/src/lib/reveal-errors";
+import { LeaveLink, useUnsavedChanges } from "@/src/lib/unsaved-changes";
+import { validate, visibleErrors } from "@/src/lib/validate";
 import { AddParticipantsSheet, type NewGuest } from "./add-participants-sheet";
 
 export type Participant = {
@@ -55,6 +58,16 @@ export type SessionFormInitial = {
 const CURRENCIES = ["MYR", "SGD", "USD", "GBP", "EUR"];
 const ROLE_LABEL: Record<Role, string> = { OWNER: "Owner", MANAGER: "Manager", EDITOR: "Editor", VIEWER: "Viewer" };
 
+/** What to do about each field, in place of the contract's developer wording. */
+const COPY: Record<string, string> = {
+  label: "Give the session a title",
+  date: "Pick a date",
+  locationUrl: "Paste a full link, starting with https://",
+  coverUrl: "Paste a full link, starting with https://",
+  courtFee: "Enter an amount of 0 or more",
+  endTime: "Ends must be after it starts",
+};
+
 /**
  * Create or edit a session and its members. Everything is staged in this form.
  * Save runs the writes in order: session, guests, members. Each write is replay safe,
@@ -64,10 +77,13 @@ export function SessionForm({
   mode,
   initial,
   viewerRole,
+  people,
 }: {
   mode: "create" | "edit";
   initial: SessionFormInitial;
   viewerRole: Role;
+  /** Suggestions for the participant picker. */
+  people: Account[];
 }) {
   const router = useRouter();
   const [label, setLabel] = useState(initial.label);
@@ -85,9 +101,43 @@ export function SessionForm({
   const [courtFee, setCourtFee] = useState(initial.courtFee);
   const [currency, setCurrency] = useState(initial.currency || "MYR");
   const [participants, setParticipants] = useState<Participant[]>(initial.participants);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const [rejections, setRejections] = useState(0);
   const [adding, setAdding] = useState(false);
   const [pending, start] = useTransition();
+
+  const fee = courtFee.trim() === "" ? null : Number(courtFee);
+  const session = {
+    id: initial.id,
+    label,
+    date,
+    location: location.trim() === "" ? null : location,
+    locationUrl: locationUrl.trim() === "" ? null : locationUrl.trim(),
+    startTime: startTime === "" ? null : localToIso(date, startTime),
+    endTime: endTime === "" ? null : localToIso(date, endTime),
+    coverUrl: coverUrl.trim() === "" ? null : coverUrl.trim(),
+    courtFee: fee,
+    currency: fee === null ? null : currency,
+  };
+  const issues = validate(SessionSave, session, COPY);
+  const errors = visibleErrors(issues, touched, submitted);
+  const touch = (field: string) => () => setTouched((t) => (t[field] ? t : { ...t, [field]: true }));
+  useRevealFirstError(rejections);
+
+  const dirty =
+    label !== initial.label ||
+    date !== initial.date ||
+    location !== initial.location ||
+    locationUrl !== initial.locationUrl ||
+    coverUrl !== initial.coverUrl ||
+    courtFee !== initial.courtFee ||
+    currency !== (initial.currency || "MYR") ||
+    startTime !== (initial.startTime ? isoToTimeInput(initial.startTime) : "") ||
+    endTime !== (initial.endTime ? isoToTimeInput(initial.endTime) : "") ||
+    participants.length !== initial.participants.length ||
+    participants.some((p) => initial.participants.find((q) => q.account.id === p.account.id)?.role !== p.role);
+  useUnsavedChanges(dirty && !pending);
 
   const canGrantManager = viewerRole === "OWNER";
   const back = mode === "edit" ? `/sessions/${initial.id}` : "/sessions";
@@ -110,25 +160,11 @@ export function SessionForm({
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
-    const fee = courtFee.trim() === "" ? null : Number(courtFee);
-    const session = {
-      id: initial.id,
-      label,
-      date,
-      location: location.trim() === "" ? null : location,
-      locationUrl: locationUrl.trim() === "" ? null : locationUrl.trim(),
-      startTime: startTime === "" ? null : localToIso(date, startTime),
-      endTime: endTime === "" ? null : localToIso(date, endTime),
-      coverUrl: coverUrl.trim() === "" ? null : coverUrl.trim(),
-      courtFee: fee,
-      currency: fee === null ? null : currency,
-    };
-    const checked = SessionSave.safeParse(session);
-    if (!checked.success) {
-      setErrors(Object.fromEntries(checked.error.issues.map((i) => [String(i.path[0]), i.message])));
+    setSubmitted(true);
+    if (Object.keys(issues).length) {
+      setRejections((n) => n + 1);
       return;
     }
-    setErrors({});
 
     start(async () => {
       const fail = (error: Parameters<typeof errorMessage>[0]) => void toast.error(errorMessage(error));
@@ -168,7 +204,7 @@ export function SessionForm({
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-6 px-4 pt-4 pb-4">
+    <form onSubmit={submit} noValidate className="flex flex-col gap-6 px-4 pt-4 pb-4">
       <FormSection title="Basics">
         <Field data-invalid={!!errors.label}>
           <FieldLabel htmlFor="label">Title</FieldLabel>
@@ -176,7 +212,9 @@ export function SessionForm({
             id="label"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
+            onBlur={touch("label")}
             placeholder="Badminton with da Laddies"
+            enterKeyHint="next"
             aria-invalid={!!errors.label}
           />
           <FieldError>{errors.label}</FieldError>
@@ -186,17 +224,35 @@ export function SessionForm({
       <FormSection title="When">
         <Field data-invalid={!!errors.date}>
           <FieldLabel htmlFor="date">Date</FieldLabel>
-          <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-invalid={!!errors.date} />
+          <Input
+            id="date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            onBlur={touch("date")}
+            aria-invalid={!!errors.date}
+          />
           <FieldError>{errors.date}</FieldError>
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field>
-            <FieldLabel htmlFor="start">Starts</FieldLabel>
+            <FieldLabel htmlFor="start">
+              Starts <OptionalTag />
+            </FieldLabel>
             <Input id="start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
           </Field>
           <Field data-invalid={!!errors.endTime}>
-            <FieldLabel htmlFor="end">Ends</FieldLabel>
-            <Input id="end" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} aria-invalid={!!errors.endTime} />
+            <FieldLabel htmlFor="end">
+              Ends <OptionalTag />
+            </FieldLabel>
+            <Input
+              id="end"
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              onBlur={touch("endTime")}
+              aria-invalid={!!errors.endTime}
+            />
           </Field>
         </div>
         <FieldError>{errors.endTime}</FieldError>
@@ -204,24 +260,34 @@ export function SessionForm({
 
       <FormSection title="Where">
         <Field data-invalid={!!errors.location}>
-          <FieldLabel htmlFor="location">Location</FieldLabel>
+          <FieldLabel htmlFor="location">
+            Location <OptionalTag />
+          </FieldLabel>
           <Input
             id="location"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
+            onBlur={touch("location")}
             placeholder="Sunway Serene"
             aria-invalid={!!errors.location}
           />
           <FieldError>{errors.location}</FieldError>
         </Field>
         <Field data-invalid={!!errors.locationUrl}>
-          <FieldLabel htmlFor="maps">Maps link</FieldLabel>
+          <FieldLabel htmlFor="maps">
+            Maps link <OptionalTag />
+          </FieldLabel>
           <Input
             id="maps"
+            type="url"
             inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             value={locationUrl}
             onChange={(e) => setLocationUrl(e.target.value)}
-            placeholder="Optional"
+            onBlur={touch("locationUrl")}
+            placeholder="https://maps.app.goo.gl/..."
             aria-invalid={!!errors.locationUrl}
           />
           <FieldError>{errors.locationUrl}</FieldError>
@@ -230,7 +296,9 @@ export function SessionForm({
 
       <FormSection title="Details">
         <Field data-invalid={!!(errors.courtFee || errors.currency)}>
-          <FieldLabel htmlFor="fee">Court fee</FieldLabel>
+          <FieldLabel htmlFor="fee">
+            Court fee <OptionalTag />
+          </FieldLabel>
           <div className="flex gap-2">
             <Input
               id="fee"
@@ -241,6 +309,7 @@ export function SessionForm({
               placeholder="Amount"
               value={courtFee}
               onChange={(e) => setCourtFee(e.target.value)}
+              onBlur={touch("courtFee")}
               aria-invalid={!!errors.courtFee}
             />
             <Select value={currency} onValueChange={setCurrency}>
@@ -259,13 +328,20 @@ export function SessionForm({
           <FieldError>{errors.courtFee ?? errors.currency}</FieldError>
         </Field>
         <Field data-invalid={!!errors.coverUrl}>
-          <FieldLabel htmlFor="cover">Cover image</FieldLabel>
+          <FieldLabel htmlFor="cover">
+            Cover image <OptionalTag />
+          </FieldLabel>
           <Input
             id="cover"
+            type="url"
             inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             value={coverUrl}
             onChange={(e) => setCoverUrl(e.target.value)}
-            placeholder="Link to an image (optional)"
+            onBlur={touch("coverUrl")}
+            placeholder="Link to an image"
             aria-invalid={!!errors.coverUrl}
           />
           <FieldError>{errors.coverUrl}</FieldError>
@@ -329,13 +405,14 @@ export function SessionForm({
           {pending ? "Saving" : mode === "create" ? "Create session" : "Save changes"}
         </Button>
         <Button asChild variant="ghost" size="lg">
-          <Link href={back}>Cancel</Link>
+          <LeaveLink href={back}>Cancel</LeaveLink>
         </Button>
       </div>
 
       <AddParticipantsSheet
         open={adding}
         onOpenChange={setAdding}
+        people={people}
         existingIds={new Set(participants.map((p) => p.account.id))}
         onConfirm={addAccounts}
       />
