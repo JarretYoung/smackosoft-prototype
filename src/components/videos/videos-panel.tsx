@@ -1,22 +1,18 @@
 "use client";
 
-import { ExternalLink, Link2, Plus, Unlink } from "lucide-react";
+import { ExternalLink, Link2, Plus, Unlink, Video } from "lucide-react";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { removeLinkages, saveLinkages, saveVideos } from "@/src/app/actions";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/src/components/ui/dialog";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
+import { Field, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
+import { Spinner } from "@/src/components/ui/spinner";
 import type { OwnVideo, SessionVideo } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
 
@@ -40,9 +36,13 @@ function parseOffset(text: string): number | null {
 
 function Thumb({ url }: { url: string | null }) {
   return (
-    <div className="h-10 w-16 shrink-0 overflow-hidden rounded-md bg-muted">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      {url && <img src={url} alt="" className="size-full object-cover" />}
+    <div className="flex h-12 w-[4.5rem] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted text-muted-foreground">
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" className="size-full object-cover" />
+      ) : (
+        <Video className="size-5" />
+      )}
     </div>
   );
 }
@@ -136,30 +136,34 @@ export function VideosPanel({
   }
 
   return (
-    <div className="space-y-8 px-5 pb-6 pt-5">
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground">
+    <div className="flex flex-col gap-8 px-4 pt-4 pb-4">
+      <section aria-labelledby="linked-heading" className="flex flex-col gap-4">
+        <h2 id="linked-heading" className="text-xl font-bold tracking-tight">
           {focus ? `Linked to ${labelOf(focus)}` : "Linked to this session"}
         </h2>
         {ordered.length === 0 && (
-          <p className="rounded-2xl border border-dashed bg-card p-5 text-center text-sm text-muted-foreground">
-            Nothing is linked yet.
-          </p>
+          <Empty className="bg-card shadow-card">
+            <EmptyHeader>
+              <EmptyMedia variant="icon" className="bg-accent text-primary">
+                <Video />
+              </EmptyMedia>
+              <EmptyTitle>Nothing linked yet</EmptyTitle>
+              <EmptyDescription>Link one of your videos to the session or to a single game.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
         {ordered.map((key) => (
-          <div key={key} className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {key === SESSION ? "Whole session" : labelOf(key)}
-            </p>
-            <ul className="divide-y rounded-2xl border bg-card">
+          <div key={key} className="flex flex-col gap-2">
+            <p className="section-label">{key === SESSION ? "Whole session" : labelOf(key)}</p>
+            <ul className="group-list">
               {groups.get(key)!.map((item) => (
-                <li key={`${item.videoId}:${item.matchGameId}`} className="flex items-center gap-3 p-3">
+                <li key={`${item.videoId}:${item.matchGameId}`} className="flex items-center gap-3 px-3 py-3">
                   <Thumb url={item.video.thumbnailUrl} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{item.video.label}</p>
-                    <p className="text-xs text-muted-foreground">Starts at {clock(item.offsetSeconds)}</p>
+                    <p className="truncate font-semibold">{item.video.label}</p>
+                    <p className="text-sm text-muted-foreground tabular-nums">Starts at {clock(item.offsetSeconds)}</p>
                   </div>
-                  <Button asChild variant="ghost" size="icon" aria-label="Open video">
+                  <Button asChild variant="tinted" size="icon-sm" aria-label="Open video">
                     <a href={`${item.video.videoUrl}#t=${Math.floor(item.offsetSeconds)}`} target="_blank" rel="noreferrer">
                       <ExternalLink />
                     </a>
@@ -167,7 +171,7 @@ export function VideosPanel({
                   {canEdit && (
                     <Button
                       variant="ghost"
-                      size="icon"
+                      size="icon-sm"
                       aria-label={`Unlink ${item.video.label}`}
                       disabled={pending}
                       onClick={() =>
@@ -189,65 +193,70 @@ export function VideosPanel({
           </div>
         ))}
         {focus && (
-          <Button asChild variant="link" className="px-0">
-            <a href={`/sessions/${sessionId}/videos`}>Show everything in this session</a>
+          <Button asChild variant="link" className="self-start px-1">
+            <Link href={`/sessions/${sessionId}/videos`}>Show everything in this session</Link>
           </Button>
         )}
       </section>
 
-      <section className="space-y-3">
+      <section aria-labelledby="own-heading" className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-muted-foreground">Your videos</h2>
-          <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
+          <h2 id="own-heading" className="text-xl font-bold tracking-tight">
+            Your videos
+          </h2>
+          <Button size="sm" variant="tinted" onClick={() => setAdding(true)}>
             <Plus /> Add video
           </Button>
         </div>
-        {own.length === 0 && <p className="text-sm text-muted-foreground">You have not added any videos.</p>}
-        <ul className="divide-y rounded-2xl border bg-card empty:hidden">
-          {own.map((video) => (
-            <li key={video.id} className="flex items-center gap-3 p-3">
-              <Thumb url={video.thumbnailUrl} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{video.label}</p>
-                <p className="truncate text-xs text-muted-foreground">{video.videoUrl}</p>
-              </div>
-              {video.linkages.length > 0 && <Badge variant="secondary">{video.linkages.length} linked</Badge>}
-              {canEdit && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setLinking(video);
-                    setTarget(focus ?? SESSION);
-                  }}
-                >
-                  <Link2 /> Link
-                </Button>
-              )}
-            </li>
-          ))}
-        </ul>
+        {own.length === 0 ? (
+          <p className="px-1 text-sm text-muted-foreground">You have not added any videos.</p>
+        ) : (
+          <ul className="group-list">
+            {own.map((video) => (
+              <li key={video.id} className="flex items-center gap-3 px-3 py-3">
+                <Thumb url={video.thumbnailUrl} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold">{video.label}</p>
+                  <p className="truncate text-sm text-muted-foreground">{video.videoUrl}</p>
+                </div>
+                {video.linkages.length > 0 && <Badge variant="tinted">{video.linkages.length} linked</Badge>}
+                {canEdit && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setLinking(video);
+                      setTarget(focus ?? SESSION);
+                    }}
+                  >
+                    <Link2 /> Link
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
-      <Dialog open={adding} onOpenChange={setAdding}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add a video</DialogTitle>
-            <DialogDescription>
+      <Sheet open={adding} onOpenChange={setAdding}>
+        <SheetContent side="bottom" className="overflow-y-auto">
+          <SheetHeader className="px-5 pt-2 pb-0">
+            <SheetTitle>Add a video</SheetTitle>
+            <SheetDescription>
               This saves a record with the video link. Uploading files is not part of this prototype.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="video-label">Name</Label>
+            </SheetDescription>
+          </SheetHeader>
+          <FieldGroup className="px-5">
+            <Field>
+              <FieldLabel htmlFor="video-label">Name</FieldLabel>
               <Input id="video-label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Court 3 recording" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="video-url">Link</Label>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="video-url">Link</FieldLabel>
               <Input id="video-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" inputMode="url" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="video-thumb">Thumbnail</Label>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="video-thumb">Thumbnail</FieldLabel>
               <Input
                 id="video-thumb"
                 value={thumbnail}
@@ -255,30 +264,28 @@ export function VideosPanel({
                 placeholder="Link to an image (optional)"
                 inputMode="url"
               />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAdding(false)}>
-              Cancel
+            </Field>
+          </FieldGroup>
+          <SheetFooter className="px-5 pb-6">
+            <Button size="lg" onClick={addVideo} disabled={pending || !label.trim() || !url.trim()}>
+              {pending && <Spinner />}
+              {pending ? "Adding" : "Add video"}
             </Button>
-            <Button onClick={addVideo} disabled={pending || !label.trim() || !url.trim()}>
-              {pending ? "Adding" : "Add"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
-      <Dialog open={linking !== null} onOpenChange={(open) => !open && setLinking(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Link {linking?.label}</DialogTitle>
-            <DialogDescription>Pick where it belongs and where in the video it starts.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label>Link to</Label>
+      <Sheet open={linking !== null} onOpenChange={(open) => !open && setLinking(null)}>
+        <SheetContent side="bottom" className="overflow-y-auto">
+          <SheetHeader className="px-5 pt-2 pb-0">
+            <SheetTitle>Link {linking?.label}</SheetTitle>
+            <SheetDescription>Pick where it belongs and where in the video it starts.</SheetDescription>
+          </SheetHeader>
+          <FieldGroup className="px-5">
+            <Field>
+              <FieldLabel htmlFor="link-target">Link to</FieldLabel>
               <Select value={target} onValueChange={setTarget}>
-                <SelectTrigger aria-label="Link target">
+                <SelectTrigger id="link-target" aria-label="Link target" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -290,22 +297,20 @@ export function VideosPanel({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="offset">Starts at</Label>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="offset">Starts at</FieldLabel>
               <Input id="offset" value={offset} onChange={(e) => setOffset(e.target.value)} placeholder="0:00 or seconds" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setLinking(null)}>
-              Cancel
+            </Field>
+          </FieldGroup>
+          <SheetFooter className="px-5 pb-6">
+            <Button size="lg" onClick={link} disabled={pending}>
+              {pending && <Spinner />}
+              {pending ? "Linking" : "Link video"}
             </Button>
-            <Button onClick={link} disabled={pending}>
-              {pending ? "Linking" : "Link"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

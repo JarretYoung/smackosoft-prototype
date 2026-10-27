@@ -1,17 +1,23 @@
+import { SearchX } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/src/components/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
 
 export default function NotFound() {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-      <p className="text-5xl font-bold text-primary">404</p>
-      <h1 className="text-xl font-semibold">We could not find that</h1>
-      <p className="text-sm text-muted-foreground">
-        It may not exist, or you may not have access to it.
-      </p>
-      <Button asChild>
-        <Link href="/home">Back to Home</Link>
-      </Button>
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4">
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon" className="size-14 bg-accent text-primary">
+            <SearchX />
+          </EmptyMedia>
+          <EmptyTitle className="text-2xl font-bold tracking-tight">We could not find that</EmptyTitle>
+          <EmptyDescription>It may not exist, or you may not have access to it.</EmptyDescription>
+        </EmptyHeader>
+        <Button asChild size="lg">
+          <Link href="/home">Back to Home</Link>
+        </Button>
+      </Empty>
     </main>
   );
 }

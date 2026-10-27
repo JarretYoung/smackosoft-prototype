@@ -6,15 +6,17 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { removeMatches, saveMatches, saveTeams } from "@/src/app/actions";
-import { Button } from "@/src/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/src/components/ui/dialog";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/src/components/ui/alert-dialog";
+import { Button } from "@/src/components/ui/button";
 import { errorMessage } from "@/src/lib/errors";
 import { cn } from "@/src/lib/utils";
 
@@ -68,32 +70,35 @@ export function MatchSwitcher({
 
   const arrow = (target: Item | null, Icon: typeof ChevronLeft, label: string) =>
     target ? (
-      <Link href={`${base}?m=${target.id}`} aria-label={label} className="flex size-9 items-center justify-center rounded-full hover:bg-accent">
-        <Icon className="size-5" />
+      <Link
+        href={`${base}?m=${target.id}`}
+        aria-label={label}
+        className="pressable flex size-10 items-center justify-center rounded-full text-primary hover:bg-muted"
+      >
+        <Icon className="size-5" strokeWidth={2.5} />
       </Link>
     ) : (
-      <span className="flex size-9 items-center justify-center rounded-full opacity-30">
-        <Icon className="size-5" />
+      <span aria-hidden className="flex size-10 items-center justify-center rounded-full text-muted-foreground opacity-40">
+        <Icon className="size-5" strokeWidth={2.5} />
       </span>
     );
 
   return (
-    <div className="flex items-center gap-2 px-5 py-4">
-      <div className="flex flex-1 items-center justify-between rounded-2xl bg-card px-2 py-1.5 shadow-xs ring-1 ring-border">
+    <div className="flex items-center gap-2 px-4 py-4">
+      <div className="flex flex-1 items-center justify-between rounded-full bg-card p-1 shadow-card">
         {arrow(prev, ChevronLeft, "Previous match")}
-        <span className={cn("text-sm font-semibold", !current && "text-muted-foreground")}>
-          {current ? `${current.label} (${index + 1} of ${matches.length})` : "No matches"}
+        <span className={cn("text-[0.9375rem] font-semibold tabular-nums", !current && "text-muted-foreground")}>
+          {current ? `${current.label} · ${index + 1} of ${matches.length}` : "No matches"}
         </span>
         {arrow(next, ChevronRight, "Next match")}
       </div>
-      <Button type="button" variant="outline" size="icon" className="size-11 rounded-2xl" onClick={add} disabled={pending} aria-label="Add match">
+      <Button type="button" variant="outline" size="icon" onClick={add} disabled={pending} aria-label="Add match">
         <Plus />
       </Button>
       <Button
         type="button"
         variant="destructive"
         size="icon"
-        className="size-11 rounded-2xl"
         onClick={() => setConfirming(true)}
         disabled={!current || pending}
         aria-label="Delete match"
@@ -101,22 +106,26 @@ export function MatchSwitcher({
         <Trash2 />
       </Button>
 
-      <Dialog open={confirming} onOpenChange={setConfirming}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete {current?.label}?</DialogTitle>
-            <DialogDescription>Its teams, games, scores and video links will be removed.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirming(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={remove} disabled={pending}>
-              {pending ? "Deleting" : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AlertDialog open={confirming} onOpenChange={setConfirming}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {current?.label}?</AlertDialogTitle>
+            <AlertDialogDescription>Its teams, games, scores and video links will be removed.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel variant="secondary">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={pending}
+              onClick={(event) => {
+                event.preventDefault();
+                remove();
+              }}
+            >
+              {pending ? "Deleting" : "Delete match"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

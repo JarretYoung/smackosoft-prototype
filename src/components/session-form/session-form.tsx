@@ -20,8 +20,9 @@ import {
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import { Spinner } from "@/src/components/ui/spinner";
 import { SessionSave, type Account, type GrantableRole, type Role } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
 import { isoToTimeInput, localToIso } from "@/src/lib/format";
@@ -167,21 +168,69 @@ export function SessionForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-6 px-5 pb-6 pt-5">
-      <div className="space-y-2">
-        <Label htmlFor="label">Title</Label>
-        <Input id="label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Badminton with da Laddies" />
-        {errors.label && <p className="text-sm text-destructive">{errors.label}</p>}
-      </div>
+    <form onSubmit={submit} className="flex flex-col gap-6 px-4 pt-4 pb-4">
+      <FormSection title="Basics">
+        <Field data-invalid={!!errors.label}>
+          <FieldLabel htmlFor="label">Title</FieldLabel>
+          <Input
+            id="label"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="Badminton with da Laddies"
+            aria-invalid={!!errors.label}
+          />
+          <FieldError>{errors.label}</FieldError>
+        </Field>
+      </FormSection>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="date">Date</Label>
-          <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          {errors.date && <p className="text-sm text-destructive">{errors.date}</p>}
+      <FormSection title="When">
+        <Field data-invalid={!!errors.date}>
+          <FieldLabel htmlFor="date">Date</FieldLabel>
+          <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-invalid={!!errors.date} />
+          <FieldError>{errors.date}</FieldError>
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field>
+            <FieldLabel htmlFor="start">Starts</FieldLabel>
+            <Input id="start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+          </Field>
+          <Field data-invalid={!!errors.endTime}>
+            <FieldLabel htmlFor="end">Ends</FieldLabel>
+            <Input id="end" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} aria-invalid={!!errors.endTime} />
+          </Field>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="fee">Court fee</Label>
+        <FieldError>{errors.endTime}</FieldError>
+      </FormSection>
+
+      <FormSection title="Where">
+        <Field data-invalid={!!errors.location}>
+          <FieldLabel htmlFor="location">Location</FieldLabel>
+          <Input
+            id="location"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="Sunway Serene"
+            aria-invalid={!!errors.location}
+          />
+          <FieldError>{errors.location}</FieldError>
+        </Field>
+        <Field data-invalid={!!errors.locationUrl}>
+          <FieldLabel htmlFor="maps">Maps link</FieldLabel>
+          <Input
+            id="maps"
+            inputMode="url"
+            value={locationUrl}
+            onChange={(e) => setLocationUrl(e.target.value)}
+            placeholder="Optional"
+            aria-invalid={!!errors.locationUrl}
+          />
+          <FieldError>{errors.locationUrl}</FieldError>
+        </Field>
+      </FormSection>
+
+      <FormSection title="Details">
+        <Field data-invalid={!!(errors.courtFee || errors.currency)}>
+          <FieldLabel htmlFor="fee">Court fee</FieldLabel>
           <div className="flex gap-2">
             <Input
               id="fee"
@@ -192,9 +241,10 @@ export function SessionForm({
               placeholder="Amount"
               value={courtFee}
               onChange={(e) => setCourtFee(e.target.value)}
+              aria-invalid={!!errors.courtFee}
             />
             <Select value={currency} onValueChange={setCurrency}>
-              <SelectTrigger className="w-24" aria-label="Currency">
+              <SelectTrigger className="w-28" aria-label="Currency">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -206,64 +256,38 @@ export function SessionForm({
               </SelectContent>
             </Select>
           </div>
-          {(errors.courtFee || errors.currency) && (
-            <p className="text-sm text-destructive">{errors.courtFee ?? errors.currency}</p>
-          )}
-        </div>
-      </div>
+          <FieldError>{errors.courtFee ?? errors.currency}</FieldError>
+        </Field>
+        <Field data-invalid={!!errors.coverUrl}>
+          <FieldLabel htmlFor="cover">Cover image</FieldLabel>
+          <Input
+            id="cover"
+            inputMode="url"
+            value={coverUrl}
+            onChange={(e) => setCoverUrl(e.target.value)}
+            placeholder="Link to an image (optional)"
+            aria-invalid={!!errors.coverUrl}
+          />
+          <FieldError>{errors.coverUrl}</FieldError>
+        </Field>
+      </FormSection>
 
-      <div className="space-y-2">
-        <Label htmlFor="location">Location</Label>
-        <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Sunway Serene" />
-        {errors.location && <p className="text-sm text-destructive">{errors.location}</p>}
-        <Input
-          aria-label="Maps link"
-          inputMode="url"
-          value={locationUrl}
-          onChange={(e) => setLocationUrl(e.target.value)}
-          placeholder="Maps link (optional)"
-        />
-        {errors.locationUrl && <p className="text-sm text-destructive">{errors.locationUrl}</p>}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="start">Starts</Label>
-          <Input id="start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="end">Ends</Label>
-          <Input id="end" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-          {errors.endTime && <p className="text-sm text-destructive">{errors.endTime}</p>}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="cover">Cover image</Label>
-        <Input
-          id="cover"
-          inputMode="url"
-          value={coverUrl}
-          onChange={(e) => setCoverUrl(e.target.value)}
-          placeholder="Link to an image (optional)"
-        />
-        {errors.coverUrl && <p className="text-sm text-destructive">{errors.coverUrl}</p>}
-      </div>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold">Participants</h2>
-        <ul className="divide-y rounded-2xl border bg-card">
+      <section aria-labelledby="participants-heading" className="flex flex-col gap-2">
+        <h2 id="participants-heading" className="section-label">
+          Participants
+        </h2>
+        <ul className="group-list">
           {participants.map((p) => (
-            <li key={p.account.id} className="flex items-center gap-3 p-3">
+            <li key={p.account.id} className="flex items-center gap-3 px-4 py-3">
               <PersonAvatar person={p.account} className="size-10" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">
-                  {p.account.isGuest && <span className="text-muted-foreground">(Guest) </span>}
+                <p className="truncate font-semibold">
+                  {p.account.isGuest && <span className="font-normal text-muted-foreground">(Guest) </span>}
                   {p.account.displayName}
                 </p>
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   {ROLE_LABEL[p.role]}
-                  {p.isPlayer && <Badge variant="secondary">Player</Badge>}
+                  {p.isPlayer && <Badge variant="tinted">Player</Badge>}
                 </p>
               </div>
               {p.role !== "OWNER" && (
@@ -273,7 +297,7 @@ export function SessionForm({
                       <MoreHorizontal />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="min-w-48">
                     <DropdownMenuLabel>Change role</DropdownMenuLabel>
                     <DropdownMenuRadioGroup value={p.role} onValueChange={(v) => setRole(p.account.id, v as Role)}>
                       <DropdownMenuRadioItem value="VIEWER">Viewer</DropdownMenuRadioItem>
@@ -294,17 +318,18 @@ export function SessionForm({
             </li>
           ))}
         </ul>
-        <Button type="button" variant="outline" size="sm" onClick={() => setAdding(true)}>
+        <Button type="button" variant="tinted" onClick={() => setAdding(true)}>
           <Plus /> Add participant
         </Button>
       </section>
 
-      <div className="grid grid-cols-2 gap-3 pt-2">
-        <Button asChild variant="outline">
-          <Link href={back}>Cancel</Link>
+      <div className="flex flex-col gap-2 pt-2">
+        <Button type="submit" size="lg" disabled={pending}>
+          {pending && <Spinner />}
+          {pending ? "Saving" : mode === "create" ? "Create session" : "Save changes"}
         </Button>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving" : "Save"}
+        <Button asChild variant="ghost" size="lg">
+          <Link href={back}>Cancel</Link>
         </Button>
       </div>
 
@@ -315,5 +340,17 @@ export function SessionForm({
         onConfirm={addAccounts}
       />
     </form>
+  );
+}
+
+/** A titled group of fields on one white surface. */
+function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="section-label">{title}</h2>
+      <div className="rounded-3xl bg-card p-4 shadow-card">
+        <FieldGroup>{children}</FieldGroup>
+      </div>
+    </section>
   );
 }

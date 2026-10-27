@@ -1,25 +1,16 @@
 "use client";
 
-import { cn } from "@/src/lib/utils";
 import { createClient } from "@/src/lib/supabase/client";
+import { AuthShell } from "@/src/components/auth-shell";
 import { Button } from "@/src/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/src/components/ui/card";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
+import { Spinner } from "@/src/components/ui/spinner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function LoginForm({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"div">) {
+export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -48,63 +39,54 @@ export function LoginForm({
   };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>
-            Enter your email below to login to your account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin}>
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                  <Link
-                    href="/auth/forgot-password"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </Link>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
-              </Button>
-            </div>
-            <div className="mt-4 text-center text-sm">
-              Don&apos;t have an account?{" "}
+    <AuthShell title="Welcome back" description="Log in to see your sessions.">
+      <form onSubmit={handleLogin} className="flex flex-col gap-6">
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="email">Email</FieldLabel>
+            <Input
+              id="email"
+              type="email"
+              placeholder="m@example.com"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </Field>
+          <Field data-invalid={!!error}>
+            <div className="flex items-center">
+              <FieldLabel htmlFor="password">Password</FieldLabel>
               <Link
-                href="/auth/sign-up"
-                className="underline underline-offset-4"
+                href="/auth/forgot-password"
+                className="ml-auto rounded-md text-sm font-semibold text-primary underline-offset-4 hover:underline"
               >
-                Sign up
+                Forgot password?
               </Link>
             </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              aria-invalid={!!error}
+            />
+            <FieldError>{error}</FieldError>
+          </Field>
+        </FieldGroup>
+        <Button type="submit" size="lg" disabled={isLoading}>
+          {isLoading && <Spinner />}
+          {isLoading ? "Logging in" : "Log in"}
+        </Button>
+        <p className="text-center text-[0.9375rem] text-muted-foreground">
+          New here?{" "}
+          <Link href="/auth/sign-up" className="font-semibold text-primary underline-offset-4 hover:underline">
+            Create an account
+          </Link>
+        </p>
+      </form>
+    </AuthShell>
   );
 }

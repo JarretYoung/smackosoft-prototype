@@ -5,8 +5,9 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { saveCurrentAccount } from "@/src/app/actions";
 import { Button } from "@/src/components/ui/button";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
+import { Spinner } from "@/src/components/ui/spinner";
 import { SaveCurrentAccountInput } from "@/src/contract";
 import { errorMessage, fieldErrors } from "@/src/lib/errors";
 
@@ -51,32 +52,38 @@ export function ProfileForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Display name</Label>
-        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-        {errors.displayName && <p className="text-sm text-destructive">{errors.displayName}</p>}
+    <form onSubmit={submit} className="flex flex-col gap-4">
+      <div className="rounded-3xl bg-card p-4 shadow-card">
+        <FieldGroup>
+          <Field data-invalid={!!errors.displayName}>
+            <FieldLabel htmlFor="name">Display name</FieldLabel>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} aria-invalid={!!errors.displayName} />
+            <FieldError>{errors.displayName}</FieldError>
+          </Field>
+          <Field data-invalid={!!errors.handle} data-disabled={changesLeft === 0}>
+            <FieldLabel htmlFor="handle">Handle</FieldLabel>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold text-muted-foreground">@</span>
+              <Input
+                id="handle"
+                value={nextHandle}
+                autoCapitalize="none"
+                disabled={changesLeft === 0}
+                onChange={(e) => setNextHandle(e.target.value)}
+                aria-invalid={!!errors.handle}
+              />
+            </div>
+            <FieldDescription>
+              {changesLeft === 0
+                ? "You have used all your handle changes."
+                : `You can change your handle ${changesLeft} more ${changesLeft === 1 ? "time" : "times"}.`}
+            </FieldDescription>
+            <FieldError>{errors.handle}</FieldError>
+          </Field>
+        </FieldGroup>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="handle">Handle</Label>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">@</span>
-          <Input
-            id="handle"
-            value={nextHandle}
-            autoCapitalize="none"
-            disabled={changesLeft === 0}
-            onChange={(e) => setNextHandle(e.target.value)}
-          />
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {changesLeft === 0
-            ? "You have used all your handle changes."
-            : `You can change your handle ${changesLeft} more ${changesLeft === 1 ? "time" : "times"}.`}
-        </p>
-        {errors.handle && <p className="text-sm text-destructive">{errors.handle}</p>}
-      </div>
-      <Button type="submit" disabled={pending || !dirty}>
+      <Button type="submit" size="lg" disabled={pending || !dirty}>
+        {pending && <Spinner />}
         {pending ? "Saving" : "Save changes"}
       </Button>
     </form>

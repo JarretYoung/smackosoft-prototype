@@ -10,18 +10,19 @@ export default async function ProfilePage() {
   const guests = unwrap(await backend.accounts.listGuests());
 
   return (
-    <main className="space-y-8 px-5 pb-6 pt-8">
-      <header className="flex items-center gap-4">
-        <PersonAvatar person={me.account} className="size-16 text-lg" />
+    <main className="flex flex-col gap-8 px-4 pt-6 pb-4">
+      <header className="flex items-center gap-4 px-1">
+        <PersonAvatar person={me.account} className="size-20 text-2xl" />
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-2xl font-bold tracking-tight">{me.account.displayName}</h1>
-          <p className="text-sm text-muted-foreground">@{me.account.handle}</p>
+          <h1 className="truncate text-[1.75rem] leading-tight font-bold tracking-tight">{me.account.displayName}</h1>
+          <p className="text-[0.9375rem] text-muted-foreground">@{me.account.handle}</p>
         </div>
-        <LogoutButton />
       </header>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground">Your details</h2>
+      <section aria-labelledby="details-heading" className="flex flex-col gap-2">
+        <h2 id="details-heading" className="section-label">
+          Your details
+        </h2>
         {/* Keyed by the saved values so the form resets after a save. */}
         <ProfileForm
           key={`${me.account.displayName}:${me.account.handle}`}
@@ -32,6 +33,8 @@ export default async function ProfilePage() {
       </section>
 
       <GuestsPanel guests={guests} />
+
+      <LogoutButton />
     </main>
   );
 }

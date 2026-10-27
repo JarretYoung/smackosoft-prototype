@@ -1,20 +1,22 @@
 "use client";
 
-import { Check, Copy, MoreHorizontal, Plus } from "lucide-react";
+import { Check, Copy, MoreHorizontal, Plus, UserRound } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createClaim, removeGuests, saveGuests } from "@/src/app/actions";
 import { PersonAvatar } from "@/src/components/avatar-stack";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/src/components/ui/alert-dialog";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/src/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,8 +24,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
+import { Field, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
+import { Spinner } from "@/src/components/ui/spinner";
 import type { Guest } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
 import { guestHandle } from "@/src/lib/guest";
@@ -77,28 +82,36 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
   const claimLink = (token: string) => `${window.location.origin}/onboarding?claim=${token}`;
 
   return (
-    <section className="space-y-3">
+    <section aria-labelledby="guests-heading" className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-muted-foreground">Guests you created</h2>
-        <Button size="sm" variant="outline" onClick={openAdd}>
+        <h2 id="guests-heading" className="section-label">
+          Guests you created
+        </h2>
+        <Button size="sm" variant="tinted" onClick={openAdd}>
           <Plus /> Add guest
         </Button>
       </div>
 
       {guests.length === 0 ? (
-        <p className="rounded-2xl border border-dashed bg-card p-5 text-center text-sm text-muted-foreground">
-          Guests are people without an account. Add one here or from a session.
-        </p>
+        <Empty className="bg-card shadow-card">
+          <EmptyHeader>
+            <EmptyMedia variant="icon" className="bg-accent text-primary">
+              <UserRound />
+            </EmptyMedia>
+            <EmptyTitle>No guests yet</EmptyTitle>
+            <EmptyDescription>Guests are people without an account. Add one here or from a session.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
-        <ul className="divide-y rounded-2xl border bg-card">
+        <ul className="group-list">
           {guests.map((guest) => (
-            <li key={guest.id} className="flex items-center gap-3 p-3">
-              <PersonAvatar person={guest} className="size-10" />
+            <li key={guest.id} className="flex items-center gap-3 px-4 py-3">
+              <PersonAvatar person={guest} className="size-11" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{guest.displayName}</p>
-                <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+                <p className="truncate font-semibold">{guest.displayName}</p>
+                <p className="flex items-center gap-1.5 truncate text-sm text-muted-foreground">
                   @{guest.handle}
-                  {guest.hasClaimCode && <Badge variant="secondary">Code ready</Badge>}
+                  {guest.hasClaimCode && <Badge variant="tinted">Code ready</Badge>}
                 </p>
               </div>
               <DropdownMenu>
@@ -107,7 +120,7 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
                     <MoreHorizontal />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="min-w-48">
                   <DropdownMenuItem onSelect={() => openEdit(guest)}>Edit</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => makeClaim(guest)}>Invite to claim</DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -121,21 +134,21 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
         </ul>
       )}
 
-      <Dialog open={dialog?.kind === "add"} onOpenChange={(open) => !open && close()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add a guest</DialogTitle>
-            <DialogDescription>A guest can play in your sessions without signing up.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="guest-name">Name</Label>
-            <Input id="guest-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Aadit" />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={close}>
-              Cancel
-            </Button>
+      <Sheet open={dialog?.kind === "add"} onOpenChange={(open) => !open && close()}>
+        <SheetContent side="bottom">
+          <SheetHeader className="px-5 pt-2 pb-0">
+            <SheetTitle>Add a guest</SheetTitle>
+            <SheetDescription>A guest can play in your sessions without signing up.</SheetDescription>
+          </SheetHeader>
+          <FieldGroup className="px-5">
+            <Field>
+              <FieldLabel htmlFor="guest-name">Name</FieldLabel>
+              <Input id="guest-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Aadit" />
+            </Field>
+          </FieldGroup>
+          <SheetFooter className="px-5 pb-6">
             <Button
+              size="lg"
               disabled={pending || !name.trim()}
               onClick={() =>
                 run(
@@ -144,33 +157,32 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
                 )
               }
             >
-              Add
+              {pending && <Spinner />}
+              Add guest
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
-      <Dialog open={dialog?.kind === "edit"} onOpenChange={(open) => !open && close()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit guest</DialogTitle>
-            <DialogDescription>A handle can change a few times in total, so pick it with care.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
+      <Sheet open={dialog?.kind === "edit"} onOpenChange={(open) => !open && close()}>
+        <SheetContent side="bottom">
+          <SheetHeader className="px-5 pt-2 pb-0">
+            <SheetTitle>Edit guest</SheetTitle>
+            <SheetDescription>A handle can change a few times in total, so pick it with care.</SheetDescription>
+          </SheetHeader>
+          <FieldGroup className="px-5">
+            <Field>
+              <FieldLabel htmlFor="edit-name">Name</FieldLabel>
               <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-handle">Handle</Label>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="edit-handle">Handle</FieldLabel>
               <Input id="edit-handle" value={handle} autoCapitalize="none" onChange={(e) => setHandle(e.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={close}>
-              Cancel
-            </Button>
+            </Field>
+          </FieldGroup>
+          <SheetFooter className="px-5 pb-6">
             <Button
+              size="lg"
               disabled={pending || !name.trim()}
               onClick={() =>
                 dialog?.kind === "edit" &&
@@ -180,71 +192,77 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
                 )
               }
             >
-              Save
+              {pending && <Spinner />}
+              Save changes
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
-      <Dialog open={dialog?.kind === "delete"} onOpenChange={(open) => !open && close()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete {dialog?.kind === "delete" ? dialog.guest.displayName : ""}?</DialogTitle>
-            <DialogDescription>
+      <AlertDialog open={dialog?.kind === "delete"} onOpenChange={(open) => !open && close()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {dialog?.kind === "delete" ? dialog.guest.displayName : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
               They stay in matches already played, and their handle becomes free. You cannot add them to new sessions.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={close}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel variant="secondary">Cancel</AlertDialogCancel>
+            <AlertDialogAction
               disabled={pending}
-              onClick={() => dialog?.kind === "delete" && run(() => removeGuests([dialog.guest.id]), "Guest deleted")}
+              onClick={(event) => {
+                event.preventDefault();
+                if (dialog?.kind === "delete") run(() => removeGuests([dialog.guest.id]), "Guest deleted");
+              }}
             >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              Delete guest
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      <Dialog open={dialog?.kind === "claim"} onOpenChange={(open) => !open && close()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Invite {dialog?.kind === "claim" ? dialog.guest.displayName : ""} to claim</DialogTitle>
-            <DialogDescription>
+      <Sheet open={dialog?.kind === "claim"} onOpenChange={(open) => !open && close()}>
+        <SheetContent side="bottom">
+          <SheetHeader className="px-5 pt-2 pb-0">
+            <SheetTitle>Invite {dialog?.kind === "claim" ? dialog.guest.displayName : ""} to claim</SheetTitle>
+            <SheetDescription>
               Send them this link. When they sign up and open it, this guest becomes their account with all its history.
               Making a new code stops the old one working.
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
           {dialog?.kind === "claim" && (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Code</Label>
-                <p className="rounded-md bg-muted px-3 py-2 font-mono text-sm">{dialog.token}</p>
-              </div>
-              <div className="flex gap-2">
-                <Input readOnly value={claimLink(dialog.token)} aria-label="Claim link" />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  aria-label="Copy link"
-                  onClick={async () => {
-                    await navigator.clipboard.writeText(claimLink(dialog.token));
-                    setCopied(true);
-                  }}
-                >
-                  {copied ? <Check /> : <Copy />}
-                </Button>
-              </div>
-            </div>
+            <FieldGroup className="px-5">
+              <Field>
+                <FieldLabel>Code</FieldLabel>
+                <p className="rounded-xl bg-muted px-3.5 py-3 font-mono text-sm break-all">{dialog.token}</p>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="claim-link">Link</FieldLabel>
+                <div className="flex gap-2">
+                  <Input id="claim-link" readOnly value={claimLink(dialog.token)} />
+                  <Button
+                    variant="tinted"
+                    size="icon"
+                    aria-label="Copy link"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(claimLink(dialog.token));
+                      setCopied(true);
+                    }}
+                  >
+                    {copied ? <Check /> : <Copy />}
+                  </Button>
+                </div>
+              </Field>
+            </FieldGroup>
           )}
-          <DialogFooter>
-            <Button onClick={close}>Done</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <SheetFooter className="px-5 pb-6">
+            <Button size="lg" onClick={close}>
+              Done
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </section>
   );
 }

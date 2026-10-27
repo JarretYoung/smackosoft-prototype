@@ -1,24 +1,15 @@
 "use client";
 
-import { cn } from "@/src/lib/utils";
 import { createClient } from "@/src/lib/supabase/client";
+import { AuthShell } from "@/src/components/auth-shell";
 import { Button } from "@/src/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/src/components/ui/card";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
+import { Spinner } from "@/src/components/ui/spinner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function UpdatePasswordForm({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"div">) {
+export function UpdatePasswordForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,36 +34,29 @@ export function UpdatePasswordForm({
   };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Reset Your Password</CardTitle>
-          <CardDescription>
-            Please enter your new password below.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleForgotPassword}>
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="password">New password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="New password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Saving..." : "Save new password"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthShell title="Choose a new password" description="Enter your new password below.">
+      <form onSubmit={handleForgotPassword} className="flex flex-col gap-6">
+        <FieldGroup>
+          <Field data-invalid={!!error}>
+            <FieldLabel htmlFor="password">New password</FieldLabel>
+            <Input
+              id="password"
+              type="password"
+              placeholder="New password"
+              autoComplete="new-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              aria-invalid={!!error}
+            />
+            <FieldError>{error}</FieldError>
+          </Field>
+        </FieldGroup>
+        <Button type="submit" size="lg" disabled={isLoading}>
+          {isLoading && <Spinner />}
+          {isLoading ? "Saving" : "Save new password"}
+        </Button>
+      </form>
+    </AuthShell>
   );
 }

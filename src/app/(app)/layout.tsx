@@ -11,7 +11,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!me.ok) redirect("/onboarding");
 
   return (
-    <div className="mx-auto min-h-dvh max-w-md bg-background pb-24 shadow-sm md:border-x">
+    <div className="mx-auto min-h-dvh max-w-md bg-background pb-32 md:shadow-float">
       {children}
       <BottomNav />
     </div>

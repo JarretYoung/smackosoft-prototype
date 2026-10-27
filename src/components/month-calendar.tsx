@@ -17,10 +17,10 @@ export function MonthCalendar({ today, dates }: { today: string; dates: Set<stri
 
   return (
     <div>
-      <p className="mb-2 text-sm font-semibold">{title}</p>
-      <div className="grid grid-cols-7 gap-y-1 text-center text-xs">
+      <p className="mb-3 text-[1.0625rem] font-semibold tracking-tight">{title}</p>
+      <div className="grid grid-cols-7 gap-y-1.5 text-center text-sm tabular-nums">
         {WEEKDAYS.map((d, i) => (
-          <span key={i} className="pb-1 text-[10px] font-medium text-muted-foreground">
+          <span key={i} className="pb-1 text-xs font-semibold text-muted-foreground">
             {d}
           </span>
         ))}
@@ -31,9 +31,9 @@ export function MonthCalendar({ today, dates }: { today: string; dates: Set<stri
             <span
               key={day}
               className={cn(
-                "mx-auto flex size-7 items-center justify-center rounded-full",
+                "mx-auto flex size-9 items-center justify-center rounded-full",
                 dates.has(iso(day)) && "bg-primary font-semibold text-primary-foreground",
-                iso(day) === today && !dates.has(iso(day)) && "ring-1 ring-primary",
+                iso(day) === today && !dates.has(iso(day)) && "font-semibold text-primary ring-[1.5px] ring-primary",
               )}
             >
               {day}

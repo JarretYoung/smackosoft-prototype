@@ -3,6 +3,10 @@ import Link from "next/link";
 import { MonthCalendar } from "@/src/components/month-calendar";
 import { AvatarStack, PersonAvatar } from "@/src/components/avatar-stack";
 import { LocalTimeRange } from "@/src/components/local-time";
+import { Badge } from "@/src/components/ui/badge";
+import { Card, CardContent } from "@/src/components/ui/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/components/ui/empty";
+import { Progress } from "@/src/components/ui/progress";
 import { dayOf, monthShort, today } from "@/src/lib/format";
 import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";
@@ -17,101 +21,131 @@ export default async function HomePage() {
   const monthPrefix = now.slice(0, 7);
   const upcoming = sessions.filter((s) => s.date >= now).slice(0, 3);
   const monthDates = new Set(sessions.filter((s) => s.date.startsWith(monthPrefix)).map((s) => s.date));
+  const winPercent = stats.winRate === null ? null : Math.round(stats.winRate * 100);
 
   return (
-    <main className="space-y-5 px-5 pb-6 pt-8">
+    <main className="flex flex-col gap-7 px-4 pt-6 pb-4">
       <header>
-        <Link href="/profile" className="flex items-center gap-3">
+        <Link href="/profile" className="pressable flex items-center gap-3">
           <PersonAvatar person={me.account} className="size-12 text-base" />
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg font-semibold leading-tight">{me.account.displayName}</h1>
-            <p className="text-sm text-muted-foreground">@{me.account.handle}</p>
+            <p className="text-sm text-muted-foreground">Welcome back</p>
+            <h1 className="truncate text-xl leading-tight font-bold tracking-tight">{me.account.displayName}</h1>
           </div>
           <ChevronRight className="size-5 text-muted-foreground" />
         </Link>
       </header>
 
-      <section className="grid grid-cols-3 gap-3">
-        <Tile value={String(stats.matches)} label="Matches" />
-        <Tile value={stats.winRate === null ? "-" : `${Math.round(stats.winRate * 100)}%`} label="Win rate" />
-        <Tile value={String(stats.streak)} label="Streak" />
+      {/* The one bold surface on this screen: how you are doing. */}
+      <section aria-labelledby="form-heading" className="hero relative overflow-hidden rounded-[2rem] p-6 shadow-float">
+        <h2 id="form-heading" className="text-[0.8125rem] font-semibold tracking-wider text-primary-foreground/90 uppercase">
+          Win rate
+        </h2>
+        <p className="score mt-1 text-[4.5rem] leading-none">{winPercent === null ? "-" : `${winPercent}%`}</p>
+        <Progress
+          value={winPercent ?? 0}
+          aria-label="Win rate"
+          className="mt-5 h-1.5 bg-white/25 [&>div]:bg-white"
+        />
+        <dl className="mt-5 grid grid-cols-2 gap-3">
+          <HeroStat value={String(stats.matches)} label="Matches" />
+          <HeroStat value={String(stats.streak)} label="Win streak" />
+        </dl>
       </section>
 
-      <section className="rounded-2xl border bg-card p-4 shadow-xs">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-semibold">Upcoming sessions</h2>
-          <Link href="/sessions" className="text-xs font-medium text-muted-foreground">
+      <section className="flex flex-col gap-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-xl font-bold tracking-tight">Upcoming</h2>
+          <Link href="/sessions" className="pressable rounded-md py-1 text-[0.9375rem] font-semibold text-primary">
             View all
           </Link>
         </div>
-        <MonthCalendar today={now} dates={monthDates} />
-        <ul className="mt-4 divide-y">
-          {upcoming.length === 0 && <li className="py-3 text-sm text-muted-foreground">Nothing coming up.</li>}
-          {upcoming.map((s) => (
-            <li key={s.id}>
-              <Link href={`/sessions/${s.id}`} className="flex items-center gap-3 py-3">
-                <div className="flex size-11 shrink-0 flex-col items-center justify-center rounded-lg bg-accent text-accent-foreground">
-                  <span className="text-base font-bold leading-none">{dayOf(s.date)}</span>
-                  <span className="text-[9px] font-semibold">{monthShort(s.date)}</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{s.label}</p>
-                  <p className="truncate text-xs text-muted-foreground"><LocalTimeRange start={s.startTime} end={s.endTime} suffix={s.location ? " · " : ""} />{s.location ?? (s.startTime ? "" : "No details")}</p>
-                </div>
-                <AvatarStack people={s.members} max={2} />
-                <ChevronRight className="size-4 text-muted-foreground" />
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <Card className="py-5">
+          <CardContent>
+            <MonthCalendar today={now} dates={monthDates} />
+          </CardContent>
+        </Card>
+        {upcoming.length === 0 ? (
+          <Empty className="rounded-2xl bg-card p-6 shadow-card">
+            <EmptyHeader>
+              <EmptyTitle>Nothing coming up</EmptyTitle>
+              <EmptyDescription>Create a session to get a game on the calendar.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <ul className="group-list">
+            {upcoming.map((s) => (
+              <li key={s.id}>
+                <Link href={`/sessions/${s.id}`} className="pressable-row flex items-center gap-3 px-4 py-3">
+                  <DateChip date={s.date} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">{s.label}</p>
+                    <p className="truncate text-sm text-muted-foreground">
+                      <LocalTimeRange start={s.startTime} end={s.endTime} suffix={s.location ? " · " : ""} />
+                      {s.location ?? (s.startTime ? "" : "No details")}
+                    </p>
+                  </div>
+                  <AvatarStack people={s.members} max={2} />
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground/70" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
-      <section className="rounded-2xl border bg-card p-4 shadow-xs">
-        <h2 className="mb-3 font-semibold">Teammate stats</h2>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-xl font-bold tracking-tight">Partners</h2>
         {teammates.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Play a doubles match to see how you do with each partner.</p>
+          <Empty className="rounded-2xl bg-card p-6 shadow-card">
+            <EmptyHeader>
+              <EmptyTitle>No partner stats yet</EmptyTitle>
+              <EmptyDescription>Play a doubles match to see how you do with each partner.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs text-muted-foreground">
-                <th className="pb-2 font-medium">Player</th>
-                <th className="pb-2 text-right font-medium">Games</th>
-                <th className="pb-2 text-right font-medium">W - L</th>
-                <th className="pb-2 text-right font-medium">Win rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {teammates.slice(0, 5).map((t) => {
-                const diff = t.wins - t.losses;
-                return (
-                  <tr key={t.account.id} className="border-t">
-                    <td className="py-2">
-                      <span className="flex items-center gap-2">
-                        <PersonAvatar person={t.account} className="size-7" />
-                        <span className="truncate">{t.account.displayName.split(" ")[0]}</span>
-                      </span>
-                    </td>
-                    <td className="text-right tabular-nums">{t.games}</td>
-                    <td className={`text-right tabular-nums ${diff < 0 ? "text-destructive" : "text-emerald-600"}`}>
-                      {diff > 0 ? `+${diff}` : diff}
-                    </td>
-                    <td className="text-right tabular-nums">{t.winRate === null ? "-" : `${Math.round(t.winRate * 100)}%`}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <ul className="group-list">
+            {teammates.slice(0, 5).map((t) => {
+              const diff = t.wins - t.losses;
+              return (
+                <li key={t.account.id} className="flex items-center gap-3 px-4 py-3">
+                  <PersonAvatar person={t.account} className="size-10" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">{t.account.displayName.split(" ")[0]}</p>
+                    <p className="text-sm text-muted-foreground tabular-nums">
+                      {t.games} {t.games === 1 ? "game" : "games"}
+                    </p>
+                  </div>
+                  <Badge variant={diff < 0 ? "tinted" : "secondary"} className="tabular-nums">
+                    {diff > 0 ? `+${diff}` : diff}
+                  </Badge>
+                  <span className="score w-12 text-right text-lg">
+                    {t.winRate === null ? "-" : `${Math.round(t.winRate * 100)}%`}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </section>
     </main>
   );
 }
 
-function Tile({ value, label }: { value: string; label: string }) {
+function HeroStat({ value, label }: { value: string; label: string }) {
   return (
-    <div className="rounded-2xl bg-primary px-3 py-4 text-center text-primary-foreground shadow-xs">
-      <p className="text-2xl font-bold tabular-nums">{value}</p>
-      <p className="mt-0.5 text-xs text-primary-foreground/80">{label}</p>
+    <div className="rounded-2xl bg-white/15 px-4 py-3">
+      <dd className="score text-3xl leading-none">{value}</dd>
+      <dt className="mt-1 text-sm text-primary-foreground/90">{label}</dt>
+    </div>
+  );
+}
+
+function DateChip({ date }: { date: string }) {
+  return (
+    <div className="flex size-12 shrink-0 flex-col items-center justify-center rounded-xl bg-accent text-accent-foreground">
+      <span className="score text-lg leading-none">{dayOf(date)}</span>
+      <span className="mt-0.5 text-[0.625rem] font-bold tracking-wider">{monthShort(date)}</span>
     </div>
   );
 }

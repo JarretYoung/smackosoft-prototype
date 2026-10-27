@@ -16,11 +16,13 @@ import {
 import { AvatarStack } from "@/src/components/avatar-stack";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
+import { Field, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import { Spinner } from "@/src/components/ui/spinner";
 import { MatchType, type Account, type Match } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
 import { isoToTimeInput, timeInputToIso } from "@/src/lib/format";
+import { cn } from "@/src/lib/utils";
 import { TeamPlayersSheet } from "./team-players-sheet";
 
 type TeamState = { id: string; label: string; playerIds: Set<string> };
@@ -185,112 +187,132 @@ export function MatchEditor({
   const otherTeams = teams.filter((t) => t.id !== editingTeam);
 
   return (
-    <div className="space-y-7 px-5 pb-6">
-      <section className="grid grid-cols-[1fr_7rem] gap-3">
-        <div className="space-y-2">
-          <Label htmlFor="match-label">Name</Label>
-          <Input id="match-label" value={label} onChange={(e) => setLabel(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label>Type</Label>
-          <Select value={matchType} onValueChange={(v) => setMatchType(v as typeof matchType)}>
-            <SelectTrigger aria-label="Match type">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MATCH_TYPES.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+    <div className="flex flex-col gap-6 px-4 pb-4">
+      <section className="rounded-3xl bg-card p-4 shadow-card">
+        <FieldGroup>
+          <div className="grid grid-cols-[1fr_7.5rem] gap-3">
+            <Field>
+              <FieldLabel htmlFor="match-label">Name</FieldLabel>
+              <Input id="match-label" value={label} onChange={(e) => setLabel(e.target.value)} />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="match-type">Type</FieldLabel>
+              <Select value={matchType} onValueChange={(v) => setMatchType(v as typeof matchType)}>
+                <SelectTrigger id="match-type" aria-label="Match type" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MATCH_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+        </FieldGroup>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground">Manage teams</h2>
-        <div className="flex flex-wrap gap-2">
+      <section aria-labelledby="teams-heading" className="flex flex-col gap-2">
+        <h2 id="teams-heading" className="section-label">
+          Teams
+        </h2>
+        <div className="grid grid-cols-2 gap-3">
           {teams.map((team) => (
             <button
               key={team.id}
               type="button"
               onClick={() => setEditingTeam(team.id)}
-              className="flex items-center gap-2 rounded-full border bg-card py-1.5 pl-3 pr-2 text-xs font-semibold uppercase shadow-xs"
+              className="pressable flex flex-col items-start gap-3 rounded-3xl bg-card p-4 text-left shadow-card"
               aria-label={`Edit ${team.label} players`}
             >
-              {team.label}
-              {team.playerIds.size > 0 ? <AvatarStack people={playersOf(team)} max={2} className="*:size-6" /> : null}
-              <Pencil className="size-3.5 text-muted-foreground" />
+              <span className="flex w-full items-center justify-between text-[0.8125rem] font-semibold tracking-wide text-muted-foreground uppercase">
+                {team.label}
+                <Pencil className="size-3.5" />
+              </span>
+              {team.playerIds.size > 0 ? (
+                <AvatarStack people={playersOf(team)} max={3} />
+              ) : (
+                <span className="flex h-9 items-center text-sm font-semibold text-primary">Choose players</span>
+              )}
             </button>
           ))}
         </div>
       </section>
 
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-muted-foreground">Manage games</h2>
-          <span className="text-xs text-muted-foreground">Score</span>
-        </div>
+      <section aria-labelledby="games-heading" className="flex flex-col gap-3">
+        <h2 id="games-heading" className="section-label">
+          Games
+        </h2>
         {games.map((game, index) => {
           const winner = winnerOf(game);
           return (
-            <div key={game.id} className="space-y-2 rounded-2xl border bg-card p-3">
+            <div key={game.id} className="flex flex-col gap-4 rounded-3xl bg-card p-4 shadow-card">
               <div className="flex items-center gap-2">
+                <h3 className="text-[1.0625rem] font-semibold tracking-tight">Game {index + 1}</h3>
                 <Button
                   type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-8 rounded-full"
+                  variant="destructive"
+                  size="icon-sm"
+                  className="ml-auto"
                   aria-label={`Remove game ${index + 1}`}
                   onClick={() => setGames((list) => list.filter((g) => g.id !== game.id))}
                 >
                   <Minus />
                 </Button>
-                <span className="text-sm font-semibold">Game {index + 1}</span>
-                <div className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <input
-                    type="time"
-                    aria-label={`Start time for game ${index + 1}`}
-                    className="h-8 rounded-md border bg-background px-1.5 text-xs"
-                    value={isoToTimeInput(game.startTime)}
-                    onChange={(e) => setGameTime(game.id, "startTime", e.target.value)}
-                  />
-                  to
-                  <input
-                    type="time"
-                    aria-label={`End time for game ${index + 1}`}
-                    className="h-8 rounded-md border bg-background px-1.5 text-xs"
-                    value={isoToTimeInput(game.endTime)}
-                    onChange={(e) => setGameTime(game.id, "endTime", e.target.value)}
-                  />
-                </div>
               </div>
-              {teams.map((team) => (
-                <div key={team.id} className="flex items-center gap-3 pl-10">
-                  <span className="flex min-w-0 flex-1 items-center gap-2 text-xs font-semibold uppercase">
-                    {team.label}
-                    {team.playerIds.size > 0 && <AvatarStack people={playersOf(team)} max={2} className="*:size-6" />}
-                  </span>
-                  <Input
-                    inputMode="numeric"
-                    aria-label={`${team.label} score for game ${index + 1}`}
-                    className="h-9 w-16 text-center tabular-nums"
-                    value={game.scores[team.id] ?? ""}
-                    onChange={(e) => setScore(game.id, team.id, e.target.value)}
-                  />
-                  <span className="w-5">{winner === team.id && <Crown className="size-5 text-amber-500" />}</span>
-                </div>
-              ))}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Input
+                  type="time"
+                  aria-label={`Start time for game ${index + 1}`}
+                  className="h-10 text-sm"
+                  value={isoToTimeInput(game.startTime)}
+                  onChange={(e) => setGameTime(game.id, "startTime", e.target.value)}
+                />
+                to
+                <Input
+                  type="time"
+                  aria-label={`End time for game ${index + 1}`}
+                  className="h-10 text-sm"
+                  value={isoToTimeInput(game.endTime)}
+                  onChange={(e) => setGameTime(game.id, "endTime", e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {teams.map((team) => (
+                  <div
+                    key={team.id}
+                    className={cn(
+                      "flex flex-col items-center gap-2 rounded-2xl p-3 transition-colors",
+                      winner === team.id ? "bg-accent" : "bg-muted",
+                    )}
+                  >
+                    <span className="flex w-full items-center justify-between gap-1 text-[0.75rem] font-semibold tracking-wide text-muted-foreground uppercase">
+                      <span className="truncate">{team.label}</span>
+                      {winner === team.id && <Crown aria-label="Winner" className="size-4 shrink-0 fill-gold text-gold" />}
+                    </span>
+                    <Input
+                      inputMode="numeric"
+                      aria-label={`${team.label} score for game ${index + 1}`}
+                      placeholder="0"
+                      className="score h-14 bg-card text-center text-3xl"
+                      value={game.scores[team.id] ?? ""}
+                      onChange={(e) => setScore(game.id, team.id, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           );
         })}
-        <Button type="button" variant="outline" size="sm" onClick={addGame}>
+        <Button type="button" variant="tinted" onClick={addGame}>
           <Plus /> Add game
         </Button>
       </section>
 
-      <Button type="button" size="lg" className="w-full" disabled={pending} onClick={saveAll}>
+      <Button type="button" size="lg" disabled={pending} onClick={saveAll}>
+        {pending && <Spinner />}
         {pending ? "Saving" : "Save all"}
       </Button>
 

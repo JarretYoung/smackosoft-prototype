@@ -3,14 +3,15 @@ import { cn } from "@/src/lib/utils";
 
 type Person = { id: string; displayName: string; avatarUrl: string | null };
 
-// Soft tones in the same family as the mockups.
+// One lightness and chroma, six hues: distinct enough to tell people apart, calm enough to sit
+// beside the red accent. Dark text on each passes 4.5:1.
 const TONES = [
-  "bg-rose-300 text-rose-950",
-  "bg-teal-300 text-teal-950",
-  "bg-amber-200 text-amber-950",
-  "bg-fuchsia-300 text-fuchsia-950",
-  "bg-sky-300 text-sky-950",
-  "bg-lime-300 text-lime-950",
+  "bg-[oklch(0.88_0.07_20)] text-[oklch(0.34_0.1_20)]",
+  "bg-[oklch(0.9_0.08_85)] text-[oklch(0.36_0.08_85)]",
+  "bg-[oklch(0.88_0.08_150)] text-[oklch(0.32_0.08_150)]",
+  "bg-[oklch(0.89_0.06_205)] text-[oklch(0.33_0.07_205)]",
+  "bg-[oklch(0.88_0.07_265)] text-[oklch(0.34_0.1_265)]",
+  "bg-[oklch(0.88_0.08_320)] text-[oklch(0.34_0.1_320)]",
 ];
 
 function toneFor(id: string) {
@@ -30,9 +31,9 @@ const initials = (name: string) =>
 
 export function PersonAvatar({ person, className }: { person: Person; className?: string }) {
   return (
-    <Avatar className={cn("size-8 ring-2 ring-card", className)}>
+    <Avatar className={cn("size-9 ring-2 ring-card", className)}>
       {person.avatarUrl && <AvatarImage src={person.avatarUrl} alt="" />}
-      <AvatarFallback className={cn("text-[11px] font-semibold", toneFor(person.id))}>
+      <AvatarFallback className={cn("text-xs font-semibold", toneFor(person.id))}>
         {initials(person.displayName)}
       </AvatarFallback>
     </Avatar>
@@ -57,7 +58,7 @@ export function AvatarStack({
         <PersonAvatar key={person.id} person={person} />
       ))}
       {rest > 0 && (
-        <span className="z-10 flex size-8 items-center justify-center rounded-full bg-foreground text-[11px] font-semibold text-background ring-2 ring-card">
+        <span className="z-10 flex size-9 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background ring-2 ring-card">
           +{rest}
         </span>
       )}

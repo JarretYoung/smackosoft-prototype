@@ -43,21 +43,24 @@ export function TeamPlayersSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="mx-auto max-h-[85dvh] max-w-md overflow-y-auto rounded-t-3xl">
-        <SheetHeader>
+      <SheetContent side="bottom" className="overflow-y-auto">
+        <SheetHeader className="px-5 pt-2 pb-0">
           <SheetTitle>{teamLabel} players</SheetTitle>
           <SheetDescription>Choose from the session members.</SheetDescription>
         </SheetHeader>
-        <ul className="divide-y px-4">
+        <ul className="group-list mx-4 border border-border/60 shadow-none">
           {candidates.map((account) => {
             const blocked = takenElsewhere.has(account.id);
             return (
               <li key={account.id}>
-                <label className="flex items-center gap-3 py-3 aria-disabled:opacity-50" aria-disabled={blocked}>
-                  <PersonAvatar person={account} className="size-9" />
+                <label
+                  className="pressable-row flex min-h-14 items-center gap-3 px-4 py-2.5 aria-disabled:opacity-50"
+                  aria-disabled={blocked}
+                >
+                  <PersonAvatar person={account} className="size-10" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium">{account.displayName}</span>
-                    <span className="block text-xs text-muted-foreground">
+                    <span className="block truncate font-semibold">{account.displayName}</span>
+                    <span className="block text-sm text-muted-foreground">
                       {blocked ? "On the other team" : account.isGuest ? "Guest" : `@${account.handle}`}
                     </span>
                   </span>
@@ -65,14 +68,15 @@ export function TeamPlayersSheet({
                     checked={selected.has(account.id)}
                     disabled={blocked}
                     onCheckedChange={(v) => toggle(account.id, v === true)}
+                    className="size-6 rounded-full"
                   />
                 </label>
               </li>
             );
           })}
         </ul>
-        <SheetFooter>
-          <Button type="button" onClick={() => onOpenChange(false)}>
+        <SheetFooter className="px-5 pb-6">
+          <Button type="button" size="lg" onClick={() => onOpenChange(false)}>
             Done
           </Button>
         </SheetFooter>

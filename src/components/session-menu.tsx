@@ -6,15 +6,17 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { removeMembers, removeSessions } from "@/src/app/actions";
-import { Button } from "@/src/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/src/components/ui/dialog";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/src/components/ui/alert-dialog";
+import { Button } from "@/src/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,11 +72,16 @@ export function SessionMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="secondary" size="icon" className="rounded-full bg-white/90 text-primary" aria-label="Session menu">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="bg-white/20 text-white backdrop-blur hover:bg-white/30 hover:text-white"
+            aria-label="Session menu"
+          >
             <MoreHorizontal />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" sideOffset={8} className="min-w-48">
           {canEdit && (
             <DropdownMenuItem asChild>
               <Link href={`/sessions/${sessionId}/edit`}>Edit session</Link>
@@ -83,9 +90,7 @@ export function SessionMenu({
           <DropdownMenuItem asChild>
             <Link href={`/sessions/${sessionId}/videos`}>Videos</Link>
           </DropdownMenuItem>
-          {canLeave && (
-            <DropdownMenuItem onSelect={() => setLeaving(true)}>Leave session</DropdownMenuItem>
-          )}
+          {canLeave && <DropdownMenuItem onSelect={() => setLeaving(true)}>Leave session</DropdownMenuItem>}
           {canDelete && (
             <>
               <DropdownMenuSeparator />
@@ -97,43 +102,53 @@ export function SessionMenu({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={leaving} onOpenChange={setLeaving}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Leave this session?</DialogTitle>
-            <DialogDescription>
-              You will no longer see {label}. A manager can add you back. If you play in a match, ask to be taken off it first.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setLeaving(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={leave} disabled={pending}>
-              {pending ? "Leaving" : "Leave"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AlertDialog open={leaving} onOpenChange={setLeaving}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave this session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will no longer see {label}. A manager can add you back. If you play in a match, ask to be taken off
+              it first.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel variant="secondary">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={pending}
+              onClick={(event) => {
+                event.preventDefault();
+                leave();
+              }}
+            >
+              {pending ? "Leaving" : "Leave session"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      <Dialog open={confirming} onOpenChange={setConfirming}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete this session?</DialogTitle>
-            <DialogDescription>
-              {label} and all of its matches, scores and video links will be removed. The videos themselves stay in your library.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirming(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={remove} disabled={pending}>
-              {pending ? "Deleting" : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AlertDialog open={confirming} onOpenChange={setConfirming}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {label} and all of its matches, scores and video links will be removed. The videos themselves stay in
+              your library.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel variant="secondary">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={pending}
+              onClick={(event) => {
+                event.preventDefault();
+                remove();
+              }}
+            >
+              {pending ? "Deleting" : "Delete session"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

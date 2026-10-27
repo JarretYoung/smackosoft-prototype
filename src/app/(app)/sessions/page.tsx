@@ -1,9 +1,11 @@
-import { ChevronRight, MapPin } from "lucide-react";
+import { CalendarPlus, ChevronRight, MapPin } from "lucide-react";
 import Link from "next/link";
 import { AvatarStack } from "@/src/components/avatar-stack";
 import { SessionCover } from "@/src/components/court-art";
 import { Button } from "@/src/components/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
 import { LocalTimeRange } from "@/src/components/local-time";
+import { cn } from "@/src/lib/utils";
 import { dayOf, monthShort, plural, today } from "@/src/lib/format";
 import { unwrap } from "@/src/lib/result";
 import type { SessionListItem } from "@/src/contract";
@@ -17,35 +19,40 @@ export default async function SessionsPage() {
   const past = sessions.filter((s) => s.date < now).reverse();
 
   return (
-    <main>
-      <header className="px-5 pt-8 pb-5">
-        <h1 className="text-3xl font-bold tracking-tight">Sessions</h1>
-        <p className="text-sm text-muted-foreground">Last month to next month</p>
+    <main className="flex flex-col gap-7 px-4 pt-6 pb-4">
+      <header className="px-1">
+        <h1 className="large-title">Sessions</h1>
+        <p className="mt-1 text-[0.9375rem] text-muted-foreground">Last month to next month</p>
       </header>
 
       {sessions.length === 0 && (
-        <div className="mx-5 rounded-2xl border border-dashed bg-card p-8 text-center">
-          <p className="font-medium">No sessions yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">Create one to start tracking matches.</p>
-          <Button asChild className="mt-4">
+        <Empty className="bg-card shadow-card">
+          <EmptyHeader>
+            <EmptyMedia variant="icon" className="bg-accent text-primary">
+              <CalendarPlus />
+            </EmptyMedia>
+            <EmptyTitle>No sessions yet</EmptyTitle>
+            <EmptyDescription>Create one to start tracking matches.</EmptyDescription>
+          </EmptyHeader>
+          <Button asChild>
             <Link href="/sessions/new">New session</Link>
           </Button>
-        </div>
+        </Empty>
       )}
 
       {todays.length > 0 && (
-        <section className="bg-primary px-5 py-5">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-primary-foreground/80">Today</h2>
-          <div className="space-y-3">
-            {todays.map((session) => (
-              <TodayCard key={session.id} session={session} />
-            ))}
-          </div>
+        <section aria-labelledby="today-heading" className="flex flex-col gap-3">
+          <h2 id="today-heading" className="section-label">
+            Today
+          </h2>
+          {todays.map((session) => (
+            <TodayCard key={session.id} session={session} />
+          ))}
         </section>
       )}
 
       <SessionGroup title="Upcoming" sessions={upcoming} />
-      <SessionGroup title="Past" sessions={past} />
+      <SessionGroup title="Past" sessions={past} muted />
     </main>
   );
 }
@@ -54,15 +61,15 @@ function TodayCard({ session }: { session: SessionListItem }) {
   return (
     <Link
       href={`/sessions/${session.id}`}
-      className="block overflow-hidden rounded-2xl bg-card shadow-md transition active:scale-[0.99]"
+      className="pressable block overflow-hidden rounded-[2rem] bg-card shadow-float"
     >
-      <div className="relative h-36">
+      <div className="relative h-44">
         <SessionCover url={session.coverUrl} className="absolute inset-0" />
-        <h3 className="absolute inset-x-4 bottom-3 text-xl font-bold leading-tight text-white drop-shadow">
+        <h3 className="absolute inset-x-5 bottom-4 text-2xl leading-tight font-bold tracking-tight text-white">
           {session.label}
         </h3>
       </div>
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex items-center gap-3 px-5 py-4">
         <AvatarStack people={session.members.filter((m) => m.isPlayer || m.role === "OWNER")} max={3} />
         {session.location && (
           <span className="flex min-w-0 items-center gap-1 text-sm text-muted-foreground">
@@ -78,15 +85,18 @@ function TodayCard({ session }: { session: SessionListItem }) {
   );
 }
 
-function SessionGroup({ title, sessions }: { title: string; sessions: SessionListItem[] }) {
+function SessionGroup({ title, sessions, muted }: { title: string; sessions: SessionListItem[]; muted?: boolean }) {
   if (sessions.length === 0) return null;
+  const headingId = `${title.toLowerCase()}-heading`;
   return (
-    <section className="px-5 pt-6">
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h2>
-      <ul className="space-y-3">
+    <section aria-labelledby={headingId} className="flex flex-col gap-2">
+      <h2 id={headingId} className="section-label">
+        {title}
+      </h2>
+      <ul className="group-list">
         {sessions.map((session) => (
           <li key={session.id}>
-            <SessionRow session={session} />
+            <SessionRow session={session} muted={muted} />
           </li>
         ))}
       </ul>
@@ -94,28 +104,30 @@ function SessionGroup({ title, sessions }: { title: string; sessions: SessionLis
   );
 }
 
-function SessionRow({ session }: { session: SessionListItem }) {
+function SessionRow({ session, muted }: { session: SessionListItem; muted?: boolean }) {
   const players = session.members.filter((m) => m.isPlayer).length;
   const subtitle = [session.location, plural(players || session.members.length, players ? "Player" : "Member")]
     .filter(Boolean)
     .join(" · ");
   return (
-    <Link
-      href={`/sessions/${session.id}`}
-      className="flex items-center gap-4 rounded-2xl border bg-card p-3 pr-4 shadow-xs transition active:scale-[0.99]"
-    >
-      <div className="flex size-14 shrink-0 flex-col items-center justify-center rounded-xl bg-primary text-primary-foreground">
-        <span className="text-xl font-bold leading-none">{dayOf(session.date)}</span>
-        <span className="mt-0.5 text-[10px] font-semibold tracking-wide">{monthShort(session.date)}</span>
+    <Link href={`/sessions/${session.id}`} className="pressable-row flex items-center gap-3.5 px-4 py-3.5">
+      <div
+        className={cn(
+          "flex size-14 shrink-0 flex-col items-center justify-center rounded-2xl",
+          muted ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground",
+        )}
+      >
+        <span className="score text-xl leading-none">{dayOf(session.date)}</span>
+        <span className="mt-0.5 text-[0.625rem] font-bold tracking-wider">{monthShort(session.date)}</span>
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold">{session.label}</p>
+        <p className="truncate text-[1.0625rem] font-semibold tracking-tight">{session.label}</p>
         <p className="truncate text-sm text-muted-foreground">
           <LocalTimeRange start={session.startTime} startOnly suffix=" · " />
           {subtitle}
         </p>
       </div>
-      <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
+      <ChevronRight className="size-5 shrink-0 text-muted-foreground/70" />
     </Link>
   );
 }
