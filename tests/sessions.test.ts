@@ -74,9 +74,10 @@ describe("sessions", () => {
     const left = await w.admin.query(
       `select (select count(*) from smackosoft.sessions where id = $1) as sessions,
               (select count(*) from smackosoft.matches where session_id = $1) as matches,
-              (select count(*) from smackosoft.video_linkages where session_id = $1) as linkages,
+              (select count(*) from smackosoft.video_sessions where session_id = $1)
+                + (select count(*) from smackosoft.video_games where match_game_id = $3) as linkages,
               (select count(*) from smackosoft.videos where id = $2) as videos`,
-      [sessionId, video],
+      [sessionId, video, game1],
     );
     expect(Object.values(left.rows[0]).map(Number)).toEqual([0, 0, 0, 1]);
   });

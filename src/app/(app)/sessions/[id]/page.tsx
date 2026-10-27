@@ -1,4 +1,4 @@
-import { Banknote, ChevronLeft, ChevronRight, Crown, MapPin, Plus, Users } from "lucide-react";
+import { Banknote, ChevronLeft, ChevronRight, Crown, MapPin, Plus, Users, Video } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AvatarStack } from "@/src/components/avatar-stack";
@@ -12,6 +12,7 @@ import { longDate, money, plural } from "@/src/lib/format";
 import { summarize } from "@/src/lib/matches";
 import { unwrap } from "@/src/lib/result";
 import { can } from "@/src/lib/roles";
+import { attentionOf } from "@/src/lib/videos";
 import type { Match, Team } from "@/src/contract";
 import { backend } from "@/src/server";
 
@@ -25,6 +26,14 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
   const fee = money(session.courtFee, session.currency);
   const canManage = can(session.myRole, "MANAGER");
   const canScore = can(session.myRole, "EDITOR");
+  const videos = unwrap(await backend.videos.listBySession({ sessionId: id }));
+  const { unsynced, unassigned } = attentionOf(
+    videos,
+    session.matches.flatMap((m) => m.games.map((g) => g.id)),
+    null,
+  );
+  const needAttention = unsynced.length + unassigned.length;
+  const videoCount = new Set(videos.map((l) => l.videoId)).size;
 
   return (
     <main className="flex flex-col gap-7">
@@ -94,6 +103,30 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
               </div>
             </div>
             {canManage && <ChevronRight className="size-5 text-muted-foreground/70" />}
+          </Link>
+          <Link href={`/sessions/${session.id}/videos`} className="pressable-row flex items-center gap-3 px-4 py-3.5">
+            <RowIcon>
+              <Video />
+            </RowIcon>
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.8125rem] text-muted-foreground">Videos</p>
+              <p className="mt-0.5 text-base">
+                {videoCount === 0 ? (
+                  <span className="text-muted-foreground">No videos yet</span>
+                ) : (
+                  <>
+                    {plural(videoCount, "video")}
+                    {needAttention > 0 && (
+                      <span className="text-muted-foreground">
+                        {" · "}
+                        {needAttention} need{needAttention === 1 ? "s" : ""} attention
+                      </span>
+                    )}
+                  </>
+                )}
+              </p>
+            </div>
+            <ChevronRight className="size-5 text-muted-foreground/70" />
           </Link>
         </section>
 

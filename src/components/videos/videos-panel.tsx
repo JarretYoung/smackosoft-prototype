@@ -1,94 +1,74 @@
 "use client";
 
-import { ExternalLink, Link2, Plus, Unlink, Video } from "lucide-react";
+import { CheckCircle2, Plus, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { removeLinkages, saveLinkages, saveVideos } from "@/src/app/actions";
-import { Badge } from "@/src/components/ui/badge";
+import { PageHeader } from "@/src/components/page-header";
 import { Button } from "@/src/components/ui/button";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
-import { Field, FieldGroup, FieldLabel } from "@/src/components/ui/field";
-import { Input } from "@/src/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
-import { Spinner } from "@/src/components/ui/spinner";
-import type { OwnVideo, SessionVideo } from "@/src/contract";
+import type { SessionVideo } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
+import { plural } from "@/src/lib/format";
+import { attentionOf } from "@/src/lib/videos";
+import { AddVideoSheet, type NewVideo } from "./add-video-sheet";
+import { PickSheet, type PickItem } from "./pick-sheet";
+import { SyncSheet, type SyncTarget } from "./sync-sheet";
+import { AddVideoRow, GameVideoRow, UnassignedRow } from "./video-rows";
 
-export type Target = { value: string; label: string };
-const SESSION = "session";
+export type MatchGroup = { id: string; label: string; games: { id: string; number: number }[] };
+type Target = { value: string; label: string };
 
-const clock = (seconds: number) => {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${String(s).padStart(2, "0")}`;
-};
+type Result = { ok: true } | { ok: false; error: Parameters<typeof errorMessage>[0] };
+type Picking = { kind: "game"; video: SessionVideo["video"] } | { kind: "video"; game: Target };
 
-/** "1:30" or "90" to seconds. Null when it is not a time. */
-function parseOffset(text: string): number | null {
-  const t = text.trim();
-  if (t === "") return 0;
-  const match = /^(?:(\d+):)?(\d+)$/.exec(t);
-  if (!match) return null;
-  return Number(match[1] ?? 0) * 60 + Number(match[2]);
-}
-
-function Thumb({ url }: { url: string | null }) {
-  return (
-    <div className="flex h-12 w-[4.5rem] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted text-muted-foreground">
-      {url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt="" className="size-full object-cover" />
-      ) : (
-        <Video className="size-5" />
-      )}
-    </div>
-  );
-}
+const rowId = (videoId: string, gameId: string | null) => `video-${videoId}-${gameId ?? "session"}`;
 
 /**
- * Videos for one session. Add a video record, link your videos to the whole session
- * or to one game, and unlink them. Linking is replay safe. Linking the same target
- * again only updates the offset.
+ * Videos for one session, on one page. Each match is a heading with its games under it,
+ * in order, and each game lists its videos. Videos that no game uses yet sit at the bottom
+ * as unassigned. With `focus` the page shows that one game only.
+ * Assigning a video to a game and adding a video to a game are the same flow: pick a game
+ * or a video, then sync. "Not now" in the sync sheet leaves the video not synced.
  */
 export function VideosPanel({
   sessionId,
   canEdit,
-  targets,
+  matches,
   linked,
-  own,
   focus,
 }: {
   sessionId: string;
   canEdit: boolean;
-  targets: Target[];
+  matches: MatchGroup[];
   linked: SessionVideo[];
-  own: OwnVideo[];
   focus: string | null;
 }) {
-  const [adding, setAdding] = useState(false);
-  const [linking, setLinking] = useState<OwnVideo | null>(null);
-  const [label, setLabel] = useState("");
-  const [url, setUrl] = useState("");
-  const [thumbnail, setThumbnail] = useState("");
-  const [target, setTarget] = useState(focus ?? SESSION);
-  const [offset, setOffset] = useState("");
+  const [adding, setAdding] = useState<{ game: Target | null } | null>(null);
+  const [picking, setPicking] = useState<Picking | null>(null);
+  const [syncing, setSyncing] = useState<SyncTarget | null>(null);
   const [pending, start] = useTransition();
 
-  const labelOf = (matchGameId: string | null) =>
-    matchGameId ? (targets.find((t) => t.value === matchGameId)?.label ?? "A game") : "Whole session";
-  const keyOf = (matchGameId: string | null) => matchGameId ?? SESSION;
+  const targets: Target[] = matches.flatMap((m) => m.games.map((g) => ({ value: g.id, label: `${m.label} · Game ${g.number}` })));
+  const labelOf = (gameId: string) => targets.find((t) => t.value === gameId)?.label ?? "A game";
 
-  const groups = new Map<string, SessionVideo[]>();
-  for (const item of linked) {
-    if (focus && item.matchGameId !== focus) continue;
-    const key = keyOf(item.matchGameId);
-    groups.set(key, [...(groups.get(key) ?? []), item]);
-  }
-  const ordered = [SESSION, ...targets.map((t) => t.value)].filter((k) => groups.has(k));
+  // A video in the session has one row with no game. Its other rows say which games it is in.
+  const sessionRows = linked.filter((l) => l.matchGameId === null);
+  const gameRows = linked.filter((l) => l.matchGameId !== null);
+  const videosOf = (gameId: string) => gameRows.filter((l) => l.matchGameId === gameId);
+  const { unsynced, unassigned } = attentionOf(linked, targets.map((t) => t.value), focus);
 
-  function run(action: () => Promise<{ ok: true } | { ok: false; error: Parameters<typeof errorMessage>[0] }>, done: string, then?: () => void) {
+  // With a focus, only the match that holds the game is shown, and only that game in it.
+  const shown = matches
+    .map((m) => ({ ...m, games: focus ? m.games.filter((g) => g.id === focus) : m.games }))
+    .filter((m) => m.games.length > 0 || !focus);
+
+  const attention = unsynced.length + unassigned.length;
+  const first = unsynced[0] ?? unassigned[0];
+  const firstId = first ? rowId(first.videoId, first.matchGameId) : undefined;
+  const idFor = (item: SessionVideo) => (rowId(item.videoId, item.matchGameId) === firstId ? firstId : undefined);
+
+  function run(action: () => Promise<Result>, done: string, then?: () => void) {
     start(async () => {
       const result = await action();
       if (!result.ok) return void toast.error(errorMessage(result.error));
@@ -97,220 +77,195 @@ export function VideosPanel({
     });
   }
 
-  function addVideo() {
+  function addVideo(video: NewVideo) {
+    const videoId = crypto.randomUUID();
+    const game = adding?.game ?? null;
     run(
-      () =>
-        saveVideos([
-          {
-            id: crypto.randomUUID(),
-            label,
-            videoUrl: url.trim(),
-            thumbnailUrl: thumbnail.trim() === "" ? null : thumbnail.trim(),
-          },
-        ]),
+      async () => {
+        const saved = await saveVideos([{ id: videoId, ...video }]);
+        // A link to a game also puts the video in the session.
+        return saved.ok ? saveLinkages([{ videoId, sessionId, matchGameId: game?.value ?? null }]) : saved;
+      },
       "Video added",
       () => {
-        setAdding(false);
-        setLabel("");
-        setUrl("");
-        setThumbnail("");
+        setAdding(null);
+        if (game) setSyncing({ videoId, label: video.label, gameId: game.value, gameLabel: game.label, offset: null });
       },
     );
   }
 
-  function link() {
-    if (!linking) return;
-    const seconds = parseOffset(offset);
-    if (seconds === null) return void toast.error("Use seconds like 90, or minutes and seconds like 1:30");
+  /** Puts the video in the game with no sync point, then opens the sync sheet. */
+  function addToGame(video: SessionVideo["video"], game: Target) {
     run(
-      () =>
-        saveLinkages([
-          { videoId: linking.id, sessionId, matchGameId: target === SESSION ? null : target, offsetSeconds: seconds },
-        ]),
-      "Video linked",
+      () => saveLinkages([{ videoId: video.id, sessionId, matchGameId: game.value }]),
+      "Added to game",
       () => {
-        setLinking(null);
-        setOffset("");
+        setPicking(null);
+        setSyncing({ videoId: video.id, label: video.label, gameId: game.value, gameLabel: game.label, offset: null });
       },
     );
+  }
+
+  function saveSync(target: SyncTarget, offset: number | null) {
+    run(
+      () => saveLinkages([{ videoId: target.videoId, sessionId, matchGameId: target.gameId, offsetSeconds: offset }]),
+      offset === null ? "Sync point cleared" : "Sync point saved",
+      () => setSyncing(null),
+    );
+  }
+
+  const openSync = (item: SessionVideo) =>
+    setSyncing({
+      videoId: item.videoId,
+      label: item.video.label,
+      gameId: item.matchGameId!,
+      gameLabel: labelOf(item.matchGameId!),
+      offset: item.offsetSeconds,
+    });
+
+  const remove = (item: SessionVideo, done: string) =>
+    run(() => removeLinkages([{ videoId: item.videoId, sessionId, matchGameId: item.matchGameId }]), done);
+
+  // What the picker offers depends on which side was chosen first.
+  const pickItems: PickItem[] =
+    picking?.kind === "game"
+      ? targets
+          .filter((t) => !videosOf(t.value).some((l) => l.videoId === picking.video.id))
+          .map((t) => ({ key: t.value, label: t.label, detail: plural(videosOf(t.value).length, "video") }))
+      : picking?.kind === "video"
+        ? sessionRows
+            .filter((p) => !videosOf(picking.game.value).some((l) => l.videoId === p.videoId))
+            .map((p) => ({ key: p.videoId, label: p.video.label, thumbnailUrl: p.video.thumbnailUrl }))
+        : [];
+
+  function pick(key: string) {
+    if (picking?.kind === "game") {
+      const game = targets.find((t) => t.value === key);
+      if (game) addToGame(picking.video, game);
+    } else if (picking?.kind === "video") {
+      const video = sessionRows.find((p) => p.videoId === key)?.video;
+      if (video) addToGame(video, picking.game);
+    }
   }
 
   return (
-    <div className="flex flex-col gap-8 px-4 pt-4 pb-4">
-      <section aria-labelledby="linked-heading" className="flex flex-col gap-4">
-        <h2 id="linked-heading" className="text-xl font-bold tracking-tight">
-          {focus ? `Linked to ${labelOf(focus)}` : "Linked to this session"}
-        </h2>
-        {ordered.length === 0 && (
-          <Empty className="bg-card shadow-card">
-            <EmptyHeader>
-              <EmptyMedia variant="icon" className="bg-accent text-primary">
-                <Video />
-              </EmptyMedia>
-              <EmptyTitle>Nothing linked yet</EmptyTitle>
-              <EmptyDescription>Link one of your videos to the session or to a single game.</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+    <>
+      <PageHeader
+        title="Videos"
+        back={`/sessions/${sessionId}`}
+        action={
+          canEdit && (
+            <Button variant="ghost" size="icon" className="text-primary" aria-label="Add video" onClick={() => setAdding({ game: null })}>
+              <Plus className="size-6" strokeWidth={2.25} />
+            </Button>
+          )
+        }
+      />
+
+      <div className="flex flex-col gap-8 px-4 pt-3 pb-6">
+        {attention > 0 ? (
+          <button
+            type="button"
+            onClick={() => firstId && document.getElementById(firstId)?.scrollIntoView({ behavior: "smooth", block: "center" })}
+            className="pressable -mb-3 inline-flex items-center gap-1.5 self-start px-1 text-sm font-medium text-accent-foreground"
+          >
+            <TriangleAlert className="size-4" /> {attention} need{attention === 1 ? "s" : ""} attention
+          </button>
+        ) : (
+          linked.length > 0 && (
+            <p className="-mb-3 inline-flex items-center gap-1.5 px-1 text-sm font-medium text-muted-foreground">
+              <CheckCircle2 className="size-4" /> All synced
+            </p>
+          )
         )}
-        {ordered.map((key) => (
-          <div key={key} className="flex flex-col gap-2">
-            <p className="section-label">{key === SESSION ? "Whole session" : labelOf(key)}</p>
+
+        {shown.map((match) => (
+          <section key={match.id} aria-label={match.label} className="flex flex-col gap-4">
+            <h2 className="px-1 text-2xl font-bold tracking-tight">{match.label}</h2>
+            {match.games.length === 0 && <p className="px-1 text-sm text-muted-foreground">No games yet</p>}
+            {match.games.map((g) => {
+              const game = { value: g.id, label: `${match.label} · Game ${g.number}` };
+              const inGame = videosOf(g.id);
+              return (
+                <div key={g.id} role="group" aria-label={`Game ${g.number}`} className="flex flex-col gap-2">
+                  <h3 className="section-label">Game {g.number}</h3>
+                  <ul className="group-list">
+                    {inGame.map((item) => (
+                      <GameVideoRow
+                        key={item.videoId}
+                        item={item}
+                        canEdit={canEdit}
+                        highlightId={idFor(item)}
+                        onSync={() => openSync(item)}
+                        onRemove={() => remove(item, "Removed from game")}
+                      />
+                    ))}
+                    {canEdit && <AddVideoRow onClick={() => setPicking({ kind: "video", game })} />}
+                    {!canEdit && inGame.length === 0 && <li className="px-4 py-3 text-sm text-muted-foreground">No videos</li>}
+                  </ul>
+                </div>
+              );
+            })}
+          </section>
+        ))}
+
+        {unassigned.length > 0 && (
+          <section aria-label="Unassigned" className="flex flex-col gap-3">
+            <h2 className="px-1 text-2xl font-bold tracking-tight">Unassigned</h2>
             <ul className="group-list">
-              {groups.get(key)!.map((item) => (
-                <li key={`${item.videoId}:${item.matchGameId}`} className="flex items-center gap-3 px-3 py-3">
-                  <Thumb url={item.video.thumbnailUrl} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{item.video.label}</p>
-                    <p className="text-sm text-muted-foreground tabular-nums">Starts at {clock(item.offsetSeconds)}</p>
-                  </div>
-                  <Button asChild variant="tinted" size="icon-sm" aria-label="Open video">
-                    <a href={`${item.video.videoUrl}#t=${Math.floor(item.offsetSeconds)}`} target="_blank" rel="noreferrer">
-                      <ExternalLink />
-                    </a>
-                  </Button>
-                  {canEdit && (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Unlink ${item.video.label}`}
-                      disabled={pending}
-                      onClick={() =>
-                        run(
-                          () =>
-                            removeLinkages([
-                              { videoId: item.videoId, sessionId, matchGameId: item.matchGameId },
-                            ]),
-                          "Video unlinked",
-                        )
-                      }
-                    >
-                      <Unlink />
-                    </Button>
-                  )}
-                </li>
+              {unassigned.map((item) => (
+                <UnassignedRow
+                  key={item.videoId}
+                  item={item}
+                  canEdit={canEdit}
+                  highlightId={idFor(item)}
+                  onAssign={() => setPicking({ kind: "game", video: item.video })}
+                  onRemove={() => remove(item, "Video removed")}
+                />
               ))}
             </ul>
-          </div>
-        ))}
+          </section>
+        )}
+
         {focus && (
           <Button asChild variant="link" className="self-start px-1">
-            <Link href={`/sessions/${sessionId}/videos`}>Show everything in this session</Link>
+            <Link href={`/sessions/${sessionId}/videos`}>All games</Link>
           </Button>
         )}
-      </section>
+      </div>
 
-      <section aria-labelledby="own-heading" className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 id="own-heading" className="text-xl font-bold tracking-tight">
-            Your videos
-          </h2>
-          <Button size="sm" variant="tinted" onClick={() => setAdding(true)}>
-            <Plus /> Add video
-          </Button>
-        </div>
-        {own.length === 0 ? (
-          <p className="px-1 text-sm text-muted-foreground">You have not added any videos.</p>
-        ) : (
-          <ul className="group-list">
-            {own.map((video) => (
-              <li key={video.id} className="flex items-center gap-3 px-3 py-3">
-                <Thumb url={video.thumbnailUrl} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">{video.label}</p>
-                  <p className="truncate text-sm text-muted-foreground">{video.videoUrl}</p>
-                </div>
-                {video.linkages.length > 0 && <Badge variant="tinted">{video.linkages.length} linked</Badge>}
-                {canEdit && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      setLinking(video);
-                      setTarget(focus ?? SESSION);
-                    }}
-                  >
-                    <Link2 /> Link
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <AddVideoSheet open={adding !== null} pending={pending} onClose={() => setAdding(null)} onAdd={addVideo} />
 
-      <Sheet open={adding} onOpenChange={setAdding}>
-        <SheetContent side="bottom" className="overflow-y-auto">
-          <SheetHeader className="px-5 pt-2 pb-0">
-            <SheetTitle>Add a video</SheetTitle>
-            <SheetDescription>
-              This saves a record with the video link. Uploading files is not part of this prototype.
-            </SheetDescription>
-          </SheetHeader>
-          <FieldGroup className="px-5">
-            <Field>
-              <FieldLabel htmlFor="video-label">Name</FieldLabel>
-              <Input id="video-label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Court 3 recording" />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="video-url">Link</FieldLabel>
-              <Input id="video-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" inputMode="url" />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="video-thumb">Thumbnail</FieldLabel>
-              <Input
-                id="video-thumb"
-                value={thumbnail}
-                onChange={(e) => setThumbnail(e.target.value)}
-                placeholder="Link to an image (optional)"
-                inputMode="url"
-              />
-            </Field>
-          </FieldGroup>
-          <SheetFooter className="px-5 pb-6">
-            <Button size="lg" onClick={addVideo} disabled={pending || !label.trim() || !url.trim()}>
-              {pending && <Spinner />}
-              {pending ? "Adding" : "Add video"}
+      <PickSheet
+        open={picking !== null}
+        title={picking?.kind === "game" ? "Assign to game" : "Add video"}
+        description={picking?.kind === "game" ? picking.video.label : (picking?.game.label ?? "")}
+        items={pickItems}
+        withThumbs={picking?.kind === "video"}
+        onPick={pick}
+        onClose={() => setPicking(null)}
+        empty={
+          <p className="text-sm text-muted-foreground">
+            {picking?.kind === "video" ? "No other videos in this session." : "Already in every game."}
+          </p>
+        }
+        action={
+          picking?.kind === "video" && (
+            <Button
+              variant="link"
+              className="mt-2 px-1"
+              onClick={() => {
+                setAdding({ game: picking.game });
+                setPicking(null);
+              }}
+            >
+              <Plus /> New video
             </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          )
+        }
+      />
 
-      <Sheet open={linking !== null} onOpenChange={(open) => !open && setLinking(null)}>
-        <SheetContent side="bottom" className="overflow-y-auto">
-          <SheetHeader className="px-5 pt-2 pb-0">
-            <SheetTitle>Link {linking?.label}</SheetTitle>
-            <SheetDescription>Pick where it belongs and where in the video it starts.</SheetDescription>
-          </SheetHeader>
-          <FieldGroup className="px-5">
-            <Field>
-              <FieldLabel htmlFor="link-target">Link to</FieldLabel>
-              <Select value={target} onValueChange={setTarget}>
-                <SelectTrigger id="link-target" aria-label="Link target" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={SESSION}>Whole session</SelectItem>
-                  {targets.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="offset">Starts at</FieldLabel>
-              <Input id="offset" value={offset} onChange={(e) => setOffset(e.target.value)} placeholder="0:00 or seconds" />
-            </Field>
-          </FieldGroup>
-          <SheetFooter className="px-5 pb-6">
-            <Button size="lg" onClick={link} disabled={pending}>
-              {pending && <Spinner />}
-              {pending ? "Linking" : "Link video"}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-    </div>
+      <SyncSheet target={syncing} pending={pending} onClose={() => setSyncing(null)} onSave={saveSync} />
+    </>
   );
 }

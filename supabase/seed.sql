@@ -136,15 +136,18 @@ INSERT INTO smackosoft.match_game_scores (match_team_id, match_game_id, score, c
   ('d0000000-0000-4000-8000-000000000042', 'e0000000-0000-4000-8000-000000000412', 21, 'a0000000-0000-4000-8000-000000000005');
 
 -- ------------------------------------------------------------
--- Videos. Ian's recording is linked to the whole session and to game 1 and 2 of Match 1.
--- The second video is unlinked, so the link screen has something to pick.
+-- Videos. Ian's recording is in the session pool and synced to game 1 of Match 1.
+-- It is linked to game 2 but not synced yet. The second video is only in the pool.
 -- ------------------------------------------------------------
 
 INSERT INTO smackosoft.videos (id, label, video_url, created_by) VALUES
   ('f0000000-0000-4000-8000-000000000001', 'Court 3 full recording', 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4', 'a0000000-0000-4000-8000-000000000001'),
   ('f0000000-0000-4000-8000-000000000002', 'Warm up clip',           'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4', 'a0000000-0000-4000-8000-000000000001');
 
-INSERT INTO smackosoft.video_linkages (video_id, session_id, match_game_id, canonical_offset, created_by) VALUES
-  ('f0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', NULL,                                   interval '0 seconds',  'a0000000-0000-4000-8000-000000000001'),
-  ('f0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000111', interval '10 seconds', 'a0000000-0000-4000-8000-000000000001'),
-  ('f0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000112', interval '5 seconds',  'a0000000-0000-4000-8000-000000000001');
+INSERT INTO smackosoft.video_sessions (video_id, session_id, created_by) VALUES
+  ('f0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001'),
+  ('f0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001');
+
+INSERT INTO smackosoft.video_games (video_id, match_game_id, canonical_offset, created_by) VALUES
+  ('f0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000111', interval '10 seconds', 'a0000000-0000-4000-8000-000000000001'),
+  ('f0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000112', NULL,                  'a0000000-0000-4000-8000-000000000001');

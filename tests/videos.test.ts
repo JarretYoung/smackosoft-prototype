@@ -10,18 +10,18 @@ describe("videos", () => {
     }
   });
 
-  test("links at session level and game level, and replays with a new offset", async ({ world: w }) => {
+  test("pools a video, links it to a game, and replays with a new offset", async ({ world: w }) => {
     const { sessionId, game1 } = await scoredMatch(w);
     const video = id();
     ok(await w.b.videos.save([{ id: video, label: "Court 1", videoUrl: "r2://a" }]));
-    ok(await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: null, offsetSeconds: 0 }]));
+    ok(await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: null }]));
     ok(await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: game1, offsetSeconds: 12.5 }]));
     ok(await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: game1, offsetSeconds: 30 }]));
 
     const linked = ok(await w.b.videos.listBySession({ sessionId }));
     expect(linked.map((l) => [l.matchGameId === null, l.offsetSeconds]).sort()).toEqual([
       [false, 30],
-      [true, 0],
+      [true, null],
     ]);
     const own = ok(await w.b.videos.listOwn({ sessionId }));
     expect(own).toHaveLength(1);
@@ -29,6 +29,60 @@ describe("videos", () => {
 
     const details = ok(await w.b.sessions.get({ sessionId }));
     expect(details.matches[0].games.find((g) => g.id === game1)?.videoCount).toBe(1);
+  });
+
+  test("a game link joins the pool, can be unsynced, and can be negative", async ({ world: w }) => {
+    const { sessionId, game1, game2 } = await scoredMatch(w);
+    const video = id();
+    ok(await w.b.videos.save([{ id: video, label: "Late start", videoUrl: "r2://d" }]));
+    ok(await w.b.videos.saveLinkages([
+      { videoId: video, sessionId, matchGameId: game1, offsetSeconds: -5 },
+      { videoId: video, sessionId, matchGameId: game2 },
+    ]));
+
+    const linked = ok(await w.b.videos.listBySession({ sessionId }));
+    expect(linked).toHaveLength(3);
+    expect(linked.filter((l) => l.matchGameId === null).map((l) => l.offsetSeconds)).toEqual([null]);
+    expect(linked.find((l) => l.matchGameId === game1)?.offsetSeconds).toBe(-5);
+    expect(linked.find((l) => l.matchGameId === game2)?.offsetSeconds).toBeNull();
+  });
+
+  test("shows who last changed a link", async ({ world: w }) => {
+    const { sessionId, game1 } = await scoredMatch(w);
+    const video = id();
+    ok(await w.b.videos.save([{ id: video, label: "V", videoUrl: "r2://g" }]));
+    ok(await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: game1 }]));
+    const gameLink = async () => ok(await w.b.videos.listBySession({ sessionId })).find((l) => l.matchGameId === game1)!;
+    expect((await gameLink()).changedBy).toBe("owner");
+
+    ok(await w.b.members.save([{ sessionId, accountId: w.mate.accountId, role: "EDITOR" }]));
+    w.as(w.mate);
+    ok(await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: game1, offsetSeconds: 4 }]));
+    expect(await gameLink()).toMatchObject({ changedBy: "mate", offsetSeconds: 4 });
+  });
+
+  test("a pool link cannot carry an offset", async ({ world: w }) => {
+    const { sessionId } = await scoredMatch(w);
+    const video = id();
+    ok(await w.b.videos.save([{ id: video, label: "V", videoUrl: "r2://e" }]));
+    const result = await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: null, offsetSeconds: 3 }]);
+    expect(code(result)).toBe("VALIDATION");
+  });
+
+  test("removing a pool link takes the game links, removing a game link keeps the pool link", async ({ world: w }) => {
+    const { sessionId, game1, game2 } = await scoredMatch(w);
+    const video = id();
+    ok(await w.b.videos.save([{ id: video, label: "V", videoUrl: "r2://f" }]));
+    ok(await w.b.videos.saveLinkages([
+      { videoId: video, sessionId, matchGameId: game1, offsetSeconds: 1 },
+      { videoId: video, sessionId, matchGameId: game2, offsetSeconds: 2 },
+    ]));
+
+    ok(await w.b.videos.removeLinkages([{ videoId: video, sessionId, matchGameId: game1 }]));
+    expect(ok(await w.b.videos.listBySession({ sessionId })).map((l) => l.matchGameId === null).sort()).toEqual([false, true]);
+
+    ok(await w.b.videos.removeLinkages([{ videoId: video, sessionId, matchGameId: null }]));
+    expect(ok(await w.b.videos.listBySession({ sessionId }))).toEqual([]);
   });
 
   test("a game must belong to the session it is linked in", async ({ world: w }) => {

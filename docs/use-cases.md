@@ -73,7 +73,7 @@ Notes:
 
 - `ON CONFLICT DO UPDATE` is atomic under concurrency and fails if one statement touches the same row twice ([PostgreSQL INSERT docs](https://www.postgresql.org/docs/current/sql-insert.html)). That is why G10 exists.
 - Rows that fail the `WHERE` are not returned. Compare the returned count to the input count to detect a blocked row, then return `FORBIDDEN` or `NOT_FOUND`.
-- `video_linkages` has two unique arbiters, because `match_game_id` can be `NULL`. One `ON CONFLICT` cannot target both. Split the batch into session-level and game-level rows and run two statements.
+- Videos use two tables, `video_sessions` (the pool) and `video_games` (game links), so each has one plain unique key and no `NULL` arbiter.
 
 ## Error model
 
@@ -116,11 +116,13 @@ There is no `reason` field. Every error points at the input item that caused it 
 | Exactly one `OWNER`, the creator. No transfer, no demotion. `members.save` cannot grant `OWNER` or touch the owner's row. | `members.save`, `members.remove` |
 | Every account may change its handle twice after it is first set. Saving the same handle is not a change. Backed by `accounts.handle_change_count`. | `accounts.saveGuests`, later the profile |
 | Handles are free for anyone once released. | Accounts |
-| An editor links a video they own, or a video already linked in that session. | `videos.saveLinkages` |
+| An editor links a video they own, or a video already in that session's pool. | `videos.saveLinkages` |
+| A game link also puts the video in the pool. A pool link has no offset. A game link with no offset is not synced yet. | `videos.saveLinkages` |
+| Removing a pool link removes the video's game links in that session. Removing a game link keeps the pool link. | `videos.removeLinkages` |
 | A new auth user gets an account from an explicit `accounts.saveCurrent` call on onboarding. No lazy creation. | `accounts.saveCurrent` |
 | A player cannot be on both teams of one match. | `matches.savePlayers` |
 | A score's team and game must belong to the same match. | `matches.saveScores` |
-| A game-level video linkage must point at a game of that same session. | `videos.saveLinkages` |
+| A game link must point at a game of that same session. | `videos.saveLinkages` |
 | Adding a member gives instant access. No acceptance step. | `members.save` |
 | A `VIEWER` reads everything in the session. | All reads |
 | Only the creator of a guest account can edit it. | `accounts.saveGuests` |
@@ -181,7 +183,7 @@ Reads are one per screen or lookup. Writes follow one pattern: `save` and `remov
 | `accounts.getCurrent` | Dashboard header, onboarding check | signed in |
 | `sessions.list({ from?, to? })` | Sessions home, dashboard upcoming | signed in. Default window: last month through next month. The frontend may override. |
 | `accounts.findByHandle` | Add Participants | signed in |
-| `videos.listBySession` | Match Details, per-game video counts | `VIEWER` |
+| `videos.listBySession` | Videos page, session videos row, Match Details video counts. Each link carries `changedBy` and `changedAt` (the last editor of the offset, or the person who made the link). | `VIEWER` |
 | `videos.listOwn({ sessionId? })` | Video management UI with session context | signed in. With `sessionId`, each video also lists its linkages in that session. |
 
 `stats.get` and `stats.getTeammates` live on the analytics surface above.
@@ -201,7 +203,7 @@ Reads are one per screen or lookup. Writes follow one pattern: `save` and `remov
 | Game score | `matches.saveScores` | none | team, game | `EDITOR` | Removing a game removes its scores. |
 | Guest account | `accounts.saveGuests` | `accounts.removeGuests` (soft delete) | client UUID | signed in | Creator edits it. Handle changes twice at most. `accounts.listGuests` reads them. |
 | Video | `videos.save` | none | client UUID | own videos only | Record only. No storage upload. |
-| Video linkage | `videos.saveLinkages` | `videos.removeLinkages` | video, session, game or none | `EDITOR` | The video is the actor's own, or already linked in the session |
+| Video linkage | `videos.saveLinkages` | `videos.removeLinkages` | video, session, game or none | `EDITOR` | The video is the actor's own, or already in the session pool |
 
 ## Side effects are documented, not named
 
@@ -229,7 +231,6 @@ Foreign keys fix the order. Replaying the whole sequence is always safe.
 | Note | Impact |
 |---|---|
 | `match_games.start_time` and `end_time` are `NOT NULL`. | The frontend must send them. |
-| `video_linkages` uniqueness splits on `NULL` game. | Two statements per batch. |
 | Child tables now cascade on delete. | The delete helpers still remove dependents in order. They can be simplified later. |
 | `accounts.handle_change_count` counts handle changes. The database only checks it is not negative. The limit of 2 lives in the backend. | In the init migration. |
 | Nothing creates an `accounts` row when someone signs up. | `accounts.saveCurrent`, called from an onboarding step. See "Account creation and handles". |
@@ -264,8 +265,8 @@ What the code does that the tables above do not say.
 | Owner row | `members.save` and `members.remove` return `CONFLICT` for the owner's row. |
 | Player on one team | `matches.savePlayers` returns `CONFLICT` if the account is on another team of the match, in the call or already saved. |
 | Score and game | `matches.saveScores` returns `CONFLICT` when the team and game belong to different matches. |
-| Video linkage | Two upserts per call (session level, game level) because of the nullable game column. |
-| Deletes | `remove*` deletes dependents first, in order. Videos stay. Their linkages go. |
+| Video linkage | One insert into the pool (do nothing on conflict), one upsert into game links. |
+| Deletes | `remove*` deletes dependents first, in order. Videos stay. Their pool and game links go. |
 | Stats | Computed in memory from the actor's matches. Provisional. |
 
 ### Known limits

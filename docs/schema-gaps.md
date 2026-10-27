@@ -14,6 +14,9 @@ What the product needs that the schema did not cover, and what we did about it. 
 | `sessions.location_url` (nullable) | A maps link next to the location text | Session form and reads need one optional field |
 | `sessions.cover_url`, `videos.thumbnail_url`, existing `accounts.avatar_url` | Anywhere an image shows, we store a URL for now | Fields on the contract when a screen needs them |
 | `ON DELETE CASCADE` on the child tables below | See "Why cascade" | The helpers in `src/server/remove.ts` can shrink |
+| `video_linkages` split into `video_sessions` (the pool) and `video_games` (game links with a nullable `canonical_offset`) | Footage can sit in a session before it is linked to a game. A game link can wait to be synced. The offset only exists where it means something. | `videos.saveLinkages` writes both tables. NULL offset means not synced. |
+
+`canonical_offset` is the video timestamp of the game's canonical 0, a sync marker chosen per game. It is often the first shuttle hit, but a clap works too. It lets many videos of one game share a timeline. To show canonical time `t`, seek to `canonical_offset + t`. It is negative when the video started after the marker.
 
 Guest deletion is a soft delete (`accounts.deleted`). That already exists. It keeps old matches intact and frees the handle, because the handle index ignores deleted accounts.
 

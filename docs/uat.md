@@ -30,7 +30,8 @@ A new email signs up with no account, so it lands on onboarding.
 | Edit session | `/sessions/[id]/edit` | Same form with the current members. Remove someone who plays and read the error. |
 | Edit match | `/sessions/[id]/matches/edit` | Switch, add and delete a match. Pick players per team. Add and remove games, edit each game's start and end time, enter scores. Save all. A match keeps one or two teams. |
 | Match details | `/sessions/[id]/matches/[matchId]` | Score header, game cards, video counts. A game card opens its videos. |
-| Videos | `/sessions/[id]/videos` | Add a video record with an optional thumbnail link, link it to the session or a game with an offset, unlink |
+| Videos | `/sessions/[id]/videos` | One page. Each match is a large heading with its games under it as small subheaders, each game with its videos. Videos that no game uses yet sit at the bottom under "Unassigned". A game card on the match screen opens this page for that one game, with an "All games" link. The "+" in the header adds a new video to the session. "Add video" at the end of a game picks one from the session, or "New video" adds one straight into that game. Tapping an unassigned video or picking one for a game ends in the sync sheet. In the sheet, drag the ruler or type the time (`1:30`, `90`, `-0:05`). "Not now" keeps the video in the game but leaves it "Not synced". Each row shows who last changed it. "N need attention" scrolls to the first item. |
+| Session videos row | `/sessions/[id]` | Shows the video count and how many need sorting out |
 | Profile | `/profile` | Change your name and handle and read how many handle changes are left. Add, edit and delete guests. "Invite to claim" makes a link. |
 | Onboarding | `/onboarding` | Taken handle error, then a free handle. "I have a claim code" turns a guest into your account. |
 

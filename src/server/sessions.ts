@@ -270,9 +270,9 @@ export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { s
                       .whereRef("match_game_scores.match_game_id", "=", "match_games.id"),
                   ).as("scores"),
                   g
-                    .selectFrom("video_linkages")
+                    .selectFrom("video_games")
                     .select(g.fn.countAll<string>().as("count"))
-                    .whereRef("video_linkages.match_game_id", "=", "match_games.id")
+                    .whereRef("video_games.match_game_id", "=", "match_games.id")
                     .as("video_count"),
                 ])
                 .whereRef("match_games.match_id", "=", "matches.id")

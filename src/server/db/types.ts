@@ -47,6 +47,9 @@ export interface Matches {
 }
 
 export interface MatchGameHighlights {
+  /**
+   * Time since the game's canonical 0 (the sync marker shared by all videos of the game). Not a position in any one video.
+   */
   canonical_offset: string;
   created_at: Generated<Timestamp>;
   created_by: string;
@@ -130,13 +133,15 @@ export interface Sessions {
   updated_by: string | null;
 }
 
-export interface VideoLinkages {
-  canonical_offset: string;
+export interface VideoGames {
+  /**
+   * Video timestamp of the game's canonical 0, a sync marker chosen per game (for example the first shuttle hit or a clap). Negative when the video started after that moment. NULL means not synced yet. To show canonical time t, seek to canonical_offset + t.
+   */
+  canonical_offset: string | null;
   created_at: Generated<Timestamp>;
   created_by: string;
   id: Generated<string>;
-  match_game_id: string | null;
-  session_id: string;
+  match_game_id: string;
   updated_at: Timestamp | null;
   updated_by: string | null;
   video_id: string;
@@ -153,6 +158,16 @@ export interface Videos {
   video_url: string;
 }
 
+export interface VideoSessions {
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: Generated<string>;
+  session_id: string;
+  updated_at: Timestamp | null;
+  updated_by: string | null;
+  video_id: string;
+}
+
 export interface DB {
   accounts: Accounts;
   match_game_highlights: MatchGameHighlights;
@@ -163,6 +178,7 @@ export interface DB {
   matches: Matches;
   session_access: SessionAccess;
   sessions: Sessions;
-  video_linkages: VideoLinkages;
+  video_games: VideoGames;
+  video_sessions: VideoSessions;
   videos: Videos;
 }

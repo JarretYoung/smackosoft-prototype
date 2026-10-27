@@ -275,6 +275,9 @@ CREATE TABLE smackosoft.match_game_highlights (
   CONSTRAINT match_game_highlights_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
 
+COMMENT ON COLUMN smackosoft.match_game_highlights.canonical_offset IS
+  'Time since the game''s canonical 0 (the sync marker shared by all videos of the game). Not a position in any one video.';
+
 GRANT ALL ON TABLE smackosoft.match_game_highlights TO smackosoft_service;
 
 CREATE INDEX match_game_highlights_match_game_id_idx ON smackosoft.match_game_highlights (match_game_id);
@@ -303,31 +306,58 @@ GRANT ALL ON TABLE smackosoft.videos TO smackosoft_service;
 CREATE INDEX videos_created_by_idx ON smackosoft.videos (created_by);
 
 -- ============================================================
--- VIDEO_LINKAGES
+-- VIDEO_SESSIONS
 -- ============================================================
 
-CREATE TABLE smackosoft.video_linkages (
+CREATE TABLE smackosoft.video_sessions (
+  id         uuid        NOT NULL DEFAULT gen_random_uuid(),
+  video_id   uuid        NOT NULL,
+  session_id uuid        NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  created_by uuid        NOT NULL,
+  updated_at timestamptz,
+  updated_by uuid,
+  CONSTRAINT video_sessions_pkey PRIMARY KEY (id),
+  CONSTRAINT video_sessions_video_id_session_id_key UNIQUE (video_id, session_id),
+  CONSTRAINT video_sessions_video_id_fkey FOREIGN KEY (video_id) REFERENCES smackosoft.videos(id) ON DELETE CASCADE,
+  CONSTRAINT video_sessions_session_id_fkey FOREIGN KEY (session_id) REFERENCES smackosoft.sessions(id) ON DELETE CASCADE,
+  CONSTRAINT video_sessions_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
+  CONSTRAINT video_sessions_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
+);
+
+COMMENT ON TABLE smackosoft.video_sessions IS
+  'A video in a session''s pool. Any session member with the right role can contribute footage here before it is linked to a game.';
+
+GRANT ALL ON TABLE smackosoft.video_sessions TO smackosoft_service;
+
+CREATE INDEX video_sessions_session_id_idx ON smackosoft.video_sessions (session_id);
+
+-- ============================================================
+-- VIDEO_GAMES
+-- ============================================================
+
+CREATE TABLE smackosoft.video_games (
   id               uuid        NOT NULL DEFAULT gen_random_uuid(),
   video_id         uuid        NOT NULL,
-  session_id       uuid        NOT NULL,
-  match_game_id    uuid,
-  canonical_offset interval    NOT NULL,
+  match_game_id    uuid        NOT NULL,
+  canonical_offset interval,
   created_at       timestamptz NOT NULL DEFAULT now(),
   created_by       uuid        NOT NULL,
   updated_at       timestamptz,
   updated_by       uuid,
-  CONSTRAINT video_linkages_pkey PRIMARY KEY (id),
-  CONSTRAINT video_linkages_video_id_session_id_match_game_id_key UNIQUE (video_id, session_id, match_game_id),
-  CONSTRAINT video_linkages_video_id_fkey FOREIGN KEY (video_id) REFERENCES smackosoft.videos(id) ON DELETE CASCADE,
-  CONSTRAINT video_linkages_session_id_fkey FOREIGN KEY (session_id) REFERENCES smackosoft.sessions(id) ON DELETE CASCADE,
-  CONSTRAINT video_linkages_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id) ON DELETE CASCADE,
-  CONSTRAINT video_linkages_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
-  CONSTRAINT video_linkages_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
+  CONSTRAINT video_games_pkey PRIMARY KEY (id),
+  CONSTRAINT video_games_video_id_match_game_id_key UNIQUE (video_id, match_game_id),
+  CONSTRAINT video_games_video_id_fkey FOREIGN KEY (video_id) REFERENCES smackosoft.videos(id) ON DELETE CASCADE,
+  CONSTRAINT video_games_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id) ON DELETE CASCADE,
+  CONSTRAINT video_games_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
+  CONSTRAINT video_games_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
 
-GRANT ALL ON TABLE smackosoft.video_linkages TO smackosoft_service;
+COMMENT ON TABLE smackosoft.video_games IS
+  'A video that covers a game. canonical_offset says how it lines up with the other videos of the same game.';
+COMMENT ON COLUMN smackosoft.video_games.canonical_offset IS
+  'Video timestamp of the game''s canonical 0, a sync marker chosen per game (for example the first shuttle hit or a clap). Negative when the video started after that moment. NULL means not synced yet. To show canonical time t, seek to canonical_offset + t.';
 
-CREATE INDEX video_linkages_video_id_idx ON smackosoft.video_linkages (video_id);
-CREATE INDEX video_linkages_session_id_match_game_id_idx ON smackosoft.video_linkages (session_id, match_game_id);
+GRANT ALL ON TABLE smackosoft.video_games TO smackosoft_service;
 
-CREATE UNIQUE INDEX video_linkages_video_id_session_id_key ON smackosoft.video_linkages (video_id, session_id) WHERE match_game_id IS NULL;
+CREATE INDEX video_games_match_game_id_idx ON smackosoft.video_games (match_game_id);

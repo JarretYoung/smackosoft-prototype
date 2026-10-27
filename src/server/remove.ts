@@ -1,6 +1,6 @@
 /**
  * Hard deletes. The schema has no ON DELETE CASCADE below sessions, so each level
- * removes what hangs off it first. Videos are never deleted. Only their linkages go.
+ * removes what hangs off it first. Videos are never deleted. Only their pool and game links go.
  * Callers run these inside a transaction and have already authorized the ids.
  */
 import { unique } from "./core";
@@ -12,7 +12,7 @@ export async function removeGameRows(db: Db, gameIds: string[]) {
   if (!gameIds.length) return;
   await db.deleteFrom("match_game_highlights").where("match_game_id", "in", gameIds).execute();
   await db.deleteFrom("match_game_scores").where("match_game_id", "in", gameIds).execute();
-  await db.deleteFrom("video_linkages").where("match_game_id", "in", gameIds).execute();
+  await db.deleteFrom("video_games").where("match_game_id", "in", gameIds).execute();
   await db.deleteFrom("match_games").where("id", "in", gameIds).execute();
 }
 
@@ -44,7 +44,7 @@ export async function removeSessionRows(db: Db, sessionIds: string[]) {
   if (!sessions.length) return;
   const matches = await db.selectFrom("matches").select("id").where("session_id", "in", sessions).execute();
   await removeMatchRows(db, ids(matches));
-  await db.deleteFrom("video_linkages").where("session_id", "in", sessions).execute();
+  await db.deleteFrom("video_sessions").where("session_id", "in", sessions).execute();
   await db.deleteFrom("session_access").where("session_id", "in", sessions).execute();
   await db.deleteFrom("sessions").where("id", "in", sessions).execute();
 }
