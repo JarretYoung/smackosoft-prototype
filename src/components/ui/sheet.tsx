@@ -58,6 +58,9 @@ function SheetContent({
       <SheetOverlay />
       <SheetPrimitive.Content
         data-slot="sheet-content"
+        // A sheet renders in a portal, but React still bubbles its events to the component that opened it.
+        // Without this, submitting a form in a sheet also submits the form the sheet was opened from.
+        onSubmit={(e) => e.stopPropagation()}
         className={cn(
           "fixed z-[51] flex flex-col gap-4 bg-card shadow-float transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500",
           side === "right" &&

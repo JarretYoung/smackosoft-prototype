@@ -35,6 +35,8 @@ export default async function NewSessionPage() {
           date: today(),
           location: last?.location ?? "",
           locationUrl: last?.locationUrl ?? "",
+          latitude: last?.latitude ?? null,
+          longitude: last?.longitude ?? null,
           // Only the time of day and the length are reused. The form reads them in the browser's timezone.
           startTime: last?.startTime ?? "",
           endTime: last?.endTime ?? "",

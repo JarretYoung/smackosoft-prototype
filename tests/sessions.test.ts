@@ -105,4 +105,23 @@ describe("session details", () => {
     const backwards = await w.b.sessions.save([{ ...full, endTime: "2026-10-30T19:00:00.000Z" }]);
     expect(failure(backwards)).toEqual({ code: "VALIDATION", paths: [[0, "endTime"]] });
   });
+
+  test("keeps the coordinates, and refuses half a pair or a place off the map", async ({ world: w }) => {
+    const base = { id: id(), label: "Evening", date: "2026-10-30" };
+    ok(await w.b.sessions.save([{ ...base, latitude: 3.0906026, longitude: 101.6063411 }]));
+    expect(ok(await w.b.sessions.get({ sessionId: base.id }))).toMatchObject({ latitude: 3.0906026, longitude: 101.6063411 });
+
+    // Saving again without them clears them, like every other field.
+    ok(await w.b.sessions.save([base]));
+    expect(ok(await w.b.sessions.get({ sessionId: base.id }))).toMatchObject({ latitude: null, longitude: null });
+
+    expect(failure(await w.b.sessions.save([{ ...base, latitude: 3.09 }]))).toEqual({
+      code: "VALIDATION",
+      paths: [[0, "longitude"]],
+    });
+    expect(failure(await w.b.sessions.save([{ ...base, latitude: 91, longitude: 101.6 }]))).toEqual({
+      code: "VALIDATION",
+      paths: [[0, "latitude"]],
+    });
+  });
 });

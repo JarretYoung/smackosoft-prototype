@@ -24,6 +24,8 @@ export default async function EditSessionPage({ params }: { params: Promise<{ id
           date: session.date,
           location: session.location ?? "",
           locationUrl: session.locationUrl ?? "",
+          latitude: session.latitude,
+          longitude: session.longitude,
           startTime: session.startTime ?? "",
           endTime: session.endTime ?? "",
           coverUrl: session.coverUrl ?? "",

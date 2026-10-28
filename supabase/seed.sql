@@ -55,11 +55,11 @@ INSERT INTO smackosoft.accounts (id, account_type, display_name, handle, created
 --   s2 and s3 upcoming. s4 last week, Jarret owns, Ian is a viewer.
 -- ------------------------------------------------------------
 
-INSERT INTO smackosoft.sessions (id, label, date, start_time, end_time, location, location_url, court_fee, currency, organiser_id, created_by) VALUES
-  ('b0000000-0000-4000-8000-000000000001', 'Badminton with da Laddies', current_date, (current_date + time '09:00') AT TIME ZONE 'Asia/Kuala_Lumpur', (current_date + time '11:00') AT TIME ZONE 'Asia/Kuala_Lumpur', 'Sunway Serene', 'https://maps.google.com/?q=Sunway+Serene', 20, 'MYR', 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001'),
-  ('b0000000-0000-4000-8000-000000000002', 'Thursday Smash',            current_date + 3, ((current_date + 3) + time '20:00') AT TIME ZONE 'Asia/Kuala_Lumpur', ((current_date + 3) + time '22:00') AT TIME ZONE 'Asia/Kuala_Lumpur', 'Bukit Jalil', NULL, NULL, NULL, NULL, 'a0000000-0000-4000-8000-000000000001'),
-  ('b0000000-0000-4000-8000-000000000003', 'Monday Singles',            current_date + 7, NULL, NULL, 'Setia Alam', NULL, 15, 'MYR', NULL, 'a0000000-0000-4000-8000-000000000001'),
-  ('b0000000-0000-4000-8000-000000000004', 'Last Week Doubles',         current_date - 7, ((current_date - 7) + time '09:00') AT TIME ZONE 'Asia/Kuala_Lumpur', ((current_date - 7) + time '11:00') AT TIME ZONE 'Asia/Kuala_Lumpur', 'Sunway Serene', NULL, 18, 'MYR', NULL, 'a0000000-0000-4000-8000-000000000005');
+INSERT INTO smackosoft.sessions (id, label, date, start_time, end_time, location, location_url, latitude, longitude, court_fee, currency, organiser_id, created_by) VALUES
+  ('b0000000-0000-4000-8000-000000000001', 'Badminton with da Laddies', current_date, (current_date + time '09:00') AT TIME ZONE 'Asia/Kuala_Lumpur', (current_date + time '11:00') AT TIME ZONE 'Asia/Kuala_Lumpur', 'Sunway Serene', 'https://maps.google.com/?q=Sunway+Serene', 3.0906026, 101.6063411, 20, 'MYR', 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001'),
+  ('b0000000-0000-4000-8000-000000000002', 'Thursday Smash',            current_date + 3, ((current_date + 3) + time '20:00') AT TIME ZONE 'Asia/Kuala_Lumpur', ((current_date + 3) + time '22:00') AT TIME ZONE 'Asia/Kuala_Lumpur', 'Bukit Jalil', NULL, NULL, NULL, NULL, NULL, NULL, 'a0000000-0000-4000-8000-000000000001'),
+  ('b0000000-0000-4000-8000-000000000003', 'Monday Singles',            current_date + 7, NULL, NULL, 'Setia Alam', NULL, NULL, NULL, 15, 'MYR', NULL, 'a0000000-0000-4000-8000-000000000001'),
+  ('b0000000-0000-4000-8000-000000000004', 'Last Week Doubles',         current_date - 7, ((current_date - 7) + time '09:00') AT TIME ZONE 'Asia/Kuala_Lumpur', ((current_date - 7) + time '11:00') AT TIME ZONE 'Asia/Kuala_Lumpur', 'Sunway Serene', NULL, 3.0906026, 101.6063411, 18, 'MYR', NULL, 'a0000000-0000-4000-8000-000000000005');
 
 INSERT INTO smackosoft.session_access (session_id, account_id, role_type, created_by) VALUES
   -- s1

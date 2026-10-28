@@ -12,6 +12,7 @@ What the product needs that the schema did not cover, and what we did about it. 
 | Index on guests by `created_by` | List the guests someone created | `accounts.listGuests` |
 | `sessions.start_time`, `end_time` (nullable) | The home mockup shows "9:00 am to 11:00 am" before any game is played | Session form and reads need two optional fields |
 | `sessions.location_url` (nullable) | A maps link next to the location text | Session form and reads need one optional field |
+| `sessions.latitude`, `sessions.longitude` (nullable, both or neither, range checked) | The maps link says where a session is, but only to a person. Coordinates let the app show a pin and open the right place later. | The session form fills them from the pasted link. Reads return them. |
 | `sessions.cover_url`, `videos.thumbnail_url`, existing `accounts.avatar_url` | Anywhere an image shows, we store a URL for now | Fields on the contract when a screen needs them |
 | `ON DELETE CASCADE` on the child tables below | See "Why cascade" | The helpers in `src/server/remove.ts` can shrink |
 | `video_linkages` split into `video_sessions` (the pool) and `video_games` (game links with a nullable `canonical_offset`) | Footage can sit in a session before it is linked to a game. A game link can wait to be synced. The offset only exists where it means something. | `videos.saveLinkages` writes both tables. NULL offset means not synced. |

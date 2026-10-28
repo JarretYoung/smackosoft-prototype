@@ -7,6 +7,25 @@ function parts(date: string) {
   return { year, month, day };
 }
 
+/** "3.0906, 101.6063". Four decimals is about ten metres, plenty to tell places apart. */
+export function coordinatesShort(latitude: number, longitude: number): string {
+  return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+}
+
+/** "Wed 28 Oct" */
+export function dayShort(date: string): string {
+  const { year, month, day } = parts(date);
+  const weekday = new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
+  return `${weekday} ${day} ${MONTHS[month - 1]}`;
+}
+
+/** "Wed, 28 Oct 2026" */
+export function weekdayDate(date: string): string {
+  const { year, month, day } = parts(date);
+  const weekday = new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
+  return `${weekday}, ${longDate(date)}`;
+}
+
 /** Today as "YYYY-MM-DD" in the server's local time. */
 export function today(): string {
   return new Date().toLocaleDateString("en-CA");
@@ -41,6 +60,17 @@ export function money(amount: number | null, currency: string | null): string | 
 
 export function plural(count: number, one: string, many = `${one}s`): string {
   return `${count} ${count === 1 ? one : many}`;
+}
+
+/** "09:30" to 570 minutes after midnight. */
+export function timeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+/** 570 to "09:30". */
+export function minutesToTime(minutes: number): string {
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
 /** "09:00" to "9:00 am". */

@@ -80,6 +80,8 @@ CREATE TABLE smackosoft.sessions (
   organiser_id uuid,
   location     text,
   location_url text,
+  latitude     double precision,
+  longitude    double precision,
   start_time   timestamptz,
   end_time     timestamptz,
   cover_url    text,
@@ -91,6 +93,9 @@ CREATE TABLE smackosoft.sessions (
   updated_by   uuid,
   CONSTRAINT sessions_pkey PRIMARY KEY (id),
   CONSTRAINT sessions_time_order_check CHECK (start_time IS NULL OR end_time IS NULL OR end_time > start_time),
+  CONSTRAINT sessions_latitude_check CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90),
+  CONSTRAINT sessions_longitude_check CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180),
+  CONSTRAINT sessions_coordinates_together_check CHECK ((latitude IS NULL) = (longitude IS NULL)),
   CONSTRAINT sessions_court_fee_check CHECK (court_fee IS NULL OR court_fee >= 0),
   CONSTRAINT sessions_currency_format_check CHECK (currency IS NULL OR currency ~ '^[A-Z]{3}$'),
   CONSTRAINT sessions_court_fee_currency_check CHECK ((court_fee IS NULL) = (currency IS NULL)),
@@ -100,6 +105,11 @@ CREATE TABLE smackosoft.sessions (
 );
 
 GRANT ALL ON TABLE smackosoft.sessions TO smackosoft_service;
+
+COMMENT ON COLUMN smackosoft.sessions.latitude IS
+  'Where the session is, in degrees (WGS 84). Read from the maps link when it is pasted. NULL when unknown. Set with longitude or not at all.';
+COMMENT ON COLUMN smackosoft.sessions.longitude IS
+  'See latitude.';
 
 CREATE INDEX sessions_organiser_id_idx ON smackosoft.sessions (organiser_id);
 

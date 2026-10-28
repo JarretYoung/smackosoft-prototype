@@ -15,6 +15,9 @@ export const SessionSave = z
     location: z.string().trim().min(1).nullish(),
     /** A maps link for the location. */
     locationUrl: HttpUrl.nullish(),
+    /** Where the session is, in degrees. Set with longitude or not at all. */
+    latitude: z.number().min(-90).max(90).nullish(),
+    longitude: z.number().min(-180).max(180).nullish(),
     /** The plan, not what happened. Games carry their own times. */
     startTime: Timestamp.nullish(),
     endTime: Timestamp.nullish(),
@@ -25,6 +28,10 @@ export const SessionSave = z
   .refine((s) => (s.courtFee == null) === (s.currency == null), {
     message: "Set courtFee and currency together, or neither",
     path: ["currency"],
+  })
+  .refine((s) => (s.latitude == null) === (s.longitude == null), {
+    message: "Set latitude and longitude together, or neither",
+    path: ["longitude"],
   })
   .refine((s) => !s.startTime || !s.endTime || Date.parse(s.endTime) > Date.parse(s.startTime), {
     message: "endTime must be after startTime",
@@ -77,6 +84,8 @@ export type SessionDetails = {
   endTime: string | null;
   location: string | null;
   locationUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
   coverUrl: string | null;
   courtFee: number | null;
   currency: string | null;

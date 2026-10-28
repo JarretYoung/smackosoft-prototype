@@ -125,8 +125,10 @@ export interface Sessions {
   end_time: Timestamp | null;
   id: Generated<string>;
   label: string;
+  latitude: number | null;
   location: string | null;
   location_url: string | null;
+  longitude: number | null;
   organiser_id: string | null;
   start_time: Timestamp | null;
   updated_at: Timestamp | null;
