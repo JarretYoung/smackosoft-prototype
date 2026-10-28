@@ -6,7 +6,7 @@ import { Button } from "@/src/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { PasswordInput } from "@/src/components/password-input";
 import { Spinner } from "@/src/components/ui/spinner";
-import { authMessage, MIN_PASSWORD } from "@/src/lib/auth-errors";
+import { authMessage, passwordProblem } from "@/src/lib/auth-errors";
 import { useRevealFirstError } from "@/src/lib/reveal-errors";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -20,12 +20,12 @@ export function UpdatePasswordForm() {
   const router = useRouter();
   useRevealFirstError(rejections);
 
-  const tooShort = password.length < MIN_PASSWORD;
-  const passwordError = (left || rejections > 0 ? (tooShort ? `Use at least ${MIN_PASSWORD} characters` : undefined) : undefined) ?? error ?? undefined;
+  const problem = passwordProblem(password);
+  const passwordError = (left || rejections > 0 ? problem : undefined) ?? error ?? undefined;
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (tooShort) return setRejections((n) => n + 1);
+    if (problem) return setRejections((n) => n + 1);
     const supabase = createClient();
     setIsLoading(true);
     setError(null);

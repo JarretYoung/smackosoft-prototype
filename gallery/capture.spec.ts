@@ -5,9 +5,9 @@ import { authFile, DEVICE, MANIFEST, PASSWORD, SHOTS } from "./device";
 
 /** Flows are described in docs/gallery-flows.md. Keep the two in step. */
 
-const S1 = "b0000000-0000-4000-8000-000000000001";
-const M1 = "c0000000-0000-4000-8000-000000000001";
-const M2 = "c0000000-0000-4000-8000-000000000002";
+const S1 = "5a27b3f7-4464-4a5a-a97b-7d20ad844b50";
+const M1 = "9eb0daa3-9d48-40de-9516-a6347150db04";
+const M2 = "89868493-987c-40fb-b4c4-9e5d1d33765f";
 
 const counters = new Map<string, number>();
 
@@ -56,7 +56,8 @@ async function signUp(page: Page, email: string, password: string) {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign up" }).click();
-  await page.waitForURL(/sign-up-success/);
+  // Local Supabase has email confirmation off, so a new user lands straight on onboarding.
+  await page.waitForURL(/sign-up-success|onboarding/);
 }
 
 const asUser = async (browser: Browser, user: "ian" | "nadree") =>
@@ -103,7 +104,7 @@ test.describe("01 auth", () => {
     await page.getByRole("button", { name: "Sign up" }).click();
     await shot(page, flow, "signup-errors", "Bad email and short password, both explained");
     await page.getByLabel("Email").fill("ian@smacko.test");
-    await page.getByLabel("Password", { exact: true }).fill("password123");
+    await page.getByLabel("Password", { exact: true }).fill("Password123");
     await page.getByRole("button", { name: "Sign up" }).click();
     await expect(page.getByText(/already an account/)).toBeVisible();
     await shot(page, flow, "signup-email-taken", "Email already registered: points at the email field");
@@ -116,15 +117,16 @@ test.describe("02 onboarding", () => {
   const flow = "02-onboarding";
 
   test("a new person signs up and picks a handle", async ({ page }) => {
-    await signUp(page, "gallery.one@smacko.test", "gallery-pass-1");
+    await signUp(page, "gallery.one@smacko.test", "Gallery-pass-1");
     await shot(page, flow, "signup-success", "Sign up accepted");
 
     await go(page, "/onboarding");
     await shot(page, flow, "onboarding-empty", "Onboarding, empty");
 
     await page.getByLabel("Display name").fill("Gallery One");
+    await page.locator("#handle").fill("gallery_one");
     await expect(page.getByText(/is available/)).toBeVisible();
-    await shot(page, flow, "handle-suggested", "A handle is suggested from the name and checked: available");
+    await shot(page, flow, "handle-available", "Name and handle typed, handle checked: available");
 
     await page.locator("#handle").fill("izaaq");
     await expect(page.getByText("That handle is taken")).toBeVisible();
@@ -474,7 +476,7 @@ test.describe("10 claim a guest", () => {
 
   test("a new person claims the guest", async ({ page }) => {
     test.skip(!claimLink, "No claim link was made in the guests flow");
-    await signUp(page, "gallery.two@smacko.test", "gallery-pass-2");
+    await signUp(page, "gallery.two@smacko.test", "Gallery-pass-2");
     await go(page, new URL(claimLink).pathname + new URL(claimLink).search);
     await shot(page, flow, "claim-first", "Arriving with a code: claim comes first, new account second");
     await page.getByRole("button", { name: "Claim my guest account" }).click();

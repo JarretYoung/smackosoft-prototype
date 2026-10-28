@@ -1,32 +1,13 @@
 import Link from "next/link";
-import { Suspense } from "react";
 import { AuthShell } from "@/src/components/auth-shell";
 import { Button } from "@/src/components/ui/button";
 
-async function ErrorContent({
-  searchParams,
-}: {
-  searchParams: Promise<{ error: string }>;
-}) {
-  const params = await searchParams;
-
+export default function Page() {
   return (
-    <p className="text-subhead text-muted-foreground">
-      {params?.error ? `Code error: ${params.error}` : "An unspecified error occurred."}
-    </p>
-  );
-}
-
-export default function Page({
-  searchParams,
-}: {
-  searchParams: Promise<{ error: string }>;
-}) {
-  return (
-    <AuthShell title="Something went wrong">
-      <Suspense>
-        <ErrorContent searchParams={searchParams} />
-      </Suspense>
+    <AuthShell title="That link did not work">
+      <p className="text-subhead text-muted-foreground">
+        The link may have expired or been used already. Log in, or ask for a new email.
+      </p>
       <Button asChild variant="secondary" size="lg">
         <Link href="/auth/login">Back to log in</Link>
       </Button>

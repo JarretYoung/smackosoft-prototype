@@ -2,6 +2,7 @@
 
 import { createClient } from "@/src/lib/supabase/client";
 import { AuthShell } from "@/src/components/auth-shell";
+import { GoogleButton } from "@/src/components/google-button";
 import { PasswordInput } from "@/src/components/password-input";
 import { Button } from "@/src/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
@@ -103,6 +104,7 @@ export function LoginForm() {
           {isLoading && <Spinner />}
           {isLoading ? "Logging in" : "Log in"}
         </Button>
+        <GoogleButton />
         <p className="text-center text-subhead text-muted-foreground">
           New here?{" "}
           <Link href="/auth/sign-up" className="font-semibold text-primary underline-offset-4 hover:underline">

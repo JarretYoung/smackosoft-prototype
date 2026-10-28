@@ -106,7 +106,7 @@ export const isHandleFree = (input: unknown) =>
 /** The only use case that works without an account. It creates the account on first call. */
 export const saveCurrentAccount = (input: unknown) =>
   guard(async () => {
-    const { displayName, handle } = parse(SaveCurrentAccountInput, input);
+    const { displayName, handle, avatarUrl } = parse(SaveCurrentAccountInput, input);
     const userId = await authSource.userId();
     if (!userId) throw new Failure("UNAUTHENTICATED");
 
@@ -125,7 +125,14 @@ export const saveCurrentAccount = (input: unknown) =>
           const id = randomUUID();
           await tx
             .insertInto("accounts")
-            .values({ id, user_id: userId, display_name: displayName, handle, created_by: id })
+            .values({
+              id,
+              user_id: userId,
+              display_name: displayName,
+              handle,
+              avatar_url: avatarUrl ?? null,
+              created_by: id,
+            })
             .execute();
           return;
         }

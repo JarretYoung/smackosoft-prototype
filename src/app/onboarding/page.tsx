@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { AuthShell } from "@/src/components/auth-shell";
+import { AvatarUrl } from "@/src/contract";
+import { createClient } from "@/src/lib/supabase/server";
 import { backend } from "@/src/server";
 import { OnboardingForm } from "./onboarding-form";
 
@@ -11,9 +13,22 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   const me = await backend.accounts.getCurrent();
   if (me.ok) redirect("/home");
 
+  // Google hands back the name on the account. Email sign ups have none, so the field stays empty.
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const meta = data?.claims?.user_metadata;
+  const providerName = [meta?.full_name, meta?.name].find((v) => typeof v === "string" && v.trim());
+  // Google sends a 96px picture. Ask for a sharper one, the largest avatar is 80px on a 2x screen.
+  const picture = [meta?.picture, meta?.avatar_url].find((v) => typeof v === "string");
+  const parsedPicture = AvatarUrl.safeParse(picture?.replace(/=s96-c$/, "=s256-c"));
+
   return (
     <AuthShell title="Pick your name" description="Friends find you by your handle.">
-      <OnboardingForm claimCode={claim ?? ""} />
+      <OnboardingForm
+        claimCode={claim ?? ""}
+        suggestedName={providerName?.trim() ?? ""}
+        avatarUrl={parsedPicture.success ? parsedPicture.data : null}
+      />
     </AuthShell>
   );
 }

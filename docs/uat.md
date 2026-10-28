@@ -8,7 +8,7 @@ Start here to try the prototype. The steps to run it are in [runbook.md](runbook
 2. `pnpm supabase db reset` to load the sample data
 3. `pnpm dev`, then open `http://localhost:3000`
 
-Sign in with any seeded user. The password is `password123`.
+Sign in with any seeded user. The password is `Password123`.
 
 | Email | Use it to check |
 |---|---|
@@ -53,7 +53,7 @@ A new email signs up with no account, so it lands on onboarding.
 |---|---|
 | Court photos | A drawn court stands in for the photo |
 | Video upload | Videos are links only. There is no file upload. |
-| Avatars | The database has `avatar_url`, but the contract and screens do not set it yet |
+| Avatars | A Google sign up stores the Google picture link on the account. Nothing else sets it yet, and it is not copied to our own storage |
 | Stats | Provisional. The win rate counts decided matches only. |
 | Dev badge | Next.js shows an "Insight" badge about instant navigation. It is a dev hint, not an error. |
 | Real sign-in in tests | Backend tests fake the signed-in user. The browser path was checked by hand. |

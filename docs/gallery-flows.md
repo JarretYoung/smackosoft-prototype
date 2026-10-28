@@ -46,7 +46,7 @@ Flows run in order. Later flows rely on data the earlier ones leave behind.
 Starts with a real sign up of a new user.
 1. Sign up success.
 2. Onboarding, empty.
-3. Name typed, handle suggested and checked, "available".
+3. Name and handle typed, handle checked, "available".
 4. A taken handle (`izaaq`), with the error.
 5. A handle that is too short, after leaving the field.
 6. The claim code section open, with a wrong code error.

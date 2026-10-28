@@ -13,21 +13,20 @@ import { useRevealFirstError } from "@/src/lib/reveal-errors";
 import { normalizeHandle, useHandleCheck } from "@/src/lib/use-handle-check";
 import { claimGuest, saveCurrentAccount } from "../actions";
 
-/** A handle to start from, made from the name: "Aadit K." becomes "aadit_k". Empty when nothing usable is left. */
-function suggestHandle(name: string): string {
-  const slug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 30);
-  return slug.length >= 3 ? slug : "";
-}
-
-export function OnboardingForm({ claimCode }: { claimCode: string }) {
+export function OnboardingForm({
+  claimCode,
+  suggestedName,
+  avatarUrl,
+}: {
+  claimCode: string;
+  suggestedName: string;
+  /** The picture from the sign in provider, saved with the new account. */
+  avatarUrl: string | null;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [name, setName] = useState("");
-  const [typedHandle, setTypedHandle] = useState<string | null>(null);
+  const [name, setName] = useState(suggestedName);
+  const [handleText, setHandleText] = useState("");
   const [left, setLeft] = useState<Record<string, boolean>>({});
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [rejections, setRejections] = useState(0);
@@ -35,8 +34,7 @@ export function OnboardingForm({ claimCode }: { claimCode: string }) {
   const [code, setCode] = useState(claimCode);
   const [claimError, setClaimError] = useState<string | null>(null);
 
-  // The handle follows the name until the person types their own.
-  const handleText = typedHandle ?? suggestHandle(name);
+  // The name starts from Google when it has one. The handle is always the person's own choice.
   const handle = normalizeHandle(handleText);
   const check = useHandleCheck(handleText);
   useRevealFirstError(rejections);
@@ -67,7 +65,7 @@ export function OnboardingForm({ claimCode }: { claimCode: string }) {
     }
     setServerErrors({});
     start(async () => {
-      const result = await saveCurrentAccount({ displayName: name, handle });
+      const result = await saveCurrentAccount({ displayName: name, handle, avatarUrl });
       if (result.ok) router.replace("/home");
       else {
         setServerErrors(fieldErrors(result.error));
@@ -144,7 +142,7 @@ export function OnboardingForm({ claimCode }: { claimCode: string }) {
               enterKeyHint="go"
               aria-invalid={!!handleError}
               onChange={(e) => {
-                setTypedHandle(e.target.value);
+                setHandleText(e.target.value);
                 setServerErrors({});
               }}
               onBlur={() => setLeft((l) => ({ ...l, handle: true }))}

@@ -7,10 +7,21 @@ import type { Ack, Result } from "./result";
 export const FindAccountByHandleInput = z.object({ handle: z.string() });
 export type FindAccountByHandleInput = z.input<typeof FindAccountByHandleInput>;
 
+/**
+ * A profile picture from Google. Only https links on Google's image hosts, so a user cannot
+ * point their avatar at any server they like (user metadata in Supabase is editable by the user).
+ */
+export const AvatarUrl = z
+  .url({ protocol: /^https$/ })
+  .max(500)
+  .refine((value) => new URL(value).hostname.endsWith(".googleusercontent.com"), "Not a Google image link");
+
 /** The actor's own account is a singleton, so this takes one object, not an array. */
 export const SaveCurrentAccountInput = z.object({
   displayName: z.string().trim().min(1),
   handle: AccountHandle,
+  /** Used only when the account is created. Later calls leave the picture alone. */
+  avatarUrl: AvatarUrl.nullish(),
 });
 export type SaveCurrentAccountInput = z.input<typeof SaveCurrentAccountInput>;
 

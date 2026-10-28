@@ -20,7 +20,7 @@ Run step 2 any time you want the sample data back. It wipes the local database.
 
 ### Sample logins
 
-All users share the password `password123`.
+All users share the password `Password123`.
 
 | Email | Person | Role in the seed |
 |---|---|---|
@@ -31,6 +31,21 @@ All users share the password `password123`.
 | `jarret@smacko.test` | Jarret Young (`@jayrome`) | Owns Last Week Doubles |
 
 The guest `Aadit` has no login. Ian created it.
+
+### Google sign in
+
+Do this once before `pnpm supabase start`. Google is enabled in `supabase/config.toml`, and the CLI needs both values.
+
+1. In Google Cloud Console, create an OAuth client of type Web application.
+2. Add this authorized redirect URI: `http://127.0.0.1:54321/auth/v1/callback`.
+3. Create `supabase/.env` (not committed) with:
+   ```
+   SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=your-client-id
+   SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=your-client-secret
+   ```
+4. Run `pnpm supabase stop`, then `pnpm supabase start`.
+
+A new Google user lands on onboarding to pick a handle, like any new user. On the hosted project, enter the same two values under Authentication, Sign in providers, Google, and use the callback URL shown there.
 
 ### Regenerating database types
 

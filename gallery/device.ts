@@ -6,7 +6,7 @@ export const SHOTS = path.join(GALLERY, "screenshots");
 export const AUTH_DIR = path.join(GALLERY, ".auth");
 export const MANIFEST = path.join(GALLERY, ".manifest.jsonl");
 
-export const PASSWORD = "password123";
+export const PASSWORD = "Password123";
 export const USERS = {
   ian: "ian@smacko.test",
   nadree: "nadree@smacko.test",

@@ -2,12 +2,13 @@
 
 import { createClient } from "@/src/lib/supabase/client";
 import { AuthShell } from "@/src/components/auth-shell";
+import { GoogleButton } from "@/src/components/google-button";
 import { PasswordInput } from "@/src/components/password-input";
 import { Button } from "@/src/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Input } from "@/src/components/ui/input";
 import { Spinner } from "@/src/components/ui/spinner";
-import { authMessage, emailProblem, MIN_PASSWORD } from "@/src/lib/auth-errors";
+import { authMessage, emailProblem, PASSWORD_RULE, passwordProblem } from "@/src/lib/auth-errors";
 import { useRevealFirstError } from "@/src/lib/reveal-errors";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -27,26 +28,30 @@ export function SignUpForm() {
   const emailError =
     (show("email") ? emailProblem(email) : undefined) ?? (serverError?.field === "email" ? serverError.message : undefined);
   const passwordError =
-    (show("password") && password.length < MIN_PASSWORD ? `Use at least ${MIN_PASSWORD} characters` : undefined) ??
+    (show("password") ? passwordProblem(password) : undefined) ??
     (serverError?.field === "password" ? serverError.message : undefined);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (emailProblem(email) || password.length < MIN_PASSWORD) return setRejections((n) => n + 1);
+    if (emailProblem(email) || passwordProblem(password)) return setRejections((n) => n + 1);
     const supabase = createClient();
     setIsLoading(true);
     setServerError(null);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
+          // Only used when the email template links straight to the app. The template in
+          // supabase/templates goes through /auth/confirm instead.
           emailRedirectTo: `${window.location.origin}/`,
         },
       });
       if (error) throw error;
-      router.push("/auth/sign-up-success");
+      // With email confirmation off there is a session already, so no email is sent. Carry on.
+      // With it on, the person has to open the email first.
+      router.push(data.session ? "/onboarding" : "/auth/sign-up-success");
     } catch (error: unknown) {
       const message = authMessage(error);
       const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
@@ -99,7 +104,7 @@ export function SignUpForm() {
             {passwordError ? (
               <FieldError>{passwordError}</FieldError>
             ) : (
-              <FieldDescription>At least {MIN_PASSWORD} characters.</FieldDescription>
+              <FieldDescription>{PASSWORD_RULE}</FieldDescription>
             )}
           </Field>
         </FieldGroup>
@@ -107,6 +112,7 @@ export function SignUpForm() {
           {isLoading && <Spinner />}
           {isLoading ? "Creating account" : "Sign up"}
         </Button>
+        <GoogleButton />
         <p className="text-center text-subhead text-muted-foreground">
           Already have an account?{" "}
           <Link href="/auth/login" className="font-semibold text-primary underline-offset-4 hover:underline">

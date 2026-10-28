@@ -49,7 +49,8 @@ export function PersonAvatar({
 }) {
   return (
     <Avatar className={cn(SIZES[size].box, "ring-2 ring-card", className)}>
-      {person.avatarUrl && <AvatarImage src={person.avatarUrl} alt="" />}
+      {/* No referrer: Google's image host can refuse requests that carry one. */}
+      {person.avatarUrl && <AvatarImage src={person.avatarUrl} alt="" referrerPolicy="no-referrer" />}
       <AvatarFallback className={cn(SIZES[size].text, "font-semibold", toneFor(person.id))}>
         {initials(person.displayName)}
       </AvatarFallback>

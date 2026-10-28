@@ -1,11 +1,23 @@
-/** Matches `minimum_password_length` in supabase/config.toml. Change both together. */
-export const MIN_PASSWORD = 6;
+/**
+ * Matches `minimum_password_length` and `password_requirements` (lower_upper_letters_digits)
+ * in supabase/config.toml. Change them together.
+ */
+export const MIN_PASSWORD = 8;
+
+/** The rule in one sentence, for hints and errors. */
+export const PASSWORD_RULE = `Use at least ${MIN_PASSWORD} characters with a lowercase letter, an uppercase letter and a number.`;
+
+/** Shape check only. Supabase decides in the end. */
+export const passwordProblem = (password: string): string | undefined =>
+  password.length >= MIN_PASSWORD && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password)
+    ? undefined
+    : PASSWORD_RULE;
 
 const MESSAGES: Record<string, string> = {
   invalid_credentials: "That email and password do not match. Check them and try again.",
   user_already_exists: "There is already an account with that email. Try logging in instead.",
   email_exists: "There is already an account with that email. Try logging in instead.",
-  weak_password: `Choose a password with at least ${MIN_PASSWORD} characters.`,
+  weak_password: PASSWORD_RULE,
   same_password: "Choose a password you have not used before.",
   email_address_invalid: "That email address does not look right.",
   over_request_rate_limit: "Too many attempts. Wait a minute and try again.",

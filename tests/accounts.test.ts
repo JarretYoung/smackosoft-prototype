@@ -14,6 +14,20 @@ describe("accounts", () => {
     expect(ok(await w.b.accounts.getCurrent()).account.handle).toBe(input.handle);
   });
 
+  test("a Google picture is saved on creation only, and other hosts are rejected", async ({ world: w }) => {
+    const fresh = await w.newUser();
+    w.as(fresh);
+    const handle = () => `pic_${id().replace(/-/g, "").slice(0, 10)}`;
+    const picture = "https://lh3.googleusercontent.com/a/abc=s256-c";
+
+    expect(failure(await w.b.accounts.saveCurrent({ displayName: "Pic", handle: handle(), avatarUrl: "https://evil.example/x.png" })).code).toBe("VALIDATION");
+    expect(code(await w.b.accounts.saveCurrent({ displayName: "Pic", handle: handle(), avatarUrl: picture }))).toBe("ok");
+    expect(ok(await w.b.accounts.getCurrent()).account.avatarUrl).toBe(picture);
+
+    expect(code(await w.b.accounts.saveCurrent({ displayName: "Pic", handle: handle(), avatarUrl: null }))).toBe("ok");
+    expect(ok(await w.b.accounts.getCurrent()).account.avatarUrl).toBe(picture);
+  });
+
   test("a handle changes twice, then the third change is blocked", async ({ world: w }) => {
     const next = () => ({ displayName: "Owner", handle: `h_${id().replace(/-/g, "").slice(0, 10)}` });
     expect(code(await w.b.accounts.saveCurrent(next()))).toBe("ok");

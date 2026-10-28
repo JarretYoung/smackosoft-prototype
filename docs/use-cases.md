@@ -246,7 +246,7 @@ The frontend provides the handle and display name on an onboarding step after th
 | Handle changes are not wasted | A generated first handle would burn one of the two changes. |
 | `display_name` is required | Something must collect it anyway. |
 
-- `accounts.saveCurrent({ displayName, handle })` creates the account on first call and updates it later. A changed handle counts against `handle_change_count`.
+- `accounts.saveCurrent({ displayName, handle, avatarUrl? })` creates the account on first call and updates it later. A changed handle counts against `handle_change_count`. `avatarUrl` is stored on creation only, and must be an https link on `*.googleusercontent.com`.
 - Every use case, including `accounts.getCurrent`, returns `UNAUTHENTICATED` when there is no session or no account. One rule, no exceptions.
 - The frontend already knows whether a Supabase session exists (`src/proxy.ts`). Session present plus `UNAUTHENTICATED` from `accounts.getCurrent` means onboarding.
 - `accounts.saveCurrent` and `accounts.isHandleFree` are the only use cases that work without an account.
