@@ -1,10 +1,11 @@
 "use client";
 
-import { MoreHorizontal, Plus } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { removeMembers, saveGuests, saveMembers, saveSessions } from "@/src/app/actions";
+import { AddRow } from "@/src/components/add-row";
 import { PersonAvatar } from "@/src/components/avatar-stack";
 import { Badge } from "@/src/components/ui/badge";
 import { OptionalTag } from "@/src/components/optional-tag";
@@ -434,10 +435,10 @@ export function SessionForm({
               )}
             </li>
           ))}
+          <li>
+            <AddRow onClick={() => setAdding(true)}>Add participant</AddRow>
+          </li>
         </ul>
-        <Button type="button" variant="tinted" onClick={() => setAdding(true)}>
-          <Plus /> Add participant
-        </Button>
       </section>
 
       <div className="flex flex-col gap-2 pt-2">

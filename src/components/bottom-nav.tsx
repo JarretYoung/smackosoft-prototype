@@ -41,7 +41,7 @@ export function BottomNav() {
               aria-current={active ? "page" : undefined}
               className={cn(
                 "pressable flex flex-1 flex-col items-center gap-0.5 rounded-full py-2 text-[0.6875rem] font-semibold",
-                active ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+                active ? "bg-foreground/[0.06] text-primary" : "text-muted-foreground",
               )}
             >
               <Icon className="size-[1.375rem]" strokeWidth={active ? 2.5 : 2} />

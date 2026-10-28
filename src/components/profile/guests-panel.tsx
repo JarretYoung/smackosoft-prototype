@@ -95,7 +95,7 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
         <h2 id="guests-heading" className="section-label">
           Guests you created
         </h2>
-        <Button size="sm" variant="tinted" onClick={openAdd}>
+        <Button size="sm" variant="text" className="-mr-3" onClick={openAdd}>
           <Plus /> Add guest
         </Button>
       </div>

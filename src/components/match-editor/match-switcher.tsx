@@ -99,8 +99,9 @@ export function MatchSwitcher({
       </Button>
       <Button
         type="button"
-        variant="destructive"
+        variant="outline"
         size="icon"
+        className="text-destructive"
         onClick={() => setConfirming(true)}
         disabled={!current || pending}
         aria-label="Delete match"

@@ -143,7 +143,7 @@ function HeroStat({ value, label }: { value: string; label: string }) {
 
 function DateChip({ date }: { date: string }) {
   return (
-    <div className="flex size-12 shrink-0 flex-col items-center justify-center rounded-xl bg-accent text-accent-foreground">
+    <div className="flex size-12 shrink-0 flex-col items-center justify-center rounded-xl bg-primary text-primary-foreground">
       <span className="score text-lg leading-none">{dayOf(date)}</span>
       <span className="mt-0.5 text-[0.625rem] font-bold tracking-wider">{monthShort(date)}</span>
     </div>

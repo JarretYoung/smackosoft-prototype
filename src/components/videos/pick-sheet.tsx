@@ -32,7 +32,7 @@ export function PickSheet({
 }) {
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
-      <SheetContent side="bottom" className="max-h-[80dvh] overflow-y-auto">
+      <SheetContent side="bottom" className="max-h-[80dvh] overflow-y-auto bg-background">
         <SheetHeader className="px-5 pt-2 pb-0">
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>{description}</SheetDescription>

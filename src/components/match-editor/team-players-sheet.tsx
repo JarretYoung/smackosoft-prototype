@@ -43,7 +43,7 @@ export function TeamPlayersSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="overflow-y-auto">
+      <SheetContent side="bottom" className="overflow-y-auto bg-background">
         <SheetHeader className="px-5 pt-2 pb-0">
           <SheetTitle>{teamLabel} players</SheetTitle>
           <SheetDescription>Choose from the session members.</SheetDescription>

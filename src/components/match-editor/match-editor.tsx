@@ -1,6 +1,6 @@
 "use client";
 
-import { Crown, Minus, Pencil, Plus } from "lucide-react";
+import { Crown, Minus, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ import {
 } from "@/src/app/actions";
 import { AvatarStack } from "@/src/components/avatar-stack";
 import { LocalTimeRange } from "@/src/components/local-time";
+import { AddRow } from "@/src/components/add-row";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "@/src/components/ui/field";
@@ -371,9 +372,9 @@ export function MatchEditor({
             </div>
           );
         })}
-        <Button type="button" variant="tinted" onClick={addGame}>
-          <Plus /> Add game
-        </Button>
+        <div className="group-list rounded-3xl">
+          <AddRow onClick={addGame}>Add game</AddRow>
+        </div>
       </section>
 
       {/* Stays in reach however many games there are. */}

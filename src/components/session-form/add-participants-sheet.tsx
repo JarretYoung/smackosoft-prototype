@@ -145,7 +145,7 @@ function Picker({
         </div>
 
         {(matches.length > 0 || canLookup || canMakeGuest) && (
-          <ul className="group-list max-h-64 overflow-y-auto">
+          <ul className="group-list max-h-64 overflow-y-auto border border-border/60 shadow-none">
             {matches.map((person) => {
               const on = isChosen(person.id);
               return (

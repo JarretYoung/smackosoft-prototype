@@ -34,7 +34,8 @@
   --muted-foreground: oklch(0.5 0.012 40);
 
   /* Tinted: the quiet red used behind selected and highlighted items. */
-  --accent: oklch(0.955 0.03 25);
+  /* The brand red at 10%, not a fixed pink, so it reads the same on white and on the page gray. */
+  --accent: oklch(0.49 0.18 24 / 10%);
   --accent-foreground: oklch(0.49 0.18 24);
 
   --destructive: oklch(0.49 0.18 24);

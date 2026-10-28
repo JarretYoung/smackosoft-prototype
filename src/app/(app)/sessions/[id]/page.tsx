@@ -62,7 +62,7 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
           <LocalTimeRange start={session.startTime} end={session.endTime} prefix=" · " />
         </p>
         <h1 className="mt-1 px-1 text-[2.125rem] leading-[1.1] font-bold tracking-tight">{session.label}</h1>
-        <SessionCover url={session.coverUrl} className="mt-5 h-44 rounded-3xl shadow-float" />
+        {session.coverUrl && <SessionCover url={session.coverUrl} className="mt-5 h-44 rounded-3xl shadow-float" />}
       </section>
 
       <div className="flex flex-col gap-7 px-4">
@@ -137,7 +137,7 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
               Matches
             </h2>
             {canScore && session.matches.length > 0 && (
-              <Button asChild variant="tinted" size="sm">
+              <Button asChild variant="text" size="sm" className="-mr-3">
                 <Link href={`/sessions/${session.id}/matches/edit`}>Edit</Link>
               </Button>
             )}

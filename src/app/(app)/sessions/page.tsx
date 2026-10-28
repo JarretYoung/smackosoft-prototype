@@ -4,9 +4,10 @@ import { AvatarStack } from "@/src/components/avatar-stack";
 import { SessionCover } from "@/src/components/court-art";
 import { Button } from "@/src/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
+import { LiveBadge } from "@/src/components/live-badge";
 import { LocalTimeRange } from "@/src/components/local-time";
 import { cn } from "@/src/lib/utils";
-import { dayOf, monthShort, plural, today } from "@/src/lib/format";
+import { addDays, dayOf, monthShort, plural, today } from "@/src/lib/format";
 import { unwrap } from "@/src/lib/result";
 import type { SessionListItem } from "@/src/contract";
 import { backend } from "@/src/server";
@@ -14,15 +15,31 @@ import { backend } from "@/src/server";
 export default async function SessionsPage() {
   const sessions = unwrap(await backend.sessions.list());
   const now = today();
-  const todays = sessions.filter((s) => s.date === now);
+  const weekEnd = addDays(now, 7);
+  // Earliest start first. A session with no start time goes last.
+  const byStart = (a: SessionListItem, b: SessionListItem) =>
+    (a.startTime ?? "9").localeCompare(b.startTime ?? "9");
+  const todays = sessions.filter((s) => s.date === now).sort(byStart);
+  const [hero, ...alsoToday] = todays;
   const upcoming = sessions.filter((s) => s.date > now);
+  const thisWeek = upcoming.filter((s) => s.date <= weekEnd);
+  const later = upcoming.filter((s) => s.date > weekEnd);
   const past = sessions.filter((s) => s.date < now).reverse();
+
+  const summary = [
+    todays.length > 0 && `${todays.length} today`,
+    thisWeek.length > 0 && `${thisWeek.length} this week`,
+  ].filter(Boolean);
 
   return (
     <main className="flex flex-col gap-7 px-4 pt-6 pb-4">
       <header className="px-1">
         <h1 className="large-title">Sessions</h1>
-        <p className="mt-1 text-[0.9375rem] text-muted-foreground">Last month to next month</p>
+        {sessions.length > 0 && (
+          <p className="mt-1 text-[0.9375rem] text-muted-foreground">
+            {summary.length ? summary.join(" · ") : "Nothing coming up"}
+          </p>
+        )}
       </header>
 
       {sessions.length === 0 && (
@@ -40,18 +57,26 @@ export default async function SessionsPage() {
         </Empty>
       )}
 
-      {todays.length > 0 && (
+      {hero && (
         <section aria-labelledby="today-heading" className="flex flex-col gap-3">
           <h2 id="today-heading" className="section-label">
             Today
           </h2>
-          {todays.map((session) => (
-            <TodayCard key={session.id} session={session} />
-          ))}
+          <TodayCard session={hero} />
+          {alsoToday.length > 0 && (
+            <ul className="group-list">
+              {alsoToday.map((session) => (
+                <li key={session.id}>
+                  <SessionRow session={session} />
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 
-      <SessionGroup title="Upcoming" sessions={upcoming} />
+      <SessionGroup title="This week" sessions={thisWeek} />
+      <SessionGroup title="Later" sessions={later} />
       <SessionGroup title="Past" sessions={past} muted />
     </main>
   );
@@ -65,9 +90,13 @@ function TodayCard({ session }: { session: SessionListItem }) {
     >
       <div className="relative h-44">
         <SessionCover url={session.coverUrl} className="absolute inset-0" />
-        <h3 className="absolute inset-x-5 bottom-4 text-2xl leading-tight font-bold tracking-tight text-white">
-          {session.label}
-        </h3>
+        <LiveBadge start={session.startTime} end={session.endTime} className="absolute top-4 left-5" />
+        <div className="absolute inset-x-5 bottom-4">
+          <p className="text-sm font-medium text-white/85">
+            <LocalTimeRange start={session.startTime} end={session.endTime} prefix="Today · " />
+          </p>
+          <h3 className="text-2xl leading-tight font-bold tracking-tight text-white">{session.label}</h3>
+        </div>
       </div>
       <div className="flex items-center gap-3 px-5 py-4">
         <AvatarStack people={session.members.filter((m) => m.isPlayer || m.role === "OWNER")} max={3} />
@@ -85,9 +114,17 @@ function TodayCard({ session }: { session: SessionListItem }) {
   );
 }
 
-function SessionGroup({ title, sessions, muted }: { title: string; sessions: SessionListItem[]; muted?: boolean }) {
+function SessionGroup({
+  title,
+  sessions,
+  muted,
+}: {
+  title: string;
+  sessions: SessionListItem[];
+  muted?: boolean;
+}) {
   if (sessions.length === 0) return null;
-  const headingId = `${title.toLowerCase()}-heading`;
+  const headingId = `${title.toLowerCase().replace(/\s+/g, "-")}-heading`;
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
       <h2 id={headingId} className="section-label">
@@ -96,7 +133,7 @@ function SessionGroup({ title, sessions, muted }: { title: string; sessions: Ses
       <ul className="group-list">
         {sessions.map((session) => (
           <li key={session.id}>
-            <SessionRow session={session} muted={muted} />
+            <SessionRow session={session} past={muted} />
           </li>
         ))}
       </ul>
@@ -104,7 +141,7 @@ function SessionGroup({ title, sessions, muted }: { title: string; sessions: Ses
   );
 }
 
-function SessionRow({ session, muted }: { session: SessionListItem; muted?: boolean }) {
+function SessionRow({ session, past = false }: { session: SessionListItem; past?: boolean }) {
   const players = session.members.filter((m) => m.isPlayer).length;
   const subtitle = [session.location, plural(players || session.members.length, players ? "Player" : "Member")]
     .filter(Boolean)
@@ -114,7 +151,7 @@ function SessionRow({ session, muted }: { session: SessionListItem; muted?: bool
       <div
         className={cn(
           "flex size-14 shrink-0 flex-col items-center justify-center rounded-2xl",
-          muted ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground",
+          past ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground",
         )}
       >
         <span className="score text-xl leading-none">{dayOf(session.date)}</span>

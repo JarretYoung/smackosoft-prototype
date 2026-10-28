@@ -9,9 +9,13 @@ const buttonVariants = cva(
     variants: {
       variant: {
         // Filled: the one primary action in a view.
-        default: "bg-primary text-primary-foreground hover:bg-primary/92",
+        // Disabled is gray, not a faded red. While it is saving (a spinner inside) it stays red.
+        default:
+          "bg-primary text-primary-foreground hover:bg-primary/92 disabled:bg-foreground/10 disabled:text-muted-foreground disabled:opacity-100 disabled:has-[[role=status]]:bg-primary disabled:has-[[role=status]]:text-primary-foreground disabled:has-[[role=status]]:opacity-70",
         // Tinted: a quiet, colored action.
-        tinted: "bg-accent text-accent-foreground hover:bg-accent/70",
+        tinted: "bg-accent text-accent-foreground hover:bg-primary/15",
+        // Text: a colored action with no fill, for small actions on the page gray.
+        text: "text-primary hover:bg-primary/10",
         // Gray fill: a neutral secondary action.
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/70",
         outline: "bg-card text-foreground shadow-card hover:bg-muted",

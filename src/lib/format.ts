@@ -12,6 +12,12 @@ export function today(): string {
   return new Date().toLocaleDateString("en-CA");
 }
 
+/** `date` moved by `days`, as "YYYY-MM-DD". */
+export function addDays(date: string, days: number): string {
+  const { year, month, day } = parts(date);
+  return new Date(year, month - 1, day + days).toLocaleDateString("en-CA");
+}
+
 export function dayOf(date: string): string {
   return String(parts(date).day);
 }
