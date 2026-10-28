@@ -64,6 +64,10 @@ export const GameScoreSave = z.object({
 export const SaveGameScoresInput = batch(GameScoreSave, (s) => `${s.teamId}:${s.gameId}`);
 export type SaveGameScoresInput = z.input<typeof SaveGameScoresInput>;
 
+export const GameScoreKey = z.object({ teamId: UUID, gameId: UUID });
+export const RemoveGameScoresInput = batch(GameScoreKey, (s) => `${s.teamId}:${s.gameId}`);
+export type RemoveGameScoresInput = z.input<typeof RemoveGameScoresInput>;
+
 // ----------------------------------------------------------------- outputs
 
 export type Game = {
@@ -109,4 +113,6 @@ export interface MatchesApi {
   removeGames(input: RemoveGamesInput): Promise<Ack>;
   /** Fails with CONFLICT if a score's team and game belong to different matches. */
   saveScores(input: SaveGameScoresInput): Promise<Ack>;
+  /** Clears a score. The game stays and reads as not scored for that team. Missing scores are skipped. */
+  removeScores(input: RemoveGameScoresInput): Promise<Ack>;
 }

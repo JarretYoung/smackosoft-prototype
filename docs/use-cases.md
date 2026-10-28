@@ -201,7 +201,7 @@ Reads are one per screen or lookup. Writes follow one pattern: `save` and `remov
 | Team | `matches.saveTeams` | `matches.removeTeams` | client UUID | `EDITOR` | |
 | Match player | `matches.savePlayers` | `matches.removePlayers` | team, account | `EDITOR` | Also makes the account a `VIEWER` member if missing. Adding a new member takes `MANAGER`. |
 | Game | `matches.saveGames` | `matches.removeGames` | client UUID | `EDITOR` | Frontend supplies start and end time. |
-| Game score | `matches.saveScores` | none | team, game | `EDITOR` | Removing a game removes its scores. |
+| Game score | `matches.saveScores` | `matches.removeScores` | team, game | `EDITOR` | Removing a game removes its scores. Clearing one team's score leaves the game and the other score. |
 | Guest account | `accounts.saveGuests` | `accounts.removeGuests` (soft delete) | client UUID | signed in | Creator edits it. Handle changes twice at most. `accounts.listGuests` reads them. |
 | Video | `videos.save` | none | client UUID | own videos only | Record only. No storage upload. |
 | Video linkage | `videos.saveLinkages` | `videos.removeLinkages` | video, session, game or none | `EDITOR` | The video is the actor's own, or already in the session pool |
@@ -215,7 +215,7 @@ Methods are `save` and `remove`, namespaced by feature (`videos.save`). A comman
 | `sessions.save` | The creator's `OWNER` member row, on insert only |
 | `matches.savePlayers` | A `VIEWER` member row if the account is not a member yet |
 
-Not built, because no screen needs them: highlights, video deletion, guest deletion, score deletion.
+Not built, because no screen needs them: highlights, video deletion, guest deletion.
 
 ### Order of saves for a frontend "Save all"
 

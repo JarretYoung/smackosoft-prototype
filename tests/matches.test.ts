@@ -96,6 +96,17 @@ describe("matches, teams, games and scores", () => {
     expect(failure(result)).toEqual({ code: "CONFLICT", paths: [[0, "gameId"]] });
   });
 
+  test("a cleared score leaves the game and the other team's score", async ({ world: w }) => {
+    const { sessionId, matchId, team2, game1 } = await scoredMatch(w);
+    ok(await w.b.matches.removeScores([{ teamId: team2, gameId: game1 }]));
+    // Clearing a score that is already gone is not an error.
+    ok(await w.b.matches.removeScores([{ teamId: team2, gameId: game1 }]));
+
+    const session = ok(await w.b.sessions.get({ sessionId }));
+    const game = session.matches.find((m) => m.id === matchId)!.games.find((g) => g.id === game1)!;
+    expect(game.scores.map((s) => s.score)).toEqual([21]);
+  });
+
   test("a match never moves to another session", async ({ world: w }) => {
     const { matchId } = await scoredMatch(w);
     const otherOwnSession = await newSession(w);

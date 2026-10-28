@@ -15,7 +15,7 @@ import {
   saveCurrentAccount,
   saveGuests,
 } from "./accounts";
-import { removeMatches, removeMatchPlayers, removeGames, removeTeams, saveGames, saveGameScores, saveMatches, saveMatchPlayers, saveTeams } from "./matches";
+import { removeGameScores, removeMatches, removeMatchPlayers, removeGames, removeTeams, saveGames, saveGameScores, saveMatches, saveMatchPlayers, saveTeams } from "./matches";
 import { removeMembers, saveMembers } from "./members";
 import { getSessionDetails, listSessions, removeSessions, saveSessions } from "./sessions";
 import { getStats, getTeammateStats } from "./stats";
@@ -53,6 +53,7 @@ export const backend: Backend = {
     saveGames,
     removeGames,
     saveScores: saveGameScores,
+    removeScores: removeGameScores,
   },
   videos: {
     listOwn: listOwnVideos,

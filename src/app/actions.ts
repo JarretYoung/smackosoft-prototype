@@ -11,6 +11,7 @@ import type {
   CreateClaimInput,
   RemoveGuestsInput,
   FindAccountByHandleInput,
+  RemoveGameScoresInput,
   RemoveGamesInput,
   RemoveMatchesInput,
   RemoveMatchPlayersInput,
@@ -99,6 +100,9 @@ export async function saveGames(input: SaveGamesInput) {
 }
 export async function removeGames(input: RemoveGamesInput) {
   return refreshed(backend.matches.removeGames(input));
+}
+export async function removeScores(input: RemoveGameScoresInput) {
+  return refreshed(backend.matches.removeScores(input));
 }
 export async function saveScores(input: SaveGameScoresInput) {
   return refreshed(backend.matches.saveScores(input));

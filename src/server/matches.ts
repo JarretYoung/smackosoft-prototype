@@ -1,5 +1,6 @@
 import { sql } from "kysely";
 import {
+  RemoveGameScoresInput,
   RemoveGamesInput,
   RemoveMatchesInput,
   RemoveMatchPlayersInput,
@@ -303,6 +304,22 @@ export const saveGameScores = write(SaveGameScoresInput, async ({ db, actor }, i
         updated_at: sql`now()`,
         updated_by: actor.accountId,
       })),
+    )
+    .execute();
+});
+
+export const removeGameScores = write(RemoveGameScoresInput, async ({ db, actor }, items) => {
+  const teams = await sessionsOfTeams(db, items.map((s) => s.teamId));
+  const allowed = await removableOnParents(db, actor, items, (s) => s.teamId, teams, "EDITOR", "teamId");
+  if (!allowed.length) return;
+  await db
+    .deleteFrom("match_game_scores")
+    .where((eb) =>
+      eb.or(
+        allowed.map((s) =>
+          eb.and([eb("match_team_id", "=", s.teamId), eb("match_game_id", "=", s.gameId)]),
+        ),
+      ),
     )
     .execute();
 });

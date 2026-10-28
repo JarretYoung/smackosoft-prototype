@@ -24,9 +24,9 @@
   --popover-foreground: oklch(0.19 0.012 30);
 
   /* Smash red. White text on it passes 4.5:1. */
-  --primary: oklch(0.57 0.225 27);
+  --primary: oklch(0.49 0.18 24); /* #b01e28 */
   --primary-foreground: oklch(0.99 0 0);
-  --primary-deep: oklch(0.43 0.17 26);
+  --primary-deep: oklch(0.36 0.14 24);
 
   --secondary: oklch(0.94 0.005 50);
   --secondary-foreground: oklch(0.25 0.012 30);
@@ -35,16 +35,16 @@
 
   /* Tinted: the quiet red used behind selected and highlighted items. */
   --accent: oklch(0.955 0.03 25);
-  --accent-foreground: oklch(0.47 0.19 27);
+  --accent-foreground: oklch(0.49 0.18 24);
 
-  --destructive: oklch(0.57 0.225 27);
+  --destructive: oklch(0.49 0.18 24);
   --success: oklch(0.55 0.15 150);
   --gold: oklch(0.76 0.15 80);
   --ink: oklch(0.22 0.02 160);
 
   --border: oklch(0.91 0.005 50);
   --input: oklch(0.94 0.005 50);
-  --ring: oklch(0.57 0.225 27 / 45%);
+  --ring: oklch(0.49 0.18 24 / 45%);
   --radius: 1rem;
 
   color-scheme: light;
@@ -152,8 +152,8 @@
   /* Hero: the one bold surface per screen. */
   .hero {
     background:
-      radial-gradient(120% 90% at 100% 0%, oklch(0.61 0.22 28) 0%, transparent 55%),
-      linear-gradient(160deg, oklch(0.55 0.22 27) 0%, var(--primary-deep) 100%);
+      radial-gradient(120% 90% at 100% 0%, oklch(0.55 0.19 25) 0%, transparent 55%),
+      linear-gradient(160deg, oklch(0.49 0.18 24) 0%, var(--primary-deep) 100%);
     color: var(--primary-foreground);
   }
 }

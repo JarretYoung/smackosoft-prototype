@@ -64,6 +64,20 @@ export function localToIso(date: string, time: string): string {
   return Number.isNaN(d.getTime()) ? "" : d.toISOString();
 }
 
+/** Whole minutes from `start` to `end`, or null when either is missing or the end is not after the start. */
+export function minutesBetween(start: string | null, end: string | null): number | null {
+  if (!start || !end) return null;
+  const minutes = Math.round((Date.parse(end) - Date.parse(start)) / 60_000);
+  return minutes > 0 ? minutes : null;
+}
+
+/** 90 to "1 h 30 min", 120 to "2 h", 45 to "45 min". */
+export function durationLabel(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return [h && `${h} h`, m && `${m} min`].filter(Boolean).join(" ");
+}
+
 /** The same day as `iso` with the local time set to "HH:mm". */
 export function timeInputToIso(iso: string, time: string): string {
   const [h, m] = time.split(":").map(Number);

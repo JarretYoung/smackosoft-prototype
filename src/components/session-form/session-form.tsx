@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/src/components/ui/spinner";
 import { SessionSave, type Account, type GrantableRole, type Role } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
-import { isoToTimeInput, localToIso } from "@/src/lib/format";
+import { clock12, durationLabel, isoToTimeInput, localToIso, longDate, minutesBetween } from "@/src/lib/format";
 import { useRevealFirstError } from "@/src/lib/reveal-errors";
 import { LeaveLink, useUnsavedChanges } from "@/src/lib/unsaved-changes";
 import { validate, visibleErrors } from "@/src/lib/validate";
@@ -57,6 +57,15 @@ export type SessionFormInitial = {
 
 const CURRENCIES = ["MYR", "SGD", "USD", "GBP", "EUR"];
 const ROLE_LABEL: Record<Role, string> = { OWNER: "Owner", MANAGER: "Manager", EDITOR: "Editor", VIEWER: "Viewer" };
+const ROLE_CAN: Record<"VIEWER" | "EDITOR" | "MANAGER", string> = {
+  VIEWER: "Can see the session and its videos",
+  EDITOR: "Can also edit matches, scores and players",
+  MANAGER: "Can also edit the session and manage people",
+};
+
+/** Half hour steps from 30 minutes to 6 hours. */
+const DURATIONS = Array.from({ length: 12 }, (_, i) => (i + 1) * 30);
+const NO_END = "none";
 
 /** What to do about each field, in place of the contract's developer wording. */
 const COPY: Record<string, string> = {
@@ -65,7 +74,6 @@ const COPY: Record<string, string> = {
   locationUrl: "Paste a full link, starting with https://",
   coverUrl: "Paste a full link, starting with https://",
   courtFee: "Enter an amount of 0 or more",
-  endTime: "Ends must be after it starts",
 };
 
 /**
@@ -78,12 +86,15 @@ export function SessionForm({
   initial,
   viewerRole,
   people,
+  prefilledFrom,
 }: {
   mode: "create" | "edit";
   initial: SessionFormInitial;
   viewerRole: Role;
   /** Suggestions for the participant picker. */
   people: Account[];
+  /** The date of the session the defaults came from, so the form can say where they are from. */
+  prefilledFrom?: string;
 }) {
   const router = useRouter();
   const [label, setLabel] = useState(initial.label);
@@ -92,11 +103,12 @@ export function SessionForm({
   const [locationUrl, setLocationUrl] = useState(initial.locationUrl);
   // The inputs hold local "HH:mm". The server cannot know the browser's timezone, so fill them after mount.
   const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
   useEffect(() => {
     setStartTime(initial.startTime ? isoToTimeInput(initial.startTime) : "");
-    setEndTime(initial.endTime ? isoToTimeInput(initial.endTime) : "");
-  }, [initial.startTime, initial.endTime]);
+  }, [initial.startTime]);
+  // The end is a length, so it needs no timezone and can start from the server value.
+  const initialDuration = minutesBetween(initial.startTime || null, initial.endTime || null);
+  const [duration, setDuration] = useState<number | null>(initialDuration);
   const [coverUrl, setCoverUrl] = useState(initial.coverUrl);
   const [courtFee, setCourtFee] = useState(initial.courtFee);
   const [currency, setCurrency] = useState(initial.currency || "MYR");
@@ -108,14 +120,22 @@ export function SessionForm({
   const [pending, start] = useTransition();
 
   const fee = courtFee.trim() === "" ? null : Number(courtFee);
+  const startIso = startTime === "" ? "" : localToIso(date, startTime);
+  // With no start to count from, an end that was saved earlier is left as it was.
+  const endIso =
+    startIso && duration
+      ? new Date(Date.parse(startIso) + duration * 60_000).toISOString()
+      : startTime === ""
+        ? initial.endTime || null
+        : null;
   const session = {
     id: initial.id,
     label,
     date,
     location: location.trim() === "" ? null : location,
     locationUrl: locationUrl.trim() === "" ? null : locationUrl.trim(),
-    startTime: startTime === "" ? null : localToIso(date, startTime),
-    endTime: endTime === "" ? null : localToIso(date, endTime),
+    startTime: startIso || null,
+    endTime: endIso,
     coverUrl: coverUrl.trim() === "" ? null : coverUrl.trim(),
     courtFee: fee,
     currency: fee === null ? null : currency,
@@ -134,7 +154,7 @@ export function SessionForm({
     courtFee !== initial.courtFee ||
     currency !== (initial.currency || "MYR") ||
     startTime !== (initial.startTime ? isoToTimeInput(initial.startTime) : "") ||
-    endTime !== (initial.endTime ? isoToTimeInput(initial.endTime) : "") ||
+    duration !== initialDuration ||
     participants.length !== initial.participants.length ||
     participants.some((p) => initial.participants.find((q) => q.account.id === p.account.id)?.role !== p.role);
   useUnsavedChanges(dirty && !pending);
@@ -205,6 +225,11 @@ export function SessionForm({
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-6 px-4 pt-4 pb-4">
+      {mode === "create" && prefilledFrom && (
+        <p className="px-1 text-sm text-muted-foreground">
+          Location, time and fee come from your session on {longDate(prefilledFrom)}. Change anything.
+        </p>
+      )}
       <FormSection title="Basics">
         <Field data-invalid={!!errors.label}>
           <FieldLabel htmlFor="label">Title</FieldLabel>
@@ -241,21 +266,34 @@ export function SessionForm({
             </FieldLabel>
             <Input id="start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
           </Field>
-          <Field data-invalid={!!errors.endTime}>
-            <FieldLabel htmlFor="end">
-              Ends <OptionalTag />
+          <Field>
+            <FieldLabel htmlFor="length">
+              Length <OptionalTag />
             </FieldLabel>
-            <Input
-              id="end"
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              onBlur={touch("endTime")}
-              aria-invalid={!!errors.endTime}
-            />
+            <Select
+              value={duration ? String(duration) : NO_END}
+              onValueChange={(v) => setDuration(v === NO_END ? null : Number(v))}
+              disabled={startTime === ""}
+            >
+              <SelectTrigger id="length" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_END}>{startTime === "" ? "Set a start first" : "Not set"}</SelectItem>
+                {(duration && !DURATIONS.includes(duration) ? [...DURATIONS, duration].sort((a, b) => a - b) : DURATIONS).map(
+                  (m) => (
+                    <SelectItem key={m} value={String(m)}>
+                      {durationLabel(m)}
+                    </SelectItem>
+                  ),
+                )}
+              </SelectContent>
+            </Select>
           </Field>
         </div>
-        <FieldError>{errors.endTime}</FieldError>
+        {startIso && endIso && (
+          <p className="text-sm text-muted-foreground">Ends at {clock12(isoToTimeInput(endIso))}</p>
+        )}
       </FormSection>
 
       <FormSection title="Where">
@@ -373,16 +411,19 @@ export function SessionForm({
                       <MoreHorizontal />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-48">
+                  <DropdownMenuContent align="end" className="w-64">
                     <DropdownMenuLabel>Change role</DropdownMenuLabel>
                     <DropdownMenuRadioGroup value={p.role} onValueChange={(v) => setRole(p.account.id, v as Role)}>
-                      <DropdownMenuRadioItem value="VIEWER">Viewer</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="EDITOR">Editor</DropdownMenuRadioItem>
-                      {(canGrantManager || p.role === "MANAGER") && (
-                        <DropdownMenuRadioItem value="MANAGER" disabled={!canGrantManager}>
-                          Manager
-                        </DropdownMenuRadioItem>
-                      )}
+                      {(["VIEWER", "EDITOR", "MANAGER"] as const)
+                        .filter((role) => role !== "MANAGER" || canGrantManager || p.role === "MANAGER")
+                        .map((role) => (
+                          <DropdownMenuRadioItem key={role} value={role} disabled={role === "MANAGER" && !canGrantManager}>
+                            <span className="flex flex-col">
+                              {ROLE_LABEL[role]}
+                              <span className="text-xs text-muted-foreground">{ROLE_CAN[role]}</span>
+                            </span>
+                          </DropdownMenuRadioItem>
+                        ))}
                     </DropdownMenuRadioGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem variant="destructive" onSelect={() => removeParticipant(p.account.id)}>

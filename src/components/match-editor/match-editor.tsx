@@ -10,6 +10,7 @@ import {
   saveGames,
   saveMatches,
   savePlayers,
+  removeScores,
   saveScores,
   saveTeams,
 } from "@/src/app/actions";
@@ -17,14 +18,13 @@ import { AvatarStack } from "@/src/components/avatar-stack";
 import { LocalTimeRange } from "@/src/components/local-time";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Spinner } from "@/src/components/ui/spinner";
 import { MatchType, type Account, type Match } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
 import { isoToTimeInput, timeInputToIso } from "@/src/lib/format";
 import { MATCH_TYPE_LABEL } from "@/src/lib/match-type";
-import { useRevealFirstError } from "@/src/lib/reveal-errors";
 import { useUnsavedChanges } from "@/src/lib/unsaved-changes";
 import { cn } from "@/src/lib/utils";
 import { TeamPlayersSheet } from "./team-players-sheet";
@@ -77,7 +77,6 @@ export function MatchEditor({
   const [games, setGames] = useState<GameState[]>(initialGames(match));
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
   const [openTimes, setOpenTimes] = useState<Set<string>>(new Set());
-  const [rejections, setRejections] = useState(0);
   const [pending, start] = useTransition();
 
   // Dirty means "differs from what was last saved". Compared as text so any edit counts.
@@ -90,15 +89,6 @@ export function MatchEditor({
   const [baseline, setBaseline] = useState(snapshot);
   const dirty = snapshot !== baseline;
   useUnsavedChanges(dirty && !pending);
-  useRevealFirstError(rejections);
-
-  // A saved score cannot be cleared, so a blank box over a saved score must be fixed, not skipped.
-  const savedScores = new Map(match.games.flatMap((g) => g.scores.map((s) => [`${g.id}:${s.teamId}`, s.score] as const)));
-  const scoreIssue = (gameId: string, teamId: string) =>
-    savedScores.has(`${gameId}:${teamId}`) && (games.find((g) => g.id === gameId)?.scores[teamId] ?? "") === ""
-      ? "A saved score can be changed, not removed"
-      : undefined;
-  const hasIssues = games.some((g) => teams.some((t) => scoreIssue(g.id, t.id)));
 
   const byId = new Map(members.map((m) => [m.id, m]));
   const playersOf = (team: TeamState) => [...team.playerIds].flatMap((id) => (byId.get(id) ? [byId.get(id)!] : []));
@@ -164,7 +154,6 @@ export function MatchEditor({
   }
 
   function saveAll() {
-    if (hasIssues) return setRejections((n) => n + 1);
     start(async () => {
       const fail = (error: Parameters<typeof errorMessage>[0]) => void toast.error(errorMessage(error));
 
@@ -211,7 +200,18 @@ export function MatchEditor({
         if (!result.ok) return fail(result.error);
       }
 
-      // Scores. A blank box is left as it is: a saved score cannot be cleared.
+      // Scores. A blank box over a saved score clears it.
+      const cleared = match.games.flatMap((saved) => {
+        const game = games.find((g) => g.id === saved.id);
+        if (!game) return []; // The game was removed, and its scores went with it.
+        return saved.scores
+          .filter((s) => (game.scores[s.teamId] ?? "") === "")
+          .map((s) => ({ teamId: s.teamId, gameId: saved.id }));
+      });
+      if (cleared.length) {
+        const result = await removeScores(cleared);
+        if (!result.ok) return fail(result.error);
+      }
       const scores = games.flatMap((g) =>
         teams.flatMap((t) => {
           const text = g.scores[t.id];
@@ -339,7 +339,6 @@ export function MatchEditor({
               )}
               <div className="grid grid-cols-2 gap-3">
                 {teams.map((team) => {
-                  const issue = scoreIssue(game.id, team.id);
                   return (
                     <div key={team.id} className="flex flex-col gap-1.5">
                       <div
@@ -358,7 +357,6 @@ export function MatchEditor({
                           enterKeyHint="next"
                           autoComplete="off"
                           aria-label={`${team.label} score for game ${index + 1}`}
-                          aria-invalid={!!issue}
                           placeholder="0"
                           className="score h-14 bg-card text-center text-3xl"
                           value={game.scores[team.id] ?? ""}
@@ -366,7 +364,6 @@ export function MatchEditor({
                           onChange={(e) => setScore(game.id, team.id, e.target.value, e.currentTarget)}
                         />
                       </div>
-                      <FieldError>{issue}</FieldError>
                     </div>
                   );
                 })}
