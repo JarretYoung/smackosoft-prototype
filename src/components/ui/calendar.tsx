@@ -76,7 +76,7 @@ function Calendar({
           defaultClassNames.month_caption
         ),
         dropdowns: cn(
-          "flex h-(--cell-size) w-full items-center justify-start gap-1.5 text-body font-semibold",
+          "flex h-(--cell-size) w-full items-center justify-start gap-1.5 text-sm font-semibold",
           defaultClassNames.dropdowns
         ),
         dropdown_root: cn(
@@ -90,14 +90,14 @@ function Calendar({
         caption_label: cn(
           "font-semibold tracking-tight select-none",
           captionLayout === "label"
-            ? "text-body"
-            : "flex h-9 items-center gap-1 rounded-xl pr-1 pl-2 text-subhead [&>svg]:size-3.5 [&>svg]:text-muted-foreground",
+            ? "text-sm"
+            : "flex h-9 items-center gap-1 rounded-xl pr-1 pl-2 text-sm [&>svg]:size-3.5 [&>svg]:text-muted-foreground",
           defaultClassNames.caption_label
         ),
         month_grid: cn("w-full border-collapse", defaultClassNames.month_grid),
         weekdays: cn("flex", defaultClassNames.weekdays),
         weekday: cn(
-          "flex-1 pb-1 text-footnote font-semibold text-muted-foreground uppercase select-none",
+          "flex-1 pb-1 text-sm font-semibold text-muted-foreground uppercase select-none",
           defaultClassNames.weekday
         ),
         week: cn("flex w-full", defaultClassNames.week),
@@ -197,31 +197,38 @@ function CalendarDayButton({
     if (modifiers.focused) ref.current?.focus()
   }, [modifiers.focused])
 
+  const singleSelected =
+    modifiers.selected && !modifiers.range_start && !modifiers.range_end && !modifiers.range_middle
+  // A filled day keeps a clear edge so neighbours never touch. The tap target stays the full cell.
+  const filled = modifiers.marked || singleSelected
+  // Today on a filled day: a red ring on the outside, a white gap, then the fill.
+  const todayFilled = modifiers.today && filled
+
   return (
     <Button
       ref={ref}
       variant="ghost"
       size="icon"
       data-day={day.date.toLocaleDateString()}
-      // A picked day that is also today shows as picked, not as today.
-      data-today={modifiers.today && !modifiers.selected}
-      data-selected-single={
-        modifiers.selected &&
-        !modifiers.range_start &&
-        !modifiers.range_end &&
-        !modifiers.range_middle
-      }
+      // Today on a plain day is a red ring with red text. On a filled day see `todayFilled`.
+      data-today={modifiers.today && !filled}
+      // `marked` is a modifier the caller defines for days with something on them, such as a session.
+      data-marked={modifiers.marked}
+      data-selected-single={singleSelected}
       data-range-start={modifiers.range_start}
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        "mx-auto flex size-(--cell-size) flex-col gap-1 text-body leading-none font-normal tabular-nums group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-ring",
+        "mx-auto flex size-(--cell-size) flex-col gap-1 text-sm leading-none font-normal tabular-nums group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-ring",
         // Today: a red ring and red text. A picked day wins over it.
         "data-[today=true]:font-semibold data-[today=true]:text-primary data-[today=true]:ring-[1.5px] data-[today=true]:ring-primary",
         "data-[selected-single=true]:bg-primary data-[selected-single=true]:font-semibold data-[selected-single=true]:text-primary-foreground data-[selected-single=true]:ring-0 data-[selected-single=true]:hover:bg-primary",
+        filled && "border-transparent bg-clip-padding",
+        filled && (todayFilled ? "border-4 outline-solid! outline-2 -outline-offset-2 outline-primary" : "border-2"),
+        "data-[marked=true]:bg-primary data-[marked=true]:font-semibold data-[marked=true]:text-primary-foreground data-[marked=true]:hover:bg-primary/90",
         "data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground",
         "data-[range-middle=true]:w-full data-[range-middle=true]:rounded-none data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground",
-        "[&>span]:text-xs [&>span]:opacity-70",
+        "[&>span]:text-caption [&>span]:opacity-70",
         defaultClassNames.day,
         className
       )}

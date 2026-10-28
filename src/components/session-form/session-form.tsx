@@ -310,7 +310,7 @@ export function SessionForm({
           placeholder="Badminton with da Laddies"
           enterKeyHint="next"
           aria-invalid={!!errors.label}
-          className="w-full min-w-0 bg-transparent text-2xl font-bold tracking-tight text-foreground outline-none placeholder:font-semibold placeholder:text-muted-foreground/50"
+          className="w-full min-w-0 bg-transparent text-xl font-bold tracking-tight text-foreground outline-none placeholder:font-semibold placeholder:text-muted-foreground/50"
         />
         <FieldError>{errors.label}</FieldError>
       </Field>

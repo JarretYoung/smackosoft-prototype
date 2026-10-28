@@ -77,7 +77,7 @@ export function TimeSheet({
         </SheetHeader>
         <div className="flex flex-col gap-4 px-5 pb-6">
           <div className="text-center" aria-live="polite">
-            <p className="text-4xl font-bold tracking-tight tabular-nums">{minutes === null ? "Not set" : clock12(value)}</p>
+            <p className="score text-3xl">{minutes === null ? "Not set" : clock12(value)}</p>
             {/* One line, always there, so the sheet does not jump when the tape crosses midnight. */}
             <div className="mt-1 flex min-h-6 items-center justify-center gap-2 text-sm text-muted-foreground">
               {nextDay && nextDayLabel && <Badge variant="tinted">Next day, {nextDayLabel}</Badge>}

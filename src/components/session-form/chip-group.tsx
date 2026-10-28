@@ -72,7 +72,7 @@ export function ChipGroup<T extends string | number>({
         e.stopPropagation();
       }}
       className={cn(
-        "-mx-4 flex cursor-grab gap-2 overflow-x-auto px-4 [scrollbar-width:none] select-none data-[dragging=true]:cursor-grabbing [&::-webkit-scrollbar]:hidden",
+        "-mx-4 flex cursor-grab gap-2 overflow-x-auto px-4 [scrollbar-width:none] select-none data-[dragging=true]:cursor-grabbing data-[dragging=true]:*:cursor-grabbing [&::-webkit-scrollbar]:hidden",
         className,
       )}
     >

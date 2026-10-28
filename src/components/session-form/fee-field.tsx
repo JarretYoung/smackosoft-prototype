@@ -64,7 +64,7 @@ export function FeeField({
           onChange={(e) => onAmount(e.target.value)}
           onBlur={onBlur}
           aria-invalid={invalid}
-          className="h-14 min-w-0 flex-1 bg-transparent px-2 pr-4 text-right text-2xl font-bold tracking-tight tabular-nums outline-none placeholder:text-muted-foreground/40"
+          className="score h-14 min-w-0 flex-1 bg-transparent px-2 pr-4 text-right text-xl outline-none placeholder:text-muted-foreground/40"
         />
       </div>
       <ChipGroup

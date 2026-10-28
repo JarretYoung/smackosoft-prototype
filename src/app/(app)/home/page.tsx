@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { MonthCalendar } from "@/src/components/month-calendar";
 import { AvatarStack, PersonAvatar } from "@/src/components/avatar-stack";
 import { DateTile } from "@/src/components/date-tile";
+import { HomeCalendar } from "@/src/components/home-calendar";
 import { RowChevron } from "@/src/components/row-chevron";
 import { LocalTimeRange } from "@/src/components/local-time";
 import { Badge } from "@/src/components/ui/badge";
@@ -19,9 +19,7 @@ export default async function HomePage() {
   const sessions = unwrap(await backend.sessions.list());
 
   const now = today();
-  const monthPrefix = now.slice(0, 7);
   const upcoming = sessions.filter((s) => s.date >= now).slice(0, 3);
-  const monthDates = new Set(sessions.filter((s) => s.date.startsWith(monthPrefix)).map((s) => s.date));
   const winPercent = stats.winRate === null ? null : Math.round(stats.winRate * 100);
 
   return (
@@ -63,7 +61,7 @@ export default async function HomePage() {
         </div>
         <Card className="py-5">
           <CardContent>
-            <MonthCalendar today={now} dates={monthDates} />
+            <HomeCalendar today={now} sessions={sessions.map((s) => ({ id: s.id, date: s.date }))} />
           </CardContent>
         </Card>
         {upcoming.length === 0 ? (
