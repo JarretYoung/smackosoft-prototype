@@ -10,12 +10,12 @@ export default async function ProfilePage() {
   const guests = unwrap(await backend.accounts.listGuests());
 
   return (
-    <main className="flex flex-col gap-8 px-4 pt-6 pb-4">
+    <main className="flex flex-col gap-7 px-4 pt-6 pb-4">
       <header className="flex items-center gap-4 px-1">
-        <PersonAvatar person={me.account} className="size-20 text-2xl" />
+        <PersonAvatar person={me.account} size="xl" />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-[1.75rem] leading-tight font-bold tracking-tight">{me.account.displayName}</h1>
-          <p className="text-[0.9375rem] text-muted-foreground">@{me.account.handle}</p>
+          <p className="text-subhead text-muted-foreground">@{me.account.handle}</p>
         </div>
       </header>
 

@@ -88,7 +88,7 @@ export function MatchSwitcher({
     <div className="flex items-center gap-2 px-4 py-4">
       <div className="flex flex-1 items-center justify-between rounded-full bg-card p-1 shadow-card">
         {arrow(prev, ChevronLeft, "Previous match")}
-        <span className={cn("text-[0.9375rem] font-semibold tabular-nums", !current && "text-muted-foreground")}>
+        <span className={cn("text-subhead font-semibold tabular-nums", !current && "text-muted-foreground")}>
           {current ? `${current.label} · ${index + 1} of ${matches.length}` : "No matches"}
         </span>
         {arrow(next, ChevronRight, "Next match")}

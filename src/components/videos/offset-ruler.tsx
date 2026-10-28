@@ -86,7 +86,7 @@ export function OffsetRuler({ value, onChange, className }: { value: number; onC
                 className={cn("absolute bottom-3 left-0 w-px -translate-x-1/2 rounded-full", major ? "h-7 bg-foreground/50" : "h-4 bg-foreground/25")}
               />
               {major && (
-                <span className="absolute top-3 left-0 -translate-x-1/2 text-[0.6875rem] font-medium text-muted-foreground tabular-nums">
+                <span className="absolute top-3 left-0 -translate-x-1/2 text-caption font-medium text-muted-foreground tabular-nums">
                   {formatOffset(t)}
                 </span>
               )}

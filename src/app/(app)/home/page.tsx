@@ -1,13 +1,14 @@
-import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { MonthCalendar } from "@/src/components/month-calendar";
 import { AvatarStack, PersonAvatar } from "@/src/components/avatar-stack";
+import { DateTile } from "@/src/components/date-tile";
+import { RowChevron } from "@/src/components/row-chevron";
 import { LocalTimeRange } from "@/src/components/local-time";
 import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/components/ui/empty";
 import { Progress } from "@/src/components/ui/progress";
-import { dayOf, monthShort, today } from "@/src/lib/format";
+import { today } from "@/src/lib/format";
 import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";
 
@@ -27,18 +28,18 @@ export default async function HomePage() {
     <main className="flex flex-col gap-7 px-4 pt-6 pb-4">
       <header>
         <Link href="/profile" className="pressable flex items-center gap-3">
-          <PersonAvatar person={me.account} className="size-12 text-base" />
+          <PersonAvatar person={me.account} size="lg" />
           <div className="min-w-0 flex-1">
             <p className="text-sm text-muted-foreground">Welcome back</p>
-            <h1 className="truncate text-xl leading-tight font-bold tracking-tight">{me.account.displayName}</h1>
+            <h1 className="section-title truncate">{me.account.displayName}</h1>
           </div>
-          <ChevronRight className="size-5 text-muted-foreground" />
+          <RowChevron />
         </Link>
       </header>
 
       {/* The one bold surface on this screen: how you are doing. */}
-      <section aria-labelledby="form-heading" className="hero relative overflow-hidden rounded-[2rem] p-6 shadow-float">
-        <h2 id="form-heading" className="text-[0.8125rem] font-semibold tracking-wider text-primary-foreground/90 uppercase">
+      <section aria-labelledby="form-heading" className="hero relative overflow-hidden rounded-4xl p-6 shadow-float">
+        <h2 id="form-heading" className="text-footnote font-semibold tracking-wider text-primary-foreground/90 uppercase">
           Win rate
         </h2>
         <p className="score mt-1 text-[4.5rem] leading-none">{winPercent === null ? "-" : `${winPercent}%`}</p>
@@ -55,8 +56,8 @@ export default async function HomePage() {
 
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-xl font-bold tracking-tight">Upcoming</h2>
-          <Link href="/sessions" className="pressable rounded-md py-1 text-[0.9375rem] font-semibold text-primary">
+          <h2 className="section-title">Upcoming</h2>
+          <Link href="/sessions" className="pressable rounded-md py-1 text-subhead font-semibold text-primary">
             View all
           </Link>
         </div>
@@ -76,17 +77,17 @@ export default async function HomePage() {
           <ul className="group-list">
             {upcoming.map((s) => (
               <li key={s.id}>
-                <Link href={`/sessions/${s.id}`} className="pressable-row flex items-center gap-3 px-4 py-3">
-                  <DateChip date={s.date} />
+                <Link href={`/sessions/${s.id}`} className="pressable-row list-row">
+                  <DateTile date={s.date} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{s.label}</p>
+                    <p className="truncate text-body font-semibold tracking-tight">{s.label}</p>
                     <p className="truncate text-sm text-muted-foreground">
                       <LocalTimeRange start={s.startTime} end={s.endTime} suffix={s.location ? " · " : ""} />
                       {s.location ?? (s.startTime ? "" : "No details")}
                     </p>
                   </div>
-                  <AvatarStack people={s.members} max={2} />
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground/70" />
+                  <AvatarStack people={s.members} max={2} size="sm" />
+                  <RowChevron />
                 </Link>
               </li>
             ))}
@@ -95,7 +96,7 @@ export default async function HomePage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-xl font-bold tracking-tight">Partners</h2>
+        <h2 className="section-title">Partners</h2>
         {teammates.length === 0 ? (
           <Empty className="rounded-2xl bg-card p-6 shadow-card">
             <EmptyHeader>
@@ -108,10 +109,10 @@ export default async function HomePage() {
             {teammates.slice(0, 5).map((t) => {
               const diff = t.wins - t.losses;
               return (
-                <li key={t.account.id} className="flex items-center gap-3 px-4 py-3">
-                  <PersonAvatar person={t.account} className="size-10" />
+                <li key={t.account.id} className="list-row">
+                  <PersonAvatar person={t.account} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{t.account.displayName.split(" ")[0]}</p>
+                    <p className="truncate text-body font-semibold tracking-tight">{t.account.displayName.split(" ")[0]}</p>
                     <p className="text-sm text-muted-foreground tabular-nums">
                       {t.games} {t.games === 1 ? "game" : "games"}
                     </p>
@@ -134,18 +135,9 @@ export default async function HomePage() {
 
 function HeroStat({ value, label }: { value: string; label: string }) {
   return (
-    <div className="rounded-2xl bg-white/15 px-4 py-3">
+    <div className="rounded-xl bg-white/15 px-4 py-3">
       <dd className="score text-3xl leading-none">{value}</dd>
       <dt className="mt-1 text-sm text-primary-foreground/90">{label}</dt>
-    </div>
-  );
-}
-
-function DateChip({ date }: { date: string }) {
-  return (
-    <div className="flex size-12 shrink-0 flex-col items-center justify-center rounded-xl bg-primary text-primary-foreground">
-      <span className="score text-lg leading-none">{dayOf(date)}</span>
-      <span className="mt-0.5 text-[0.625rem] font-bold tracking-wider">{monthShort(date)}</span>
     </div>
   );
 }

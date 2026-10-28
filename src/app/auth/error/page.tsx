@@ -11,7 +11,7 @@ async function ErrorContent({
   const params = await searchParams;
 
   return (
-    <p className="text-[0.9375rem] text-muted-foreground">
+    <p className="text-subhead text-muted-foreground">
       {params?.error ? `Code error: ${params.error}` : "An unspecified error occurred."}
     </p>
   );

@@ -156,7 +156,7 @@ function Picker({
                     onClick={() => toggle(person)}
                     className="pressable-row flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left"
                   >
-                    <PersonAvatar person={person} className="size-10" />
+                    <PersonAvatar person={person} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-semibold">{person.displayName}</span>
                       <span className="block truncate text-sm text-muted-foreground">
@@ -184,7 +184,7 @@ function Picker({
                   disabled={looking}
                   className="pressable-row flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left font-semibold text-primary"
                 >
-                  <span className="flex size-10 items-center justify-center rounded-full bg-accent">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-accent">
                     {looking ? <Spinner /> : <Search className="size-4" />}
                   </span>
                   Find @{handle}
@@ -198,7 +198,7 @@ function Picker({
                   onClick={makeGuest}
                   className="pressable-row flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left font-semibold text-primary"
                 >
-                  <span className="flex size-10 items-center justify-center rounded-full bg-accent">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-accent">
                     <UserPlus className="size-4" />
                   </span>
                   <span className="min-w-0 truncate">Add “{text}” as a guest</span>

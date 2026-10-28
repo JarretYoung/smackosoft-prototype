@@ -1,8 +1,10 @@
-import { Banknote, ChevronLeft, ChevronRight, Crown, MapPin, Plus, Users, Video } from "lucide-react";
+import { Banknote, ChevronLeft, Crown, MapPin, Plus, Users, Video } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AvatarStack } from "@/src/components/avatar-stack";
 import { SessionCover } from "@/src/components/court-art";
+import { MembersSheetRow } from "@/src/components/members-sheet";
+import { RowChevron } from "@/src/components/row-chevron";
 import { SessionMenu } from "@/src/components/session-menu";
 import { LocalTimeRange } from "@/src/components/local-time";
 import { Button } from "@/src/components/ui/button";
@@ -36,14 +38,29 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
   const needAttention = unsynced.length + unassigned.length;
   const videoCount = new Set(videos.map((l) => l.videoId)).size;
 
+  const membersRow = (
+    <>
+      <RowIcon>
+        <Users />
+      </RowIcon>
+      <div className="min-w-0 flex-1">
+        <p className="text-footnote text-muted-foreground">Members</p>
+        <div className="mt-1 flex items-center gap-2">
+          <AvatarStack people={session.members} max={4} />
+          <span className="text-sm text-muted-foreground">{plural(session.members.length, "member")}</span>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <main className="flex flex-col gap-7">
       {/* The one bold surface on this screen: what this session is. */}
-      <section className="hero rounded-b-[2.25rem] px-4 pb-6 shadow-float">
+      <section className="hero rounded-b-4xl px-4 pb-6 shadow-float">
         <div className="flex h-16 items-center justify-between">
           <Link
             href="/sessions"
-            className="pressable inline-flex h-10 items-center gap-0.5 rounded-full bg-white/20 pr-4 pl-2 text-[0.9375rem] font-semibold backdrop-blur"
+            className="pressable inline-flex h-10 items-center gap-0.5 rounded-full bg-white/20 pr-4 pl-2 text-subhead font-semibold backdrop-blur"
           >
             <ChevronLeft className="size-5" strokeWidth={2.5} />
             Sessions
@@ -57,12 +74,12 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
             canLeave={session.myRole !== "OWNER"}
           />
         </div>
-        <p className="px-1 text-[0.9375rem] font-medium text-primary-foreground/90">
+        <p className="px-1 text-subhead font-medium text-primary-foreground/90">
           {longDate(session.date)}
           <LocalTimeRange start={session.startTime} end={session.endTime} prefix=" · " />
         </p>
         <h1 className="mt-1 px-1 text-[2.125rem] leading-[1.1] font-bold tracking-tight">{session.label}</h1>
-        {session.coverUrl && <SessionCover url={session.coverUrl} className="mt-5 h-44 rounded-3xl shadow-float" />}
+        {session.coverUrl && <SessionCover url={session.coverUrl} className="mt-5 h-44 rounded-xl shadow-float" />}
       </section>
 
       <div className="flex flex-col gap-7 px-4">
@@ -88,30 +105,21 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
           <FactRow icon={<Banknote />} label="Court fee">
             {fee ? <span className="score text-base">{fee}</span> : <span className="text-muted-foreground">Not set</span>}
           </FactRow>
-          <Link
-            href={canManage ? `/sessions/${session.id}/edit` : "#"}
-            aria-disabled={!canManage}
-            className={cn("flex items-center gap-3 px-4 py-3.5", canManage && "pressable-row")}
-          >
-            <RowIcon>
-              <Users />
-            </RowIcon>
-            <div className="min-w-0 flex-1">
-              <p className="text-[0.8125rem] text-muted-foreground">Members</p>
-              <div className="mt-1 flex items-center gap-3">
-                <AvatarStack people={session.members} max={4} />
-                <span className="text-sm text-muted-foreground">{plural(session.members.length, "member")}</span>
-              </div>
-            </div>
-            {canManage && <ChevronRight className="size-5 text-muted-foreground/70" />}
-          </Link>
-          <Link href={`/sessions/${session.id}/videos`} className="pressable-row flex items-center gap-3 px-4 py-3.5">
+          {canManage ? (
+            <Link href={`/sessions/${session.id}/edit`} className="pressable-row list-row">
+              {membersRow}
+              <RowChevron />
+            </Link>
+          ) : (
+            <MembersSheetRow members={session.members}>{membersRow}</MembersSheetRow>
+          )}
+          <Link href={`/sessions/${session.id}/videos`} className="pressable-row list-row">
             <RowIcon>
               <Video />
             </RowIcon>
             <div className="min-w-0 flex-1">
-              <p className="text-[0.8125rem] text-muted-foreground">Videos</p>
-              <p className="mt-0.5 text-base">
+              <p className="text-footnote text-muted-foreground">Videos</p>
+              <p className="mt-0.5 text-body">
                 {videoCount === 0 ? (
                   <span className="text-muted-foreground">No videos yet</span>
                 ) : (
@@ -127,13 +135,13 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
                 )}
               </p>
             </div>
-            <ChevronRight className="size-5 text-muted-foreground/70" />
+            <RowChevron />
           </Link>
         </section>
 
         <section aria-labelledby="matches-heading" className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 id="matches-heading" className="text-xl font-bold tracking-tight">
+            <h2 id="matches-heading" className="section-title">
               Matches
             </h2>
             {canScore && session.matches.length > 0 && (
@@ -173,7 +181,7 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
 
 function RowIcon({ children }: { children: ReactNode }) {
   return (
-    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-primary [&_svg]:size-[1.125rem]">
+    <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-accent text-primary [&_svg]:size-[1.125rem]">
       {children}
     </span>
   );
@@ -181,11 +189,11 @@ function RowIcon({ children }: { children: ReactNode }) {
 
 function FactRow({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3.5">
+    <div className="list-row">
       <RowIcon>{icon}</RowIcon>
       <div className="min-w-0 flex-1">
-        <p className="text-[0.8125rem] text-muted-foreground">{label}</p>
-        <p className="mt-0.5 truncate text-base">{children}</p>
+        <p className="text-footnote text-muted-foreground">{label}</p>
+        <p className="mt-0.5 truncate text-body">{children}</p>
       </div>
     </div>
   );
@@ -197,13 +205,13 @@ function MatchCard({ sessionId, match, index }: { sessionId: string; match: Matc
   return (
     <Link
       href={`/sessions/${sessionId}/matches/${match.id}`}
-      className="pressable block rounded-3xl bg-card p-4 shadow-card"
+      className="pressable block rounded-2xl bg-card p-4 shadow-card"
     >
       <div className="flex items-center justify-between">
-        <span className="text-[0.8125rem] font-semibold tracking-wide text-muted-foreground uppercase">
+        <span className="text-footnote font-semibold tracking-wide text-muted-foreground uppercase">
           {match.label || `Match ${index + 1}`} · {MATCH_TYPE_LABEL[match.matchType]}
         </span>
-        <ChevronRight className="size-4 text-muted-foreground/70" />
+        <RowChevron />
       </div>
       {left && right ? (
         <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">

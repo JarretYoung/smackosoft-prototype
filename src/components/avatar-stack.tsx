@@ -29,36 +29,66 @@ const initials = (name: string) =>
     .map((word) => word[0]!.toUpperCase())
     .join("");
 
-export function PersonAvatar({ person, className }: { person: Person; className?: string }) {
+/** sm (32) is the one size for rows and stacks. lg (48) and xl (80) are for who someone is: the Home greeting, the score hero, the profile. */
+const SIZES = {
+  sm: { box: "size-8", text: "text-xs", overlap: "-space-x-2" },
+  lg: { box: "size-12", text: "text-base", overlap: "-space-x-3" },
+  xl: { box: "size-20", text: "text-2xl", overlap: "-space-x-5" },
+} as const;
+
+export type AvatarSize = keyof typeof SIZES;
+
+export function PersonAvatar({
+  person,
+  size = "sm",
+  className,
+}: {
+  person: Person;
+  size?: AvatarSize;
+  className?: string;
+}) {
   return (
-    <Avatar className={cn("size-9 ring-2 ring-card", className)}>
+    <Avatar className={cn(SIZES[size].box, "ring-2 ring-card", className)}>
       {person.avatarUrl && <AvatarImage src={person.avatarUrl} alt="" />}
-      <AvatarFallback className={cn("text-xs font-semibold", toneFor(person.id))}>
+      <AvatarFallback className={cn(SIZES[size].text, "font-semibold", toneFor(person.id))}>
         {initials(person.displayName)}
       </AvatarFallback>
     </Avatar>
   );
 }
 
-/** Overlapping avatars with a "+N" chip for the rest. */
+/** Overlapping avatars with a quiet "+N" chip for the rest. */
 export function AvatarStack({
   people,
   max = 4,
+  size = "sm",
   className,
+  ringClassName = "ring-card",
 }: {
   people: Person[];
   max?: number;
+  size?: AvatarSize;
   className?: string;
+  /** The ring is the gap between avatars, so it must match the surface behind them. */
+  ringClassName?: string;
 }) {
   const shown = people.slice(0, max);
   const rest = people.length - shown.length;
+  const { box, text, overlap } = SIZES[size];
   return (
-    <div className={cn("flex items-center -space-x-2", className)}>
+    <div className={cn("flex shrink-0 items-center", overlap, className)}>
       {shown.map((person) => (
-        <PersonAvatar key={person.id} person={person} />
+        <PersonAvatar key={person.id} person={person} size={size} className={ringClassName} />
       ))}
       {rest > 0 && (
-        <span className="z-10 flex size-9 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background ring-2 ring-card">
+        <span
+          className={cn(
+            "z-10 flex items-center justify-center rounded-full bg-secondary font-semibold text-secondary-foreground ring-2 tabular-nums",
+            box,
+            text,
+            ringClassName,
+          )}
+        >
           +{rest}
         </span>
       )}

@@ -235,7 +235,7 @@ export function MatchEditor({
 
   return (
     <div className="flex flex-col gap-6 px-4 pb-4">
-      <section className="rounded-3xl bg-card p-4 shadow-card">
+      <section className="rounded-2xl bg-card p-4 shadow-card">
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="match-label">Name</FieldLabel>
@@ -269,10 +269,10 @@ export function MatchEditor({
               key={team.id}
               type="button"
               onClick={() => setEditingTeam(team.id)}
-              className="pressable flex flex-col items-start gap-3 rounded-3xl bg-card p-4 text-left shadow-card"
+              className="pressable flex flex-col items-start gap-3 rounded-2xl bg-card p-4 text-left shadow-card"
               aria-label={`Edit ${team.label} players`}
             >
-              <span className="flex w-full items-center justify-between text-[0.8125rem] font-semibold tracking-wide text-muted-foreground uppercase">
+              <span className="flex w-full items-center justify-between text-footnote font-semibold tracking-wide text-muted-foreground uppercase">
                 {team.label}
                 <Pencil className="size-3.5" />
               </span>
@@ -293,9 +293,9 @@ export function MatchEditor({
         {games.map((game, index) => {
           const winner = winnerOf(game);
           return (
-            <div key={game.id} className="flex flex-col gap-4 rounded-3xl bg-card p-4 shadow-card">
+            <div key={game.id} className="flex flex-col gap-4 rounded-2xl bg-card p-4 shadow-card">
               <div className="flex items-center gap-2">
-                <h3 className="text-[1.0625rem] font-semibold tracking-tight">Game {index + 1}</h3>
+                <h3 className="text-body font-semibold tracking-tight">Game {index + 1}</h3>
                 <Button
                   type="button"
                   variant="destructive"
@@ -344,11 +344,11 @@ export function MatchEditor({
                     <div key={team.id} className="flex flex-col gap-1.5">
                       <div
                         className={cn(
-                          "flex flex-col items-center gap-2 rounded-2xl p-3 transition-colors",
+                          "flex flex-col items-center gap-2 rounded-xl p-3 transition-colors",
                           winner === team.id ? "bg-accent" : "bg-muted",
                         )}
                       >
-                        <span className="flex w-full items-center justify-between gap-1 text-[0.75rem] font-semibold tracking-wide text-muted-foreground uppercase">
+                        <span className="flex w-full items-center justify-between gap-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                           <span className="truncate">{team.label}</span>
                           {winner === team.id && <Crown aria-label="Winner" className="size-4 shrink-0 fill-gold text-gold" />}
                         </span>
@@ -359,7 +359,7 @@ export function MatchEditor({
                           autoComplete="off"
                           aria-label={`${team.label} score for game ${index + 1}`}
                           placeholder="0"
-                          className="score h-14 bg-card text-center text-3xl"
+                          className="score h-14 rounded-lg bg-card text-center text-3xl"
                           value={game.scores[team.id] ?? ""}
                           onFocus={(e) => e.currentTarget.select()}
                           onChange={(e) => setScore(game.id, team.id, e.target.value, e.currentTarget)}
@@ -372,7 +372,7 @@ export function MatchEditor({
             </div>
           );
         })}
-        <div className="group-list rounded-3xl">
+        <div className="group-list rounded-2xl">
           <AddRow onClick={addGame}>Add game</AddRow>
         </div>
       </section>

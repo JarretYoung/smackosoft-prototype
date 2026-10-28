@@ -1,13 +1,14 @@
-import { CalendarPlus, ChevronRight, MapPin } from "lucide-react";
+import { CalendarPlus, MapPin } from "lucide-react";
 import Link from "next/link";
 import { AvatarStack } from "@/src/components/avatar-stack";
 import { SessionCover } from "@/src/components/court-art";
+import { DateTile } from "@/src/components/date-tile";
+import { RowChevron } from "@/src/components/row-chevron";
 import { Button } from "@/src/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
 import { LiveBadge } from "@/src/components/live-badge";
 import { LocalTimeRange } from "@/src/components/local-time";
-import { cn } from "@/src/lib/utils";
-import { addDays, dayOf, monthShort, plural, today } from "@/src/lib/format";
+import { addDays, plural, today } from "@/src/lib/format";
 import { unwrap } from "@/src/lib/result";
 import type { SessionListItem } from "@/src/contract";
 import { backend } from "@/src/server";
@@ -36,7 +37,7 @@ export default async function SessionsPage() {
       <header className="px-1">
         <h1 className="large-title">Sessions</h1>
         {sessions.length > 0 && (
-          <p className="mt-1 text-[0.9375rem] text-muted-foreground">
+          <p className="mt-1 text-subhead text-muted-foreground">
             {summary.length ? summary.join(" · ") : "Nothing coming up"}
           </p>
         )}
@@ -58,7 +59,7 @@ export default async function SessionsPage() {
       )}
 
       {hero && (
-        <section aria-labelledby="today-heading" className="flex flex-col gap-3">
+        <section aria-labelledby="today-heading" className="flex flex-col gap-2">
           <h2 id="today-heading" className="section-label">
             Today
           </h2>
@@ -86,7 +87,7 @@ function TodayCard({ session }: { session: SessionListItem }) {
   return (
     <Link
       href={`/sessions/${session.id}`}
-      className="pressable block overflow-hidden rounded-[2rem] bg-card shadow-float"
+      className="pressable block overflow-hidden rounded-4xl bg-card shadow-float"
     >
       <div className="relative h-44">
         <SessionCover url={session.coverUrl} className="absolute inset-0" />
@@ -147,24 +148,16 @@ function SessionRow({ session, past = false }: { session: SessionListItem; past?
     .filter(Boolean)
     .join(" · ");
   return (
-    <Link href={`/sessions/${session.id}`} className="pressable-row flex items-center gap-3.5 px-4 py-3.5">
-      <div
-        className={cn(
-          "flex size-14 shrink-0 flex-col items-center justify-center rounded-2xl",
-          past ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground",
-        )}
-      >
-        <span className="score text-xl leading-none">{dayOf(session.date)}</span>
-        <span className="mt-0.5 text-[0.625rem] font-bold tracking-wider">{monthShort(session.date)}</span>
-      </div>
+    <Link href={`/sessions/${session.id}`} className="pressable-row list-row">
+      <DateTile date={session.date} past={past} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[1.0625rem] font-semibold tracking-tight">{session.label}</p>
+        <p className="truncate text-body font-semibold tracking-tight">{session.label}</p>
         <p className="truncate text-sm text-muted-foreground">
           <LocalTimeRange start={session.startTime} startOnly suffix=" · " />
           {subtitle}
         </p>
       </div>
-      <ChevronRight className="size-5 shrink-0 text-muted-foreground/70" />
+      <RowChevron />
     </Link>
   );
 }

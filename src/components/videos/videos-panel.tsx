@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { removeLinkages, saveLinkages, saveVideos } from "@/src/app/actions";
+import { AddRow } from "@/src/components/add-row";
 import { PageHeader } from "@/src/components/page-header";
 import { Button } from "@/src/components/ui/button";
 import type { SessionVideo } from "@/src/contract";
@@ -162,7 +163,7 @@ export function VideosPanel({
         }
       />
 
-      <div className="flex flex-col gap-8 px-4 pt-3 pb-6">
+      <div className="flex flex-col gap-7 px-4 pt-3 pb-6">
         {attention > 0 ? (
           <button
             type="button"
@@ -251,16 +252,16 @@ export function VideosPanel({
         }
         action={
           picking?.kind === "video" && (
-            <Button
-              variant="link"
-              className="mt-2 px-1"
-              onClick={() => {
-                setAdding({ game: picking.game });
-                setPicking(null);
-              }}
-            >
-              <Plus /> New video
-            </Button>
+            <div className="group-list mt-3 border border-border/60 shadow-none">
+              <AddRow
+                onClick={() => {
+                  setAdding({ game: picking.game });
+                  setPicking(null);
+                }}
+              >
+                New video
+              </AddRow>
+            </div>
           )
         }
       />

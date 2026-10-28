@@ -67,7 +67,7 @@ function SheetContent({
           side === "top" &&
             "inset-x-0 top-0 h-auto border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
           side === "bottom" &&
-            "inset-x-0 bottom-0 mx-auto h-auto max-h-[92dvh] max-w-md rounded-t-[1.75rem] pt-3 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+            "inset-x-0 bottom-0 mx-auto h-auto max-h-[92dvh] max-w-md rounded-t-4xl pt-3 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
           className
         )}
         {...props}
@@ -77,7 +77,7 @@ function SheetContent({
         )}
         {children}
         {showCloseButton && (
-          <SheetPrimitive.Close className="group pressable absolute top-2 right-2.5 flex size-11 items-center justify-center rounded-full focus-visible:ring-[3px] focus-visible:ring-ring disabled:pointer-events-none">
+          <SheetPrimitive.Close className="group pressable absolute top-2 right-2 flex size-11 items-center justify-center rounded-full focus-visible:ring-[3px] focus-visible:ring-ring disabled:pointer-events-none">
             <span className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground group-hover:bg-secondary">
               <XIcon className="size-4" />
             </span>
@@ -93,7 +93,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn("flex flex-col gap-1.5 p-4", className)}
+      className={cn("flex flex-col gap-1.5 px-5 pt-2", className)}
       {...props}
     />
   )
@@ -103,7 +103,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-footer"
-      className={cn("mt-auto flex flex-col gap-2 p-4", className)}
+      className={cn("mt-auto flex flex-col gap-2 px-5 pb-6", className)}
       {...props}
     />
   )

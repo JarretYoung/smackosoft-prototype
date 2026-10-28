@@ -21,7 +21,7 @@ export function PageHeader({
       >
         <ChevronLeft className="size-6" strokeWidth={2.5} />
       </LeaveLink>
-      <h1 className="truncate text-center text-[1.0625rem] font-semibold tracking-tight">{title}</h1>
+      <h1 className="truncate text-center text-body font-semibold tracking-tight">{title}</h1>
       <div className="flex justify-end">{action}</div>
     </header>
   );

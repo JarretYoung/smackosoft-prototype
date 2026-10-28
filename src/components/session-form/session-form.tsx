@@ -393,10 +393,10 @@ export function SessionForm({
         </h2>
         <ul className="group-list">
           {participants.map((p) => (
-            <li key={p.account.id} className="flex items-center gap-3 px-4 py-3">
-              <PersonAvatar person={p.account} className="size-10" />
+            <li key={p.account.id} className="list-row">
+              <PersonAvatar person={p.account} />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">
+                <p className="truncate text-body font-semibold tracking-tight">
                   {p.account.isGuest && <span className="font-normal text-muted-foreground">(Guest) </span>}
                   {p.account.displayName}
                 </p>
@@ -467,7 +467,7 @@ function FormSection({ title, children }: { title: string; children: React.React
   return (
     <section className="flex flex-col gap-2">
       <h2 className="section-label">{title}</h2>
-      <div className="rounded-3xl bg-card p-4 shadow-card">
+      <div className="rounded-2xl bg-card p-4 shadow-card">
         <FieldGroup>{children}</FieldGroup>
       </div>
     </section>

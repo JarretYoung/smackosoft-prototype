@@ -1,7 +1,8 @@
 "use client";
 
-import { ExternalLink, MoreHorizontal, Plus, Video } from "lucide-react";
+import { ExternalLink, MoreHorizontal, Video } from "lucide-react";
 import type { ReactNode } from "react";
+import { AddRow } from "@/src/components/add-row";
 import { RelativeTime } from "@/src/components/relative-time";
 import { Button } from "@/src/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/src/components/ui/dropdown-menu";
@@ -10,7 +11,7 @@ import { formatOffset, openUrl } from "@/src/lib/offset";
 
 export function Thumb({ url }: { url: string | null }) {
   return (
-    <div className="flex h-11 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted text-muted-foreground">
+    <div className="flex h-11 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted text-muted-foreground">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={url} alt="" className="size-full object-cover" />
@@ -73,8 +74,8 @@ export function GameVideoRow({
     <>
       <Thumb url={item.video.thumbnailUrl} />
       <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold">{item.video.label}</p>
-        <p className="truncate text-[0.8125rem] text-muted-foreground">
+        <p className="truncate text-body font-semibold tracking-tight">{item.video.label}</p>
+        <p className="truncate text-sm text-muted-foreground">
           {synced ? (
             <span className="tabular-nums">Synced at {formatOffset(item.offsetSeconds!)}</span>
           ) : (
@@ -127,12 +128,12 @@ export function UnassignedRow({
     <>
       <Thumb url={item.video.thumbnailUrl} />
       <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold">{item.video.label}</p>
-        <p className="truncate text-[0.8125rem] text-muted-foreground">
+        <p className="truncate text-body font-semibold tracking-tight">{item.video.label}</p>
+        <p className="truncate text-sm text-muted-foreground">
           <Who item={item} />
         </p>
       </div>
-      {canEdit && <span className="text-[0.9375rem] font-semibold text-primary">Assign</span>}
+      {canEdit && <span className="text-subhead font-semibold text-primary">Assign</span>}
     </>
   );
   return (
@@ -159,9 +160,7 @@ export function UnassignedRow({
 export function AddVideoRow({ onClick }: { onClick: () => void }) {
   return (
     <li>
-      <button type="button" onClick={onClick} className="pressable-row flex w-full items-center gap-2 px-4 py-3 text-left font-semibold text-primary">
-        <Plus className="size-[1.125rem]" strokeWidth={2.5} /> Add video
-      </button>
+      <AddRow onClick={onClick}>Add video</AddRow>
     </li>
   );
 }

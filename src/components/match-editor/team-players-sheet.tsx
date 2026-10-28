@@ -43,21 +43,21 @@ export function TeamPlayersSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="overflow-y-auto bg-background">
+      <SheetContent side="bottom" className="overflow-y-auto">
         <SheetHeader className="px-5 pt-2 pb-0">
           <SheetTitle>{teamLabel} players</SheetTitle>
           <SheetDescription>Choose from the session members.</SheetDescription>
         </SheetHeader>
-        <ul className="group-list mx-4 border border-border/60 shadow-none">
+        <ul className="group-list mx-5 border border-border/60 shadow-none">
           {candidates.map((account) => {
             const blocked = takenElsewhere.has(account.id);
             return (
               <li key={account.id}>
                 <label
-                  className="pressable-row flex min-h-14 items-center gap-3 px-4 py-2.5 aria-disabled:opacity-50"
+                  className="pressable-row flex min-h-14 items-center gap-3 px-4 py-2 aria-disabled:opacity-50"
                   aria-disabled={blocked}
                 >
-                  <PersonAvatar person={account} className="size-10" />
+                  <PersonAvatar person={account} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-semibold">{account.displayName}</span>
                     <span className="block text-sm text-muted-foreground">

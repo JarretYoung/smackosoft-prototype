@@ -17,7 +17,7 @@ export function MonthCalendar({ today, dates }: { today: string; dates: Set<stri
 
   return (
     <div>
-      <p className="mb-3 text-[1.0625rem] font-semibold tracking-tight">{title}</p>
+      <p className="mb-3 text-body font-semibold tracking-tight">{title}</p>
       <div className="grid grid-cols-7 gap-y-1.5 text-center text-sm tabular-nums">
         {WEEKDAYS.map((d, i) => (
           <span key={i} className="pb-1 text-xs font-semibold text-muted-foreground">

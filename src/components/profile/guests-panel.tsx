@@ -113,10 +113,10 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
       ) : (
         <ul className="group-list">
           {guests.map((guest) => (
-            <li key={guest.id} className="flex items-center gap-3 px-4 py-3">
-              <PersonAvatar person={guest} className="size-11" />
+            <li key={guest.id} className="list-row">
+              <PersonAvatar person={guest} />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">{guest.displayName}</p>
+                <p className="truncate text-body font-semibold tracking-tight">{guest.displayName}</p>
                 <p className="flex items-center gap-1.5 truncate text-sm text-muted-foreground">
                   @{guest.handle}
                   {guest.hasClaimCode && <Badge variant="tinted">Code ready</Badge>}

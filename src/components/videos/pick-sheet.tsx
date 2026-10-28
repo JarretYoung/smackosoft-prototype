@@ -32,7 +32,7 @@ export function PickSheet({
 }) {
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
-      <SheetContent side="bottom" className="max-h-[80dvh] overflow-y-auto bg-background">
+      <SheetContent side="bottom" className="max-h-[80dvh] overflow-y-auto">
         <SheetHeader className="px-5 pt-2 pb-0">
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>{description}</SheetDescription>
@@ -41,12 +41,12 @@ export function PickSheet({
           {items.length === 0 ? (
             empty
           ) : (
-            <ul className="group-list">
+            <ul className="group-list border border-border/60 shadow-none">
               {items.map((item) => (
                 <li key={item.key}>
-                  <button type="button" onClick={() => onPick(item.key)} className="pressable-row flex w-full items-center gap-3 px-3 py-3 text-left">
+                  <button type="button" onClick={() => onPick(item.key)} className="pressable-row list-row w-full text-left">
                     {withThumbs && <Thumb url={item.thumbnailUrl ?? null} />}
-                    <p className="min-w-0 flex-1 truncate font-semibold">{item.label}</p>
+                    <p className="min-w-0 flex-1 truncate text-body font-semibold tracking-tight">{item.label}</p>
                     {item.detail && <span className="shrink-0 text-sm text-muted-foreground">{item.detail}</span>}
                   </button>
                 </li>

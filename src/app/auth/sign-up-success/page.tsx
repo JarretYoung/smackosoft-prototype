@@ -5,7 +5,7 @@ import { Button } from "@/src/components/ui/button";
 export default function Page() {
   return (
     <AuthShell title="Check your email" description="One step left before you can sign in.">
-      <p className="text-[0.9375rem] text-muted-foreground">
+      <p className="text-subhead text-muted-foreground">
         You have signed up. Confirm your account from the email we sent, then log in.
       </p>
       <Button asChild variant="secondary" size="lg">

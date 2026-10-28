@@ -107,7 +107,7 @@ export function SignUpForm() {
           {isLoading && <Spinner />}
           {isLoading ? "Creating account" : "Sign up"}
         </Button>
-        <p className="text-center text-[0.9375rem] text-muted-foreground">
+        <p className="text-center text-subhead text-muted-foreground">
           Already have an account?{" "}
           <Link href="/auth/login" className="font-semibold text-primary underline-offset-4 hover:underline">
             Log in

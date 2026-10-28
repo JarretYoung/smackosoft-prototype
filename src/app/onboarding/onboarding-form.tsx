@@ -168,7 +168,7 @@ export function OnboardingForm({ claimCode }: { claimCode: string }) {
         {claimForm}
         <Separator />
         <div className="flex flex-col gap-4">
-          <p className="text-center text-[0.9375rem] text-muted-foreground">Or start a new account instead</p>
+          <p className="text-center text-subhead text-muted-foreground">Or start a new account instead</p>
           {profileForm}
         </div>
       </div>

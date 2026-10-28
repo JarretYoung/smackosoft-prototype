@@ -1,9 +1,10 @@
-import { ChevronRight, Crown, Pencil, Video } from "lucide-react";
+import { Crown, Pencil, Video } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AvatarStack } from "@/src/components/avatar-stack";
 import { CourtArt } from "@/src/components/court-art";
 import { PageHeader } from "@/src/components/page-header";
+import { RowChevron } from "@/src/components/row-chevron";
 import { Button } from "@/src/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/components/ui/empty";
 import { cn } from "@/src/lib/utils";
@@ -28,7 +29,7 @@ export default async function MatchDetailsPage({ params }: { params: Promise<{ i
   const [left, right] = rows;
 
   return (
-    <main className="flex flex-col gap-6 pb-4">
+    <main className="flex flex-col gap-7 pb-4">
       <PageHeader
         title="Match"
         back={`/sessions/${id}`}
@@ -44,14 +45,14 @@ export default async function MatchDetailsPage({ params }: { params: Promise<{ i
       />
 
       {/* The one bold surface on this screen: the score. */}
-      <section aria-label="Result" className="hero mx-4 rounded-[2rem] px-5 py-6 shadow-float">
-        <p className="text-center text-[0.8125rem] font-semibold tracking-wider text-primary-foreground/90 uppercase">
+      <section aria-label="Result" className="hero mx-4 rounded-4xl p-6 shadow-float">
+        <p className="text-center text-footnote font-semibold tracking-wider text-primary-foreground/90 uppercase">
           {match.label} · {MATCH_TYPE_LABEL[match.matchType]}
         </p>
         {left && right ? (
-          <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-start gap-2">
             <Scoreboard team={left.team} wins={left.wins} won={winnerId === left.team.id} lost={!!winnerId && winnerId !== left.team.id} />
-            <span className="text-2xl font-medium text-primary-foreground/50">:</span>
+            <span className="mt-[4.25rem] text-2xl leading-8 font-medium text-primary-foreground/50">:</span>
             <Scoreboard team={right.team} wins={right.wins} won={winnerId === right.team.id} lost={!!winnerId && winnerId !== right.team.id} />
           </div>
         ) : (
@@ -60,7 +61,7 @@ export default async function MatchDetailsPage({ params }: { params: Promise<{ i
       </section>
 
       <section aria-labelledby="games-heading" className="flex flex-col gap-3 px-4">
-        <h2 id="games-heading" className="section-label">
+        <h2 id="games-heading" className="section-title">
           Games
         </h2>
         {match.games.length === 0 && (
@@ -77,29 +78,29 @@ export default async function MatchDetailsPage({ params }: { params: Promise<{ i
             <Link
               key={game.id}
               href={`/sessions/${id}/videos?game=${game.id}`}
-              className="pressable flex overflow-hidden rounded-3xl bg-card shadow-card"
+              className="pressable flex overflow-hidden rounded-2xl bg-card shadow-card"
             >
               <div className="relative w-28 shrink-0">
                 <CourtArt className="absolute inset-0" />
-                <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[0.6875rem] font-semibold text-white backdrop-blur">
+                <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-caption font-semibold text-white backdrop-blur">
                   <Video className="size-3" />
                   {plural(game.videoCount, "Video")}
                 </span>
               </div>
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5 py-3.5 pr-3 pl-4">
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5 py-3 pr-4 pl-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-[0.8125rem] font-semibold tracking-wide text-muted-foreground uppercase">
+                  <p className="text-footnote font-semibold tracking-wide text-muted-foreground uppercase">
                     Game {index + 1}
                   </p>
-                  <ChevronRight className="size-4 text-muted-foreground/70" />
+                  <RowChevron />
                 </div>
                 {match.teams.map((team) => (
                   <div key={team.id} className="flex items-center gap-2">
-                    <span className={cn("min-w-0 flex-1 truncate text-[0.9375rem]", winner === team.id ? "font-semibold" : "text-muted-foreground")}>
+                    <span className={cn("min-w-0 flex-1 truncate text-sm", winner === team.id ? "font-semibold" : "text-muted-foreground")}>
                       {names(team)}
                     </span>
                     {winner === team.id && <Crown aria-label="Won" className="size-4 shrink-0 fill-gold text-gold" />}
-                    <span className={cn("score w-7 text-right text-lg", winner !== team.id && "text-muted-foreground")}>
+                    <span className={cn("score w-7 text-right text-base", winner !== team.id && "text-muted-foreground")}>
                       {scoreOf(match, game.id, team) ?? "-"}
                     </span>
                   </div>
@@ -117,7 +118,7 @@ function Scoreboard({ team, wins, won, lost }: { team: Team; wins: number; won: 
   return (
     <div className="flex min-w-0 flex-col items-center gap-3">
       <div className="relative">
-        <AvatarStack people={team.players} max={2} className="*:size-12 *:ring-white/30" />
+        <AvatarStack people={team.players} max={2} size="lg" ringClassName="ring-white/30" />
         {won && <Crown aria-label="Winner" className="absolute -top-4 left-1/2 size-5 -translate-x-1/2 fill-gold text-gold" />}
       </div>
       <p className={cn("score text-[4rem] leading-none", lost && "text-primary-foreground/65")}>{wins}</p>

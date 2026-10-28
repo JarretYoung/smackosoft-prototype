@@ -47,7 +47,7 @@ export function ForgotPasswordForm() {
   if (success) {
     return (
       <AuthShell title="Check your email" description="Password reset instructions sent.">
-        <p className="text-[0.9375rem] text-muted-foreground">
+        <p className="text-subhead text-muted-foreground">
           If you registered using your email and password, you will receive a password reset email.
         </p>
         <Button asChild variant="secondary" size="lg">
@@ -87,7 +87,7 @@ export function ForgotPasswordForm() {
           {isLoading && <Spinner />}
           {isLoading ? "Sending" : "Send reset email"}
         </Button>
-        <p className="text-center text-[0.9375rem] text-muted-foreground">
+        <p className="text-center text-subhead text-muted-foreground">
           Remembered it?{" "}
           <Link href="/auth/login" className="font-semibold text-primary underline-offset-4 hover:underline">
             Log in

@@ -103,7 +103,7 @@ export function LoginForm() {
           {isLoading && <Spinner />}
           {isLoading ? "Logging in" : "Log in"}
         </Button>
-        <p className="text-center text-[0.9375rem] text-muted-foreground">
+        <p className="text-center text-subhead text-muted-foreground">
           New here?{" "}
           <Link href="/auth/sign-up" className="font-semibold text-primary underline-offset-4 hover:underline">
             Create an account

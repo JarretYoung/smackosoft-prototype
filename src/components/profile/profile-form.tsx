@@ -82,7 +82,7 @@ export function ProfileForm({
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-4">
-      <div className="rounded-3xl bg-card p-4 shadow-card">
+      <div className="rounded-2xl bg-card p-4 shadow-card">
         <FieldGroup>
           <Field data-invalid={!!nameError}>
             <FieldLabel htmlFor="name">Display name</FieldLabel>
