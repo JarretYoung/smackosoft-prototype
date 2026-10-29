@@ -1,6 +1,6 @@
 # Backend use cases and design guidelines
 
-Status: contract in `src/contract/`, one file per feature. The implementation and tests live on branch `backup/service-layer-full`, with the old flat method names. The read shapes are a draft until the frontend reviews them.
+The contract is in `src/contract/`, one file per feature. The implementation is in `src/server/` and the tests are in `tests/`.
 
 ## Principles
 

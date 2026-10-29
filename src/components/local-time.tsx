@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { clock12, isoToTimeInput, timeRange } from "@/src/lib/format";
+import { useHydrated } from "@/src/lib/use-hydrated";
 
 /**
  * "9:00 am to 11:00 am" in the viewer's timezone, or nothing when there is no start.
@@ -22,11 +22,9 @@ export function LocalTimeRange({
   prefix?: string;
   suffix?: string;
 }) {
-  const [text, setText] = useState<string | null>(null);
-  useEffect(() => {
-    if (!start) return setText(null);
-    const from = isoToTimeInput(start);
-    setText(startOnly ? clock12(from) : timeRange(from, end ? isoToTimeInput(end) : null));
-  }, [start, end, startOnly]);
+  const hydrated = useHydrated();
+  if (!hydrated || !start) return null;
+  const from = isoToTimeInput(start);
+  const text = startOnly ? clock12(from) : timeRange(from, end ? isoToTimeInput(end) : null);
   return text ? `${prefix}${text}${suffix}` : null;
 }

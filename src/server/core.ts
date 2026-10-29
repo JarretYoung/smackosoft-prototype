@@ -10,7 +10,7 @@ import { fail, ok, type ErrorCode, type Issue, type Result } from "../contract";
 import { getDb, type Db } from "./db/client";
 
 export type Actor = { accountId: string };
-export type Ctx = { db: Db; actor: Actor };
+type Ctx = { db: Db; actor: Actor };
 type Path = (string | number)[];
 
 export class Failure extends Error {

@@ -127,12 +127,15 @@ export function SessionForm({
   const [location, setLocation] = useState(initial.location);
   const [locationUrl, setLocationUrl] = useState(initial.locationUrl);
   // The inputs hold local "HH:mm". The server cannot know the browser's timezone, so fill them after mount.
+  // Goes away with the form migration (the form state is created after hydration there).
   const [startTime, setStartTime] = useState("");
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStartTime(initial.startTime ? isoToTimeInput(initial.startTime) : "");
   }, [initial.startTime]);
   const [endTime, setEndTime] = useState("");
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEndTime(initial.endTime ? isoToTimeInput(initial.endTime) : "");
   }, [initial.endTime]);
   const [coverUrl, setCoverUrl] = useState(initial.coverUrl);

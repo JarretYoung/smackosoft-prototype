@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useHydrated } from "@/src/lib/use-hydrated";
 
 const UNITS: [limit: number, size: number, name: string][] = [
   [60, 1, "s"],
@@ -10,7 +10,7 @@ const UNITS: [limit: number, size: number, name: string][] = [
 ];
 
 /** "just now", "5m ago", "2d ago". Older than a month shows the date. */
-export function ago(iso: string, now = Date.now()): string {
+function ago(iso: string, now = Date.now()): string {
   const seconds = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
   if (seconds < 45) return "just now";
   const unit = UNITS.find(([limit]) => seconds < limit);
@@ -20,7 +20,6 @@ export function ago(iso: string, now = Date.now()): string {
 
 /** Renders after mount, because the server and the viewer do not share a clock. */
 export function RelativeTime({ iso }: { iso: string }) {
-  const [text, setText] = useState<string | null>(null);
-  useEffect(() => setText(ago(iso)), [iso]);
-  return <time dateTime={iso}>{text ?? ""}</time>;
+  const hydrated = useHydrated();
+  return <time dateTime={iso}>{hydrated ? ago(iso) : ""}</time>;
 }

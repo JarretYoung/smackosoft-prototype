@@ -2,7 +2,7 @@
  * Matches `minimum_password_length` and `password_requirements` (lower_upper_letters_digits)
  * in supabase/config.toml. Change them together.
  */
-export const MIN_PASSWORD = 8;
+const MIN_PASSWORD = 8;
 
 /** The rule in one sentence, for hints and errors. */
 export const PASSWORD_RULE = `Use at least ${MIN_PASSWORD} characters with a lowercase letter, an uppercase letter and a number.`;

@@ -21,7 +21,7 @@ import { removeSessionRows } from "./remove";
 const isoOrNull = (time: Date | null) => (time ? time.toISOString() : null);
 
 /** Members of the given sessions, in the order they were added. */
-export async function loadMembers(db: Db, sessionIds: string[]): Promise<Map<string, Member[]>> {
+async function loadMembers(db: Db, sessionIds: string[]): Promise<Map<string, Member[]>> {
   const bySession = new Map<string, Member[]>();
   if (!sessionIds.length) return bySession;
   const rows = await db

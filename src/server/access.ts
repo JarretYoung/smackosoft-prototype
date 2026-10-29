@@ -16,7 +16,7 @@ type Path = (string | number)[];
 
 const RANK: Record<Role, number> = { VIEWER: 0, EDITOR: 1, MANAGER: 2, OWNER: 3 };
 
-export const atLeast = (role: Role, min: Role) => RANK[role] >= RANK[min];
+const atLeast = (role: Role, min: Role) => RANK[role] >= RANK[min];
 
 export async function rolesIn(db: Db, actor: Actor, sessionIds: string[]): Promise<Map<string, Role>> {
   if (!sessionIds.length) return new Map();

@@ -1,7 +1,5 @@
 ## Architecture
 
-THIS IS THE BEGINNING BABY
-
 ### Tech stack considerations
 
 | Component | Technology |

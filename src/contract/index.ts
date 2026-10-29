@@ -1,9 +1,8 @@
 /**
  * The integration surface between frontend and backend.
  *
- * The frontend codes against `Backend`. The real implementation is not written yet.
- * See branch backup/service-layer-full for a working one, with the old flat method names.
- * A mock implements the same interface. Rules and guidelines: docs/use-cases.md.
+ * The frontend codes against `Backend`. The real implementation is in src/server.
+ * Rules and guidelines: docs/use-cases.md.
  *
  * One file per feature, each with its inputs, outputs and interface:
  * accounts, sessions, members, matches, videos, stats.

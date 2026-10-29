@@ -17,7 +17,6 @@ import type {
   RemoveMatchPlayersInput,
   RemoveMembersInput,
   RemoveSessionsInput,
-  RemoveTeamsInput,
   RemoveVideoLinkagesInput,
   SaveCurrentAccountInput,
   SaveGameScoresInput,
@@ -85,9 +84,6 @@ export async function removeMatches(input: RemoveMatchesInput) {
 }
 export async function saveTeams(input: SaveTeamsInput) {
   return refreshed(backend.matches.saveTeams(input));
-}
-export async function removeTeams(input: RemoveTeamsInput) {
-  return refreshed(backend.matches.removeTeams(input));
 }
 export async function savePlayers(input: SaveMatchPlayersInput) {
   return refreshed(backend.matches.savePlayers(input));
