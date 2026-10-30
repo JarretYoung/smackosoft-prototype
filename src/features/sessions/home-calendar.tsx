@@ -12,6 +12,7 @@ const toDate = (iso: string) => {
  * Sessions on a month calendar. Days with a session are filled red and today has a ring.
  * Tapping a day with one session opens it, and a day with several opens the sessions list.
  * `sessions` is what the home page already loaded, so the arrows stop at the months it covers.
+ * Today and each session's day are the viewer's own, worked out by the server from their timezone.
  */
 export function HomeCalendar({ today, sessions }: { today: string; sessions: { id: string; date: string }[] }) {
   const router = useRouter();
@@ -21,7 +22,7 @@ export function HomeCalendar({ today, sessions }: { today: string; sessions: { i
   const now = toDate(today);
   return (
     <Calendar
-      // The server decides what today is, so the ring matches the rest of the page.
+      key={today}
       today={now}
       defaultMonth={now}
       startMonth={new Date(now.getFullYear(), now.getMonth() - 1, 1)}

@@ -5,7 +5,8 @@ import { Field, FieldError, FieldLabel } from "@/src/components/ui/field";
 import { Spinner } from "@/src/components/ui/spinner";
 import type { Account, Role } from "@/src/contract";
 import { useHydrated } from "@/src/hooks/use-hydrated";
-import { longDate } from "@/src/lib/format";
+import { dayLong } from "@/src/lib/format";
+import { browserZone, todayIn } from "@/src/lib/zoned";
 import { CoverTile } from "./cover-tile";
 import { MembersSection } from "./members-section";
 import type { SessionFormInitial } from "./session-values";
@@ -24,24 +25,26 @@ type Props = {
 };
 
 /**
- * Create or edit a session and its members. The times are the browser's local time, which the
- * server cannot know, so the form starts empty-timed on the server and is created again once the
- * browser has taken over.
+ * Create or edit a session and its members. An edited session keeps its own zone, so it renders
+ * the same on the server and in the browser. A new one starts in the browser's zone and day, which
+ * the server cannot know, so that form is created again once the browser has taken over.
  */
 export function SessionForm(props: Props) {
-  const zoned = useHydrated();
-  return <SessionFormBody key={zoned ? "browser" : "server"} {...props} zoned={zoned} />;
+  const hydrated = useHydrated();
+  if (props.mode === "edit" || !hydrated) return <SessionFormBody key="server" {...props} />;
+  const zone = browserZone();
+  return <SessionFormBody key="browser" {...props} initial={{ ...props.initial, timezone: zone, date: todayIn(zone) }} />;
 }
 
-function SessionFormBody({ mode, initial, viewerRole, people, prefilledFrom, zoned }: Props & { zoned: boolean }) {
-  const session = useSessionForm({ mode, initial, viewerRole, zoned });
+function SessionFormBody({ mode, initial, viewerRole, people, prefilledFrom }: Props) {
+  const session = useSessionForm({ mode, initial, viewerRole });
   const { form, formProps, errorOf, inputProps, busy, saveDisabled } = session;
 
   return (
     <form {...formProps} className="flex flex-col gap-6 px-4 pt-4 pb-4">
       {mode === "create" && prefilledFrom && (
         <p className="px-1 text-sm text-muted-foreground">
-          Location, time and fee come from your session on {longDate(prefilledFrom)}. Change anything.
+          Location, time and fee come from your session on {dayLong(prefilledFrom)}. Change anything.
         </p>
       )}
       <form.Field name="coverUrl">

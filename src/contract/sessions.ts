@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { batch, DateOnly, HttpUrl, Role, Timestamp, UUID } from "./common";
+import { batch, DateOnly, HttpUrl, Role, Timestamp, TimeZone, UUID } from "./common";
 import type { Match } from "./matches";
 import type { Member } from "./members";
 import type { Ack, Result } from "./result";
@@ -10,7 +10,10 @@ export const SessionSave = z
   .object({
     id: UUID,
     label: z.string().trim().min(1),
+    /** The calendar day in `timezone`. */
     date: DateOnly,
+    /** Where the session happens. Its times are shown and entered in this zone. */
+    timezone: TimeZone,
     location: z.string().trim().min(1).nullish(),
     /** A maps link for the location. */
     locationUrl: HttpUrl.nullish(),
@@ -43,7 +46,7 @@ export const RemoveSessionsInput = batch(UUID, (id) => id);
 export type RemoveSessionsInput = z.input<typeof RemoveSessionsInput>;
 
 /**
- * Sessions the actor can access, ordered by date.
+ * Sessions the actor can access, ordered by date, then start time (none last), then creation.
  * Anything with a calendar meaning takes a date window. Omitted bounds default to
  * the first day of last month and the last day of next month.
  */
@@ -66,6 +69,7 @@ export type SessionListItem = {
   id: string;
   label: string;
   date: string;
+  timezone: string;
   startTime: string | null;
   endTime: string | null;
   location: string | null;
@@ -79,6 +83,7 @@ export type SessionDetails = {
   id: string;
   label: string;
   date: string;
+  timezone: string;
   startTime: string | null;
   endTime: string | null;
   location: string | null;

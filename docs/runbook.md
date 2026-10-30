@@ -100,6 +100,8 @@ Rules:
 - Every test fails on a browser console error, an uncaught page error or a 5xx response. The exclusions are listed in `e2e/support/test.ts`.
 - The `newUser` fixture signs up a fresh person through the real forms and Mailpit.
 - Only `session-times.spec.ts` runs in the extra timezones. The other specs run in `mobile`.
+- A new session takes the browser's timezone, so the time specs create their sessions in that zone. One spec makes a session in a different zone, checks the list shows it on the viewer's clock and taps the zone chip to reveal the session's own. Another changes the zone in the form.
+- The app learns the browser's timezone from the `tz` cookie. A saved login carries the cookie of the zone it was made in, so in another zone the first page is drawn once with the old zone and then corrected.
 - One worker, phone size viewport, address `127.0.0.1` (not `localhost`). Supabase email links use `127.0.0.1`, and `next.config.ts` only hydrates pages opened there.
 - Local Supabase allows 20 emails an hour. A full run sends 4. Wait if you see "Too many emails sent".
 - CI retries a failed test once. Locally nothing retries.

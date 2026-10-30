@@ -80,6 +80,7 @@ export const saveSessions = write(SaveSessionsInput, async ({ db, actor }, items
         id: s.id,
         label: s.label,
         date: s.date,
+        timezone: s.timezone,
         location: s.location ?? null,
         location_url: s.locationUrl ?? null,
         latitude: s.latitude ?? null,
@@ -98,6 +99,7 @@ export const saveSessions = write(SaveSessionsInput, async ({ db, actor }, items
         .doUpdateSet((eb) => ({
           label: eb.ref("excluded.label"),
           date: eb.ref("excluded.date"),
+          timezone: eb.ref("excluded.timezone"),
           location: eb.ref("excluded.location"),
           location_url: eb.ref("excluded.location_url"),
           latitude: eb.ref("excluded.latitude"),
@@ -174,6 +176,7 @@ export const listSessions = read(ListSessionsInput, async ({ db, actor }, input)
       "sessions.id",
       "sessions.label",
       "sessions.date",
+      "sessions.timezone",
       "sessions.start_time",
       "sessions.end_time",
       "sessions.location",
@@ -184,6 +187,8 @@ export const listSessions = read(ListSessionsInput, async ({ db, actor }, input)
     .where("sessions.date", ">=", from)
     .where("sessions.date", "<=", to)
     .orderBy("sessions.date")
+    // Within a day, the one that starts first comes first. A session with no start goes last.
+    .orderBy("sessions.start_time", (ob) => ob.asc().nullsLast())
     .orderBy("sessions.created_at")
     .execute();
   if (!sessions.length) return [];
@@ -203,6 +208,7 @@ export const listSessions = read(ListSessionsInput, async ({ db, actor }, input)
       id: s.id,
       label: s.label,
       date: s.date,
+      timezone: s.timezone,
       startTime: isoOrNull(s.start_time),
       endTime: isoOrNull(s.end_time),
       location: s.location,
@@ -225,6 +231,7 @@ export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { s
       "sessions.id",
       "sessions.label",
       "sessions.date",
+      "sessions.timezone",
       "sessions.start_time",
       "sessions.end_time",
       "sessions.location",
@@ -295,6 +302,7 @@ export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { s
     id: session.id,
     label: session.label,
     date: session.date,
+    timezone: session.timezone,
     startTime: isoOrNull(session.start_time),
     endTime: isoOrNull(session.end_time),
     location: session.location,

@@ -1,6 +1,8 @@
 "use client";
 
 import { useHydrated } from "@/src/hooks/use-hydrated";
+import { dayShort } from "@/src/lib/format";
+import { browserZone, isoToDate } from "@/src/lib/zoned";
 
 const UNITS: [limit: number, size: number, name: string][] = [
   [60, 1, "s"],
@@ -14,7 +16,7 @@ function ago(iso: string, now = Date.now()): string {
   const seconds = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
   if (seconds < 45) return "just now";
   const unit = UNITS.find(([limit]) => seconds < limit);
-  if (!unit) return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  if (!unit) return dayShort(isoToDate(iso, browserZone()));
   return `${Math.floor(seconds / unit[1])}${unit[2]} ago`;
 }
 

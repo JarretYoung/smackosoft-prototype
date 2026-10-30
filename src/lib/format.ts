@@ -1,4 +1,18 @@
-/** Display helpers. Dates arrive as "YYYY-MM-DD" strings and are shown without timezone shifts. */
+/**
+ * Display helpers. Dates arrive as "YYYY-MM-DD" strings and are shown without timezone shifts.
+ * Every screen shows dates and times in these forms and no others, so a session reads the same everywhere:
+ *
+ *   Time          6:00 am               clock12
+ *   Time range    6:00 am to 9:00 am    timeRange (open ended: "From 6:00 am")
+ *   Length        1 h 30 min            durationLabel
+ *   Day           Sat 31 Oct            dayShort, the default
+ *   Day, year     Sat 31 Oct 2026       dayLong, or dayFor to add the year only when it is not this year
+ *   Weekday       Sat                   weekdayShort
+ *   Tile          31 over OCT           dayOf and monthShort
+ *
+ * A word where it helps ("Today", "Tomorrow") comes from `dayLabel` in the sessions feature.
+ * Times that depend on a timezone come from `src/lib/zoned.ts`.
+ */
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -12,23 +26,26 @@ export function coordinatesShort(latitude: number, longitude: number): string {
   return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
 }
 
+/** "Wed" */
+export function weekdayShort(date: string): string {
+  const { year, month, day } = parts(date);
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
+}
+
 /** "Wed 28 Oct" */
 export function dayShort(date: string): string {
-  const { year, month, day } = parts(date);
-  const weekday = new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
-  return `${weekday} ${day} ${MONTHS[month - 1]}`;
+  const { month, day } = parts(date);
+  return `${weekdayShort(date)} ${day} ${MONTHS[month - 1]}`;
 }
 
-/** "Wed, 28 Oct 2026" */
-export function weekdayDate(date: string): string {
-  const { year, month, day } = parts(date);
-  const weekday = new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
-  return `${weekday}, ${longDate(date)}`;
+/** "Wed 28 Oct 2026" */
+export function dayLong(date: string): string {
+  return `${dayShort(date)} ${parts(date).year}`;
 }
 
-/** Today as "YYYY-MM-DD" in the server's local time. */
-export function today(): string {
-  return new Date().toLocaleDateString("en-CA");
+/** `dayShort`, with the year added when `date` is not in the same year as `today`. */
+export function dayFor(date: string, today: string): string {
+  return parts(date).year === parts(today).year ? dayShort(date) : dayLong(date);
 }
 
 /** The first day of the month before `date` through the last day of the month after it. */
@@ -41,10 +58,10 @@ export function monthWindow(date: string): { from: string; to: string } {
   };
 }
 
-/** `date` moved by `days`, as "YYYY-MM-DD". */
+/** `date` moved by whole calendar days, as "YYYY-MM-DD". Pure date arithmetic, so no zone or clock change matters. */
 export function addDays(date: string, days: number): string {
   const { year, month, day } = parts(date);
-  return new Date(year, month - 1, day + days).toLocaleDateString("en-CA");
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
 
 export function dayOf(date: string): string {
@@ -53,12 +70,6 @@ export function dayOf(date: string): string {
 
 export function monthShort(date: string): string {
   return MONTHS[parts(date).month - 1].toUpperCase();
-}
-
-/** "3 Oct 2026" */
-export function longDate(date: string): string {
-  const { year, month, day } = parts(date);
-  return `${day} ${MONTHS[month - 1]} ${year}`;
 }
 
 /** "RM 20" for MYR, otherwise the currency code and amount. */
@@ -96,32 +107,10 @@ export function timeRange(start: string | null, end: string | null): string | nu
   return end ? `${clock12(start)} to ${clock12(end)}` : `From ${clock12(start)}`;
 }
 
-/** The local "HH:mm" of an ISO timestamp, for a time input. */
-export function isoToTimeInput(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-/** The instant for a local "YYYY-MM-DD" date and "HH:mm" time, in the browser's timezone. */
-export function localToIso(date: string, time: string): string {
-  const [year, month, day] = date.split("-").map(Number);
-  const [h, m] = time.split(":").map(Number);
-  const d = new Date(year, month - 1, day, h, m);
-  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
-}
-
 /** 90 to "1 h 30 min", 120 to "2 h", 45 to "45 min". */
 export function durationLabel(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return [h && `${h} h`, m && `${m} min`].filter(Boolean).join(" ");
-}
-
-/** The same day as `iso` with the local time set to "HH:mm". */
-export function timeInputToIso(iso: string, time: string): string {
-  const [h, m] = time.split(":").map(Number);
-  const d = new Date(iso);
-  d.setHours(h, m, 0, 0);
-  return d.toISOString();
 }
 

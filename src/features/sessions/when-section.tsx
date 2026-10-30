@@ -2,20 +2,23 @@
 
 import { useState } from "react";
 import { FieldError } from "@/src/components/ui/field";
-import { addDays, clock12, dayShort, durationLabel, weekdayDate } from "@/src/lib/format";
+import { addDays, clock12, dayLong, dayShort, durationLabel } from "@/src/lib/format";
+import { offsetLabel, zoneCity } from "@/src/lib/zoned";
 import { DateSheet } from "./date-sheet";
 import { DAY, endSuggestions, endTape, START_TIMES } from "./session-times";
 import { TimeSheet, timeChips } from "./time-sheet";
 import type { SessionFormState } from "./use-session-form";
 import { ValueRow } from "./value-row";
+import { ZoneSheet } from "./zone-sheet";
 
 const START_CHIPS = timeChips(START_TIMES);
 
-/** The date, start and end as rows. Each opens a sheet to pick from. */
+/** The date, start, end and time zone as rows. Each opens a sheet to pick from. */
 export function WhenSection({ session }: { session: SessionFormState }) {
   const { form, errorOf, times } = session;
   const [pickDate, setPickDate] = useState(false);
   const [pickTime, setPickTime] = useState<"start" | "end" | null>(null);
+  const [pickZone, setPickZone] = useState(false);
   const runHint = times.runMinutes ? `${durationLabel(times.runMinutes)} long` : undefined;
 
   return (
@@ -30,6 +33,7 @@ export function WhenSection({ session }: { session: SessionFormState }) {
                 const end = endField.state.value;
                 const tape = endTape(start);
                 const nextDayLabel = dayShort(addDays(date, 1));
+                const zone = session.values.timezone;
                 return (
                   <section className="flex flex-col gap-2">
                     <h2 className="section-label">When</h2>
@@ -38,7 +42,7 @@ export function WhenSection({ session }: { session: SessionFormState }) {
                         <ValueRow
                           id="date"
                           label="Date"
-                          value={date ? weekdayDate(date) : null}
+                          value={date ? dayLong(date) : null}
                           placeholder="Pick a date"
                           invalid={!!errorOf(dateField)}
                           onClick={() => setPickDate(true)}
@@ -62,10 +66,25 @@ export function WhenSection({ session }: { session: SessionFormState }) {
                           onClick={() => setPickTime("end")}
                         />
                       </li>
+                      <li>
+                        <ValueRow
+                          label="Time zone"
+                          value={zone ? `${zoneCity(zone)} (${offsetLabel(zone, date)})` : null}
+                          placeholder="Your time zone"
+                          onClick={() => setPickZone(true)}
+                        />
+                      </li>
                     </ul>
                     <FieldError className="px-1">{errorOf(dateField) ?? errorOf(endField)}</FieldError>
 
                     <DateSheet open={pickDate} onOpenChange={setPickDate} value={date} onChange={dateField.handleChange} />
+                    <ZoneSheet
+                      open={pickZone}
+                      onOpenChange={setPickZone}
+                      value={zone}
+                      date={date}
+                      onChange={(next) => form.setFieldValue("timezone", next)}
+                    />
                     <TimeSheet
                       open={pickTime === "start"}
                       onOpenChange={(open) => !open && setPickTime(null)}

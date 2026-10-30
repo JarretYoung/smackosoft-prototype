@@ -8,8 +8,8 @@ const parts = (iso: string) => {
   return { year, month, day };
 };
 
-/** Today as "YYYY-MM-DD" on the machine that runs the app and the tests. */
-export const todayIso = () => new Date().toLocaleDateString("en-CA");
+/** Today as "YYYY-MM-DD" in `timeZone`, or on the machine that runs the app and the tests. */
+export const todayIso = (timeZone?: string) => new Date().toLocaleDateString("en-CA", { timeZone });
 
 /** `iso` moved by whole calendar days. */
 export function addDays(iso: string, days: number): string {
@@ -38,6 +38,21 @@ export function zonedIso(iso: string, time: string, timeZone: string): string {
   // The offset depends on the instant, so settle it in two passes.
   const firstGuess = wall - offsetAt(wall);
   return new Date(wall - offsetAt(firstGuess)).toISOString();
+}
+
+/** The wall clock "HH:mm" that an instant shows in `timeZone`. */
+export function clockIn(iso: string, timeZone: string): string {
+  return new Date(iso).toLocaleTimeString("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+}
+
+/** The date "YYYY-MM-DD" that an instant falls on in `timeZone`. */
+export function dateIn(iso: string, timeZone: string): string {
+  return new Date(iso).toLocaleDateString("en-CA", { timeZone });
+}
+
+/** "Asia/Kuala_Lumpur" as "Kuala Lumpur", the way the app names a zone. */
+export function cityOf(timeZone: string): string {
+  return timeZone.split("/").pop()!.replaceAll("_", " ");
 }
 
 /** "22:00" as "10:00 pm". */

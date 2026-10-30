@@ -12,13 +12,6 @@ const HARMLESS_CONSOLE: { pattern: RegExp; why: string }[] = [
     pattern: /^Failed to load resource: the server responded with a status of 4\d\d/,
     why: "Browser echo of an expected 4xx response",
   },
-  {
-    // The Next.js dev server replays this as console.error when it checks /home for instant navigation.
-    // docs/uat.md calls the dev "Insight" hints "a dev hint, not an error". The roadmap tracks the
-    // real fix as the parked timezone item, so keep this filter until that lands.
-    pattern: /Next\.js encountered the unstable value `new Date\(\)` while prerendering/,
-    why: "Next.js dev only hint about today() on the Home page",
-  },
 ];
 
 /** A person who signed up and finished onboarding during this test. */

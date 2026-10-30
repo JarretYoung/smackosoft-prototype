@@ -27,22 +27,19 @@ import { undoToast } from "@/src/lib/undo-toast";
  * Form state for creating or editing a session and its members. Everything is staged here.
  * Save runs the writes in order: session, guests, members. Each write is replay safe,
  * so a failed save can simply be tried again.
- * `zoned` is false until the browser has taken over from the server, because the times are the
- * browser's local time. The caller recreates the form when it turns true.
+ * The times are clock readings in the session's zone, so the form needs nothing from the browser.
  */
 export function useSessionForm({
   mode,
   initial,
   viewerRole,
-  zoned,
 }: {
   mode: "create" | "edit";
   initial: SessionFormInitial;
   viewerRole: Role;
-  zoned: boolean;
 }) {
   const router = useRouter();
-  const [saved, setSaved] = useState(() => toValues(initial, zoned));
+  const [saved, setSaved] = useState(() => toValues(initial));
   const [navigating, startNavigation] = useTransition();
   const schema = useMemo(() => sessionSchema(initial.id), [initial.id]);
 
@@ -82,7 +79,7 @@ export function useSessionForm({
 
   const values: SessionValues = useStore(app.form.store, (state) => state.values);
   const place = useMapsPlace(values.locationUrl, values.location, initial);
-  const times = sessionTimes(values.date, values.startTime, values.endTime);
+  const times = sessionTimes(values.date, values.startTime, values.endTime, values.timezone);
 
   const busy = app.pending || navigating;
   /** An edit has nothing to save until something changed. A pin found from the link counts as a change. */

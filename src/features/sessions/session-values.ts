@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { SessionSave } from "../../contract";
-import { isoToTimeInput } from "../../lib/format";
 import type { MapsLink } from "./maps-link";
 import { membersChanged, type MemberDraft } from "./members-draft";
 import { sessionTimes } from "./session-times";
@@ -9,14 +8,16 @@ export type SessionFormInitial = {
   id: string;
   label: string;
   date: string;
+  /** IANA zone of the session. The times below are read in it. */
+  timezone: string;
   location: string;
   locationUrl: string;
   /** Where the saved link points. Both or neither. */
   latitude: number | null;
   longitude: number | null;
-  /** An ISO timestamp, or "" when not set. */
+  /** The clock reading "HH:mm" in `timezone`, or "" when not set. */
   startTime: string;
-  /** An ISO timestamp, or "" when not set. */
+  /** The clock reading "HH:mm" in `timezone`, or "" when not set. */
   endTime: string;
   coverUrl: string;
   courtFee: string;
@@ -24,10 +25,12 @@ export type SessionFormInitial = {
   members: MemberDraft[];
 };
 
-/** What the fields hold. Times are the browser's local "HH:mm", the fee stays text so typing is never rewritten. */
+/** What the fields hold. Times are "HH:mm" on the session's clock, the fee stays text so typing is never rewritten. */
 export type SessionValues = {
   label: string;
   date: string;
+  /** Carried through unchanged, the form has no field for it. */
+  timezone: string;
   location: string;
   locationUrl: string;
   startTime: string;
@@ -40,18 +43,16 @@ export type SessionValues = {
 
 export type Pin = { latitude: number; longitude: number };
 
-/**
- * The field values for a saved session. The server cannot know the browser's timezone, so the
- * times stay empty until `zoned` says the browser has taken over.
- */
-export function toValues(initial: SessionFormInitial, zoned: boolean): SessionValues {
+/** The field values for a session. The times are already clock readings in its zone. */
+export function toValues(initial: SessionFormInitial): SessionValues {
   return {
     label: initial.label,
     date: initial.date,
+    timezone: initial.timezone,
     location: initial.location,
     locationUrl: initial.locationUrl,
-    startTime: zoned && initial.startTime ? isoToTimeInput(initial.startTime) : "",
-    endTime: zoned && initial.endTime ? isoToTimeInput(initial.endTime) : "",
+    startTime: initial.startTime,
+    endTime: initial.endTime,
     coverUrl: initial.coverUrl,
     courtFee: initial.courtFee,
     currency: initial.currency || "MYR",
@@ -61,12 +62,13 @@ export function toValues(initial: SessionFormInitial, zoned: boolean): SessionVa
 
 /** The session write for the field values. Blank optional fields become null, and the fee takes its currency. */
 export function toSessionSave(values: SessionValues, id: string, pin: Pin | null) {
-  const { startIso, endIso } = sessionTimes(values.date, values.startTime, values.endTime);
+  const { startIso, endIso } = sessionTimes(values.date, values.startTime, values.endTime, values.timezone);
   const fee = values.courtFee.trim() === "" ? null : Number(values.courtFee);
   return {
     id,
     label: values.label,
     date: values.date,
+    timezone: values.timezone,
     location: values.location.trim() === "" ? null : values.location,
     locationUrl: values.locationUrl.trim() === "" ? null : values.locationUrl.trim(),
     latitude: pin?.latitude ?? null,
@@ -83,6 +85,7 @@ export function toSessionSave(values: SessionValues, id: string, pin: Pin | null
 const COPY: Record<string, string> = {
   label: "Give the session a name",
   date: "Pick a date",
+  timezone: "Pick a time zone",
   endTime: "Pick an end after the start",
   locationUrl: "Paste a full link, starting with https://",
   coverUrl: "Paste a full link, starting with https://",
@@ -107,6 +110,7 @@ export function sessionSchema(id: string) {
     .object({
       label: z.string(),
       date: z.string(),
+      timezone: z.string(),
       location: z.string(),
       locationUrl: z.string(),
       startTime: z.string(),

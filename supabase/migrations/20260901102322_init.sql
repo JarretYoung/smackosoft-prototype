@@ -77,6 +77,7 @@ CREATE TABLE smackosoft.sessions (
   id           uuid        NOT NULL DEFAULT gen_random_uuid(),
   label        text        NOT NULL,
   date         date        NOT NULL,
+  timezone     text        NOT NULL,
   location     text,
   location_url text,
   latitude     double precision,
@@ -91,6 +92,7 @@ CREATE TABLE smackosoft.sessions (
   updated_at   timestamptz,
   updated_by   uuid,
   CONSTRAINT sessions_pkey PRIMARY KEY (id),
+  CONSTRAINT sessions_timezone_check CHECK (timezone <> ''),
   CONSTRAINT sessions_time_order_check CHECK (start_time IS NULL OR end_time IS NULL OR end_time > start_time),
   CONSTRAINT sessions_latitude_check CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90),
   CONSTRAINT sessions_longitude_check CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180),
@@ -104,6 +106,10 @@ CREATE TABLE smackosoft.sessions (
 
 GRANT ALL ON TABLE smackosoft.sessions TO smackosoft_service;
 
+COMMENT ON COLUMN smackosoft.sessions.date IS
+  'The calendar day of the session in its timezone. Not shifted for the viewer.';
+COMMENT ON COLUMN smackosoft.sessions.timezone IS
+  'IANA name of the zone the session happens in, for example Asia/Kuala_Lumpur. Times are shown and entered in this zone, whatever the viewer''s zone. The app checks the name.';
 COMMENT ON COLUMN smackosoft.sessions.latitude IS
   'Where the session is, in degrees (WGS 84). Read from the maps link when it is pasted. NULL when unknown. Set with longitude or not at all.';
 COMMENT ON COLUMN smackosoft.sessions.longitude IS

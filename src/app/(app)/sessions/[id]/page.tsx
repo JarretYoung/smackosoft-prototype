@@ -2,7 +2,6 @@ import { Banknote, ChevronLeft, MapPin, Plus, Users, Video } from "lucide-react"
 import Link from "next/link";
 import { AvatarStack } from "@/src/components/avatar-stack";
 import { SessionCover } from "@/src/components/court-art";
-import { LocalTimeRange } from "@/src/components/local-time";
 import { RowChevron } from "@/src/components/row-chevron";
 import { Button } from "@/src/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/components/ui/empty";
@@ -11,17 +10,20 @@ import { MatchCard } from "@/src/features/matches/match-card";
 import { FactRow, RowIcon } from "@/src/features/sessions/fact-row";
 import { MembersSheetRow } from "@/src/features/sessions/members-sheet";
 import { SessionMenu } from "@/src/features/sessions/session-menu";
+import { SessionWhen } from "@/src/features/sessions/session-when";
 import { attentionOf } from "@/src/features/videos/videos";
-import { longDate, money, plural } from "@/src/lib/format";
+import { money, plural } from "@/src/lib/format";
 import { unwrap } from "@/src/lib/result";
+import { getViewerZone } from "@/src/lib/viewer-zone";
 import { backend } from "@/src/server";
 
 export default async function SessionDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [sessionResult, meResult, videosResult] = await Promise.all([
+  const [sessionResult, meResult, videosResult, viewerZone] = await Promise.all([
     backend.sessions.get({ sessionId: id }),
     backend.accounts.getCurrent(),
     backend.videos.listBySession({ sessionId: id }),
+    getViewerZone(),
   ]);
   const session = unwrap(sessionResult);
   const me = unwrap(meResult);
@@ -73,10 +75,14 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
             canLeave={session.myRole !== "OWNER"}
           />
         </div>
-        <p className="px-1 text-subhead font-medium text-primary-foreground/90">
-          {longDate(session.date)}
-          <LocalTimeRange start={session.startTime} end={session.endTime} prefix=" · " />
-        </p>
+        <SessionWhen
+          date={session.date}
+          start={session.startTime}
+          end={session.endTime}
+          zone={session.timezone}
+          viewerZone={viewerZone}
+          className="px-1 text-subhead font-medium text-primary-foreground/90"
+        />
         <h1 className="mt-1 px-1 text-[2.125rem] leading-[1.1] font-bold tracking-tight">{session.label}</h1>
         {session.coverUrl && <SessionCover url={session.coverUrl} className="mt-5 h-44 rounded-xl shadow-float" />}
       </section>

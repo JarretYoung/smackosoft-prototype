@@ -1,37 +1,44 @@
 import Link from "next/link";
-import { connection } from "next/server";
 import { AvatarStack, PersonAvatar } from "@/src/components/avatar-stack";
 import { DateTile } from "@/src/components/date-tile";
 import { HeroStat } from "@/src/features/home/hero-stat";
 import { HomeCalendar } from "@/src/features/sessions/home-calendar";
 import { RowChevron } from "@/src/components/row-chevron";
-import { LocalTimeRange } from "@/src/components/local-time";
+import { TimeRange } from "@/src/components/time-range";
 import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/components/ui/empty";
 import { Progress } from "@/src/components/ui/progress";
-import { monthWindow, today } from "@/src/lib/format";
+import { byViewerDay, dayGroup, viewerDay } from "@/src/features/sessions/session-days";
+import { addDays, monthWindow } from "@/src/lib/format";
+import { todayIn } from "@/src/lib/zoned";
 import { unwrap } from "@/src/lib/result";
+import { getViewerZone } from "@/src/lib/viewer-zone";
 import { backend } from "@/src/server";
 
 export default async function HomePage() {
-  // Cache Components refuses to prerender a read of the clock. This page is per request, so say so.
-  // The roadmap item "server today uses the server timezone" replaces this with the viewer's timezone.
-  await connection();
-  const now = today();
+  // The zone comes from the request, so the clock is read after it, which a Server Component may do.
+  const viewerZone = await getViewerZone();
+  const now = new Date();
+  // Today, and every day on this page, is the viewer's own.
+  const today = todayIn(viewerZone, now);
+  // The calendar shows last, this and next month around today. A session's saved date is in its own
+  // zone, so ask a day wider each side and let each session's day on the viewer's calendar decide.
+  const months = monthWindow(today);
   const [meResult, statsResult, teammatesResult, sessionsResult] = await Promise.all([
     backend.accounts.getCurrent(),
     backend.stats.get(),
     backend.stats.getTeammates(),
-    // The calendar shows last, this and next month around `now`, so ask for exactly those.
-    backend.sessions.list(monthWindow(now)),
+    backend.sessions.list({ from: addDays(months.from, -1), to: addDays(months.to, 1) }),
   ]);
   const me = unwrap(meResult);
   const stats = unwrap(statsResult);
   const teammates = unwrap(teammatesResult);
-  const sessions = unwrap(sessionsResult);
+  const sessions = unwrap(sessionsResult).sort(byViewerDay(viewerZone));
 
-  const upcoming = sessions.filter((s) => s.date >= now).slice(0, 3);
+  const upcoming = sessions
+    .filter((s) => dayGroup(viewerDay(s, viewerZone), viewerZone, now) !== "past")
+    .slice(0, 3);
   const winPercent = stats.winRate === null ? null : Math.round(stats.winRate * 100);
 
   return (
@@ -73,7 +80,7 @@ export default async function HomePage() {
         </div>
         <Card className="py-5">
           <CardContent>
-            <HomeCalendar today={now} sessions={sessions.map((s) => ({ id: s.id, date: s.date }))} />
+            <HomeCalendar today={today} sessions={sessions.map((s) => ({ id: s.id, date: viewerDay(s, viewerZone) }))} />
           </CardContent>
         </Card>
         {upcoming.length === 0 ? (
@@ -88,11 +95,11 @@ export default async function HomePage() {
             {upcoming.map((s) => (
               <li key={s.id}>
                 <Link href={`/sessions/${s.id}`} className="pressable-row list-row">
-                  <DateTile date={s.date} />
+                  <DateTile date={viewerDay(s, viewerZone)} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-body font-semibold tracking-tight">{s.label}</p>
                     <p className="truncate text-sm text-muted-foreground">
-                      <LocalTimeRange start={s.startTime} end={s.endTime} suffix={s.location ? " · " : ""} />
+                      <TimeRange start={s.startTime} end={s.endTime} zone={viewerZone} suffix={s.location ? " · " : ""} />
                       {s.location ?? (s.startTime ? "" : "No details")}
                     </p>
                   </div>

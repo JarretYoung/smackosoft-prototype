@@ -63,6 +63,18 @@ Other writes follow the same rule. A Client Component writes only through a serv
 4. A concept with no table takes the plain domain word (`Member`, `Teammate`, `Stats`).
 5. UI copy is plain language. Delete a record. Remove a link or a member. Leave means removing yourself.
 
+## Time and timezones
+
+A session has a timezone: where it happens, as an IANA name in `sessions.timezone`.
+
+- `date` is the calendar day in that zone. Start and end times are exact instants.
+- **Everything is on the viewer's clock.** Lists, Home and the session page show times in the viewer's timezone. The day of a session is the day it starts on the viewer's clock (`viewerDay`), and "today" is today where the viewer is.
+- **The session's own clock is one tap away.** A session that happens on a different clock gets a chip on its page. It says "Your time", and a tap switches to the session's clock, named by its short zone name ("GMT", or "UTC+8" where the browser has no abbreviation), and back. The date moves with the time. Two zones with the same clock at that moment, such as Kuala Lumpur and Singapore, count as the same, so nobody sees a chip. Lists have no chip, so every row reads on one clock.
+- **The server knows the viewer's zone from a cookie.** A browser does not send its timezone, so `TimezoneCookie` (in the root layout) keeps a `tz` cookie equal to the browser's and draws the page again once when it changes. `getViewerZone` reads it on the server and checks it first. A first visit assumes `DEFAULT_TIMEZONE` (Kuala Lumpur, set in `src/config.ts`), then corrects itself if the browser is somewhere else. Nobody on Malaysian time sees a redraw.
+- **Forms stay on the session's clock.** The session form always shows the zone as a row, "Time zone", with a search sheet. A new session starts in the browser's zone, taken in the browser so a stale cookie can never set it. Changing the zone keeps the times that were typed, because "8 pm" means 8 pm at the venue. The match editor edits game times on the session's clock too, and says so when it differs from yours.
+- The server renders the times, so nothing pops in after the page loads.
+- The helpers are in `src/lib/zoned.ts`. They use `Intl`, with no library.
+
 ## Glossary
 
 | Concept | Schema | Code | UI |
@@ -84,6 +96,7 @@ Other writes follow the same rule. A Client Component writes only through a serv
 | Sync point | `video_games.canonical_offset` | `canonicalOffset` | Sync point |
 | Teammate | derived from `match_players` | `TeammateStat` | Teammates |
 | Court fee | `sessions.court_fee` | `courtFee` | Court fee |
+| Timezone | `sessions.timezone` | `timezone` | "Times are in London time" |
 
 ## Known simplification
 

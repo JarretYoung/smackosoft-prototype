@@ -1,4 +1,5 @@
-import { addDays, localToIso, minutesToTime, timeToMinutes } from "../../lib/format";
+import { addDays, minutesToTime, timeToMinutes } from "../../lib/format";
+import { zonedToIso } from "../../lib/zoned";
 
 export const DAY = 24 * 60;
 
@@ -9,15 +10,16 @@ export const END_TIMES = ["09:00", "11:00", "20:00", "21:00", "22:00", "23:00"];
 const END_AFTER = [60, 90, 120, 150, 180];
 
 /**
- * The instants for the local "HH:mm" start and end on a date. An end earlier than the start is the
- * next day, so a game can run past midnight. `runMinutes` is how long it runs, when both are set.
+ * The instants for the "HH:mm" start and end on a date, read on the clock of `zone`. An end earlier
+ * than the start is the next day, so a game can run past midnight. `runMinutes` is how long it
+ * runs, when both are set.
  */
-export function sessionTimes(date: string, start: string, end: string) {
-  const startIso = start === "" ? "" : localToIso(date, start);
-  const endSameDay = end === "" ? "" : localToIso(date, end);
+export function sessionTimes(date: string, start: string, end: string, zone: string) {
+  const startIso = zonedToIso(date, start, zone);
+  const endSameDay = zonedToIso(date, end, zone);
   const nextDay = !!startIso && !!endSameDay && Date.parse(endSameDay) < Date.parse(startIso);
   // The next calendar day, not 24 hours later: a clock change makes the two differ by an hour.
-  const endIso = nextDay ? localToIso(addDays(date, 1), end) : endSameDay;
+  const endIso = nextDay ? zonedToIso(addDays(date, 1), end, zone) : endSameDay;
   const runMinutes = start && end ? (timeToMinutes(end) - timeToMinutes(start) + DAY) % DAY : null;
   return { startIso, endIso, nextDay, runMinutes };
 }

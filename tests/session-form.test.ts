@@ -11,7 +11,9 @@ import {
   toValues,
   type SessionFormInitial,
 } from "../src/features/sessions/session-values";
-import { localToIso } from "../src/lib/format";
+import { zonedToIso } from "../src/lib/zoned";
+
+const KL = "Asia/Kuala_Lumpur";
 
 const account = (name: string, isGuest = false): Account => ({
   id: crypto.randomUUID(),
@@ -79,20 +81,25 @@ describe("session members", () => {
 
 describe("session times", () => {
   it("reads an end earlier than the start as the next day", () => {
-    const times = sessionTimes("2026-11-06", "22:00", "00:30");
+    const times = sessionTimes("2026-11-06", "22:00", "00:30", KL);
     expect(times.nextDay).toBe(true);
     expect(times.runMinutes).toBe(150);
     expect(Date.parse(times.endIso) - Date.parse(times.startIso)).toBe(150 * 60_000);
   });
 
   it("keeps an end after the start on the same day", () => {
-    const times = sessionTimes("2026-11-06", "19:00", "21:00");
+    const times = sessionTimes("2026-11-06", "19:00", "21:00", KL);
     expect(times.nextDay).toBe(false);
-    expect(times.endIso).toBe(localToIso("2026-11-06", "21:00"));
+    expect(times.endIso).toBe(zonedToIso("2026-11-06", "21:00", KL));
+  });
+
+  it("reads the times on the session's clock, whatever zone the viewer is in", () => {
+    expect(sessionTimes("2026-11-06", "19:00", "21:00", KL).startIso).toBe("2026-11-06T11:00:00.000Z");
+    expect(sessionTimes("2026-11-06", "19:00", "21:00", "Europe/London").startIso).toBe("2026-11-06T19:00:00.000Z");
   });
 
   it("leaves unset times empty", () => {
-    expect(sessionTimes("2026-11-06", "", "")).toEqual({ startIso: "", endIso: "", nextDay: false, runMinutes: null });
+    expect(sessionTimes("2026-11-06", "", "", KL)).toEqual({ startIso: "", endIso: "", nextDay: false, runMinutes: null });
   });
 
   it("offers end times after the start, wrapping past midnight", () => {
@@ -102,34 +109,37 @@ describe("session times", () => {
 
 describe("session form values", () => {
   const initial: SessionFormInitial = {
-    ...newSessionInitial({ id: sessionId, today: "2026-11-06", me, last: null }),
+    ...newSessionInitial({ id: sessionId, today: "2026-11-06", timezone: "Asia/Kuala_Lumpur", me, last: null }),
     label: "Friday",
   };
 
   it("explains an end that is not after the start", () => {
-    const values = { ...toValues(initial, true), startTime: "19:00", endTime: "19:00" };
+    const values = { ...toValues(initial), startTime: "19:00", endTime: "19:00" };
     expect(sessionProblems(values, sessionId)).toEqual({ endTime: "Pick an end after the start" });
   });
 
   it("asks for a name in plain words", () => {
-    expect(sessionProblems({ ...toValues(initial, true), label: "  " }, sessionId)).toEqual({ label: "Give the session a name" });
+    expect(sessionProblems({ ...toValues(initial), label: "  " }, sessionId)).toEqual({ label: "Give the session a name" });
   });
 
   it("sends a fee with its currency, or neither", () => {
-    const values = toValues(initial, true);
+    const values = toValues(initial);
     expect(toSessionSave(values, sessionId, null)).toMatchObject({ courtFee: null, currency: null });
     expect(toSessionSave({ ...values, courtFee: "55" }, sessionId, null)).toMatchObject({ courtFee: 55, currency: "MYR" });
   });
 
-  it("starts the times empty until the browser has taken over", () => {
-    const withTimes = { ...initial, startTime: localToIso("2026-11-06", "19:00") };
-    expect(toValues(withTimes, false).startTime).toBe("");
-    expect(toValues(withTimes, true).startTime).toBe("19:00");
+  it("saves the session's own timezone with the times", () => {
+    const values = { ...toValues(initial), date: "2026-11-06", startTime: "19:00", endTime: "21:00" };
+    expect(toSessionSave(values, sessionId, null)).toMatchObject({
+      timezone: KL,
+      startTime: "2026-11-06T11:00:00.000Z",
+      endTime: "2026-11-06T13:00:00.000Z",
+    });
   });
 
   it("counts a changed role as a change, and a pin as none", () => {
     const sam = account("Sam");
-    const saved = { ...toValues(initial, true), members: [draft(me, "OWNER"), draft(sam)] };
+    const saved = { ...toValues(initial), members: [draft(me, "OWNER"), draft(sam)] };
     expect(isDirty(saved, saved)).toBe(false);
     expect(isDirty({ ...saved, members: [draft(me, "OWNER"), draft(sam, "EDITOR")] }, saved)).toBe(true);
   });
@@ -147,6 +157,7 @@ describe("session defaults", () => {
     id: crypto.randomUUID(),
     label: "Last Friday",
     date: "2026-10-30",
+    timezone: "Asia/Kuala_Lumpur",
     location: "Sunway Serene",
     locationUrl: "https://maps.app.goo.gl/abc",
     latitude: 3.1,
@@ -160,7 +171,7 @@ describe("session defaults", () => {
   };
 
   it("starts a new session from the last one, without its name or cover", () => {
-    const initial = newSessionInitial({ id: sessionId, today: "2026-11-06", me, last });
+    const initial = newSessionInitial({ id: sessionId, today: "2026-11-06", timezone: "Asia/Kuala_Lumpur", me, last });
     expect(initial).toMatchObject({
       label: "",
       date: "2026-11-06",
@@ -168,13 +179,22 @@ describe("session defaults", () => {
       courtFee: "55",
       currency: "SGD",
       coverUrl: "",
-      startTime: last.startTime,
+      startTime: "19:00",
+      endTime: "21:00",
     });
     expect(initial.members).toEqual([draft(me, "OWNER")]);
   });
 
+  it("keeps the time of day when the last session was in another zone", () => {
+    const london = { ...last, timezone: "Europe/London" };
+    expect(newSessionInitial({ id: sessionId, today: "2026-11-06", timezone: KL, me, last: london })).toMatchObject({
+      startTime: "11:00",
+      endTime: "13:00",
+    });
+  });
+
   it("starts from plain defaults when there is no last session", () => {
-    expect(newSessionInitial({ id: sessionId, today: "2026-11-06", me, last: null })).toMatchObject({
+    expect(newSessionInitial({ id: sessionId, today: "2026-11-06", timezone: "Asia/Kuala_Lumpur", me, last: null })).toMatchObject({
       location: "",
       courtFee: "",
       currency: "MYR",

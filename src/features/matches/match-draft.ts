@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Match } from "../../contract";
-import { timeInputToIso } from "../../lib/format";
+import { withTime } from "../../lib/zoned";
 
 export type TeamDraft = { id: string; label: string; playerIds: string[] };
 
@@ -51,7 +51,8 @@ export function toValues(match: Match): MatchValues {
 
 export type GamesAction =
   | { type: "score"; gameId: string; teamId: string; value: string }
-  | { type: "time"; gameId: string; field: "startTime" | "endTime"; time: string }
+  /** `time` is "HH:mm" on the clock of `timezone`, the session's zone. */
+  | { type: "time"; gameId: string; field: "startTime" | "endTime"; time: string; timezone: string }
   /** `savedNumbers` are the saved games' numbers, so a number is never reused. */
   | { type: "add"; id: string; now: Date; savedNumbers: number[] }
   | { type: "remove"; id: string }
@@ -68,7 +69,7 @@ export function gamesReducer(list: GameDraft[], action: GamesAction): GameDraft[
     case "time":
       if (!action.time) return list;
       return list.map((g) =>
-        g.id === action.gameId ? { ...g, [action.field]: timeInputToIso(g[action.field], action.time) } : g,
+        g.id === action.gameId ? { ...g, [action.field]: withTime(g[action.field], action.time, action.timezone) } : g,
       );
     case "add": {
       // The next game starts when the last one ended, or now for the first.

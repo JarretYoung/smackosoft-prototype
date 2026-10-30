@@ -182,7 +182,7 @@ Reads are one per screen or lookup. Writes follow one pattern: `save` and `remov
 | `sessions.list` | Sessions home | any member |
 | `sessions.get` | Session Details | `VIEWER` |
 | `accounts.getCurrent` | Dashboard header, onboarding check | signed in |
-| `sessions.list({ from?, to? })` | Sessions home, dashboard upcoming | signed in. Default window: last month through next month. The frontend may override. |
+| `sessions.list({ from?, to? })` | Sessions home, dashboard upcoming | signed in. Default window: last month through next month. The frontend may override. Ordered by date, then start time (no start last), then creation. The Sessions page asks for all time. |
 | `accounts.findByHandle` | Add members | signed in |
 | `accounts.isHandleFree` | Onboarding and Profile, checks a handle as it is typed. Your own handle counts as free. | signed in. Works before onboarding. |
 | `videos.listBySession` | Videos page, session videos row, Match Details video counts. Each row has a nullable `matchGameId` and `canonicalOffset`, plus `changedByName` and `changedAt` (the last editor of the offset, or the person who made the link). | `VIEWER` |
@@ -198,7 +198,7 @@ Unverified: `videos.listOwn` follows the fourth story in the story map, "link th
 
 | Entity | Save | Remove | Key (G8) | Min role | Notes |
 |---|---|---|---|---|---|
-| Session | `sessions.save` | `sessions.remove` | client UUID | new: signed in. Existing: `MANAGER`. Remove: `OWNER` | Creator becomes `OWNER` on insert. Court fee and currency saved together. |
+| Session | `sessions.save` | `sessions.remove` | client UUID | new: signed in. Existing: `MANAGER`. Remove: `OWNER` | Creator becomes `OWNER` on insert. Court fee and currency saved together. `timezone` (IANA name) is required. `date` is the day in that zone. |
 | Member | `members.save` | `members.remove` | session, account | `MANAGER` | One call adds people and changes roles. Cannot grant `OWNER`. |
 | Match | `matches.save` | `matches.remove` | client UUID | `EDITOR` | |
 | Team | `matches.saveTeams` | `matches.removeTeams` | client UUID | `EDITOR` | |
@@ -280,7 +280,8 @@ What the code does that the tables above do not say.
 | Limit | Impact | Fix when needed |
 |---|---|---|
 | Swapping `gameNumber` between two games in one `matches.saveGames` call fails on the unique constraint | `CONFLICT` | Nothing renumbers games today. Add a deferrable constraint or a temporary number if a screen needs it. |
-| `date` windows use UTC | Up to one day off at month edges | Accept a timezone from the client |
+| `sessions.list` filters on the saved `date`, which is in the session's own zone | A session can be a day outside a window that the viewer sees it inside. Home asks a day wider each side to cover it. | Filter on the start instant |
+| The Sessions page loads every session | Slow with thousands of sessions | Page the reads by date |
 | No React `cache` around reads | A layout and a page calling the same read query twice | Wrap the read in `cache` where a screen needs it |
 | Stats load all of the actor's matches | Slow with thousands of matches | Move to SQL |
 | Account bootstrap relies on the frontend calling `accounts.saveCurrent` | A signed-in user without an account gets `UNAUTHENTICATED` everywhere | Route to onboarding when `accounts.getCurrent` fails with a session present |

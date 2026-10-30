@@ -1,17 +1,19 @@
 "use client";
 
 import { Crown, Minus } from "lucide-react";
-import { LocalTimeRange } from "@/src/components/local-time";
+import { TimeRange } from "@/src/components/time-range";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import type { GameDraft, TeamDraft } from "@/src/features/matches/match-draft";
-import { isoToTimeInput } from "@/src/lib/format";
+import { durationLabel } from "@/src/lib/format";
+import { isoToTime } from "@/src/lib/zoned";
 import { cn } from "@/src/lib/utils";
 
 /** One game: its times and a score box per team. The winner is marked as scores are typed. */
 export function GameCard({
   game,
   index,
+  timezone,
   teams,
   winner,
   timesOpen,
@@ -22,6 +24,8 @@ export function GameCard({
 }: {
   game: GameDraft;
   index: number;
+  /** The session's zone. The times are read and written on its clock. */
+  timezone: string;
   teams: TeamDraft[];
   winner: string | null;
   timesOpen: boolean;
@@ -50,14 +54,14 @@ export function GameCard({
           <Input
             type="time"
             aria-label={`Start time for game ${index + 1}`}
-            value={isoToTimeInput(game.startTime)}
+            value={isoToTime(game.startTime, timezone)}
             onChange={(e) => onTime("startTime", e.target.value)}
           />
           to
           <Input
             type="time"
             aria-label={`End time for game ${index + 1}`}
-            value={isoToTimeInput(game.endTime)}
+            value={isoToTime(game.endTime, timezone)}
             onChange={(e) => onTime("endTime", e.target.value)}
           />
         </div>
@@ -69,9 +73,9 @@ export function GameCard({
           className="pressable -mt-2 flex min-h-11 items-center justify-between gap-2 rounded-xl text-left text-sm text-muted-foreground"
         >
           <span>
-            <LocalTimeRange start={game.startTime} end={game.endTime} />
+            <TimeRange start={game.startTime} end={game.endTime} zone={timezone} />
             {" · "}
-            {Math.max(0, Math.round((Date.parse(game.endTime) - Date.parse(game.startTime)) / 60_000))} min
+            {durationLabel(Math.max(0, Math.round((Date.parse(game.endTime) - Date.parse(game.startTime)) / 60_000))) || "0 min"}
           </span>
           <span className="font-semibold text-primary">Edit</span>
         </button>

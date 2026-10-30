@@ -59,7 +59,7 @@ function Calendar({
       labels={{ labelDayButton: dayButtonLabel, ...labels }}
       formatters={{
         formatMonthDropdown: (date) =>
-          date.toLocaleString("default", { month: "short" }),
+          date.toLocaleString("en-GB", { month: "short" }),
         ...formatters,
       }}
       classNames={{

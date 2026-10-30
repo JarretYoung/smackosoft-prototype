@@ -3,24 +3,30 @@ import Link from "next/link";
 import { Button } from "@/src/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
 import { SessionGroup, SessionRow, TodayCard } from "@/src/features/sessions/session-list";
-import { addDays, today } from "@/src/lib/format";
+import { byViewerDay, dayGroup, leadToday, viewerDay } from "@/src/features/sessions/session-days";
 import { unwrap } from "@/src/lib/result";
-import type { SessionListItem } from "@/src/contract";
+import { getViewerZone } from "@/src/lib/viewer-zone";
 import { backend } from "@/src/server";
 
+/** The whole calendar. This page lists everything the person can see, not a month around today. */
+const ALL_TIME = { from: "1970-01-01", to: "2999-12-31" };
+/** How many past sessions show before "Show older". */
+const PAST_SHOWN = 20;
+
 export default async function SessionsPage() {
-  const sessions = unwrap(await backend.sessions.list());
-  const now = today();
-  const weekEnd = addDays(now, 7);
-  // Earliest start first. A session with no start time goes last.
-  const byStart = (a: SessionListItem, b: SessionListItem) =>
-    (a.startTime ?? "9").localeCompare(b.startTime ?? "9");
-  const todays = sessions.filter((s) => s.date === now).sort(byStart);
+  const [listed, viewerZone] = await Promise.all([backend.sessions.list(ALL_TIME), getViewerZone()]);
+  // Everything is on the viewer's calendar and clock. The day of a session is the day it starts for them.
+  const sessions = unwrap(listed).sort(byViewerDay(viewerZone));
+  // Read after the request, so the clock is not read while prerendering.
+  const now = new Date();
+  const inGroup = (group: ReturnType<typeof dayGroup>) =>
+    sessions.filter((s) => dayGroup(viewerDay(s, viewerZone), viewerZone, now) === group);
+  // Every session of today stays here, the running or next one first and big.
+  const todays = leadToday(inGroup("today"), now);
   const [hero, ...alsoToday] = todays;
-  const upcoming = sessions.filter((s) => s.date > now);
-  const thisWeek = upcoming.filter((s) => s.date <= weekEnd);
-  const later = upcoming.filter((s) => s.date > weekEnd);
-  const past = sessions.filter((s) => s.date < now).reverse();
+  const thisWeek = inGroup("week");
+  const later = inGroup("later");
+  const past = inGroup("past").reverse();
 
   const summary = [
     todays.length > 0 && `${todays.length} today`,
@@ -58,12 +64,12 @@ export default async function SessionsPage() {
           <h2 id="today-heading" className="section-label">
             Today
           </h2>
-          <TodayCard session={hero} />
+          <TodayCard session={hero} viewerZone={viewerZone} />
           {alsoToday.length > 0 && (
             <ul className="group-list">
               {alsoToday.map((session) => (
                 <li key={session.id}>
-                  <SessionRow session={session} />
+                  <SessionRow session={session} now={now} viewerZone={viewerZone} showDay={false} />
                 </li>
               ))}
             </ul>
@@ -71,9 +77,9 @@ export default async function SessionsPage() {
         </section>
       )}
 
-      <SessionGroup title="This week" sessions={thisWeek} />
-      <SessionGroup title="Later" sessions={later} />
-      <SessionGroup title="Past" sessions={past} muted />
+      <SessionGroup title="This week" sessions={thisWeek} now={now} viewerZone={viewerZone} />
+      <SessionGroup title="Later" sessions={later} now={now} viewerZone={viewerZone} />
+      <SessionGroup title="Past" sessions={past} now={now} viewerZone={viewerZone} muted limit={PAST_SHOWN} moreLabel="Show older" />
     </main>
   );
 }

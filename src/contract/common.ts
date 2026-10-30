@@ -10,8 +10,18 @@ export const DateOnly = z.iso.date();
 /** Links we store for images and maps. Never `javascript:` or `data:`. */
 export const HttpUrl = z.url({ protocol: /^https?$/ });
 
-/** An instant, ISO 8601 with an offset. Clients show it in the viewer's timezone. */
+/** An instant, ISO 8601 with an offset. A session shows it in the session's own timezone. */
 export const Timestamp = z.iso.datetime({ offset: true });
+
+/** An IANA zone name such as "Asia/Kuala_Lumpur". The database only checks it is not empty, so this is the real check. */
+export const TimeZone = z.string().refine((name) => {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: name });
+    return true;
+  } catch {
+    return false;
+  }
+}, "An IANA timezone name, for example Asia/Kuala_Lumpur");
 
 export const Role = z.enum(["VIEWER", "EDITOR", "MANAGER", "OWNER"]);
 export type Role = z.infer<typeof Role>;

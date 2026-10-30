@@ -121,6 +121,9 @@ export interface Sessions {
   created_at: Generated<Timestamp>;
   created_by: string;
   currency: string | null;
+  /**
+   * The calendar day of the session in its timezone. Not shifted for the viewer.
+   */
   date: string;
   end_time: Timestamp | null;
   id: Generated<string>;
@@ -136,6 +139,10 @@ export interface Sessions {
    */
   longitude: number | null;
   start_time: Timestamp | null;
+  /**
+   * IANA name of the zone the session happens in, for example Asia/Kuala_Lumpur. Times are shown and entered in this zone, whatever the viewer's zone. The app checks the name.
+   */
+  timezone: string;
   updated_at: Timestamp | null;
   updated_by: string | null;
 }

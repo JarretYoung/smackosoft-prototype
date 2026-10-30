@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import { TimezoneCookie } from "@/src/components/timezone-cookie";
 import { Toaster } from "@/src/components/ui/sonner";
 import "./globals.css";
 
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body className={`${geistSans.variable} font-sans antialiased`}>
         {children}
+        <TimezoneCookie />
         <Toaster position="top-center" offset={TOAST_TOP} mobileOffset={TOAST_TOP} />
       </body>
     </html>

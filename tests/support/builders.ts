@@ -11,7 +11,7 @@ export const endTime = "2026-10-18T10:20:00Z";
 /** A session owned by the signed-in actor. */
 export async function newSession(w: Pick<Who, "b">, overrides: { label?: string } = {}) {
   const sessionId = id();
-  ok(await w.b.sessions.save([{ id: sessionId, label: overrides.label ?? "Smash", date: today(), courtFee: 20, currency: "MYR" }]));
+  ok(await w.b.sessions.save([{ id: sessionId, label: overrides.label ?? "Smash", date: today(), timezone: "Asia/Kuala_Lumpur", courtFee: 20, currency: "MYR" }]));
   return sessionId;
 }
 

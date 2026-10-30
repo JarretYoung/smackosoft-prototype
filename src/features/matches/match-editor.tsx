@@ -8,6 +8,7 @@ import { Input } from "@/src/components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Spinner } from "@/src/components/ui/spinner";
+import { ZoneNote } from "@/src/components/zone-note";
 import { MatchType, type Account, type Match } from "@/src/contract";
 import { GameCard } from "@/src/features/matches/game-card";
 import { MATCH_TYPE_LABEL } from "@/src/features/matches/match-type";
@@ -16,17 +17,22 @@ import { TeamPlayersSheet } from "./team-players-sheet";
 
 const MATCH_TYPES = MatchType.options;
 
-/** Edit one match: label and type, who plays for each team, and the games with their scores. */
+/**
+ * Edit one match: label and type, who plays for each team, and the games with their scores.
+ * Game times are read and written on the session's clock, `timezone`.
+ */
 export function MatchEditor({
   sessionId,
+  timezone,
   match,
   members,
 }: {
   sessionId: string;
+  timezone: string;
   match: Match;
   members: Account[];
 }) {
-  const state = useMatchForm({ sessionId, match });
+  const state = useMatchForm({ sessionId, timezone, match });
   const { form, values, editingTeam } = state;
 
   const byId = new Map(members.map((m) => [m.id, m]));
@@ -98,11 +104,15 @@ export function MatchEditor({
         <h2 id="games-heading" className="section-label">
           Games
         </h2>
+        {values.games[0] && (
+          <ZoneNote zone={timezone} at={values.games[0].startTime} className="-mt-1 px-1 text-sm text-muted-foreground" />
+        )}
         {values.games.map((game, index) => (
           <GameCard
             key={game.id}
             game={game}
             index={index}
+            timezone={timezone}
             teams={values.teams}
             winner={state.winnerOf(game)}            timesOpen={state.openTimes.has(game.id)}
             onShowTimes={() => state.showTimes(game.id)}

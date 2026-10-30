@@ -74,6 +74,8 @@ export async function createSession(input: {
   ownerId?: string;
   label: string;
   date: string;
+  /** IANA zone the times belong to. Defaults to Kuala Lumpur, like the seed. */
+  timezone?: string;
   startTime?: string;
   endTime?: string;
   members?: string[];
@@ -82,8 +84,8 @@ export async function createSession(input: {
   const ownerId = input.ownerId ?? (await accountOf(SEEDED.handle));
   await inTransaction(async (client) => {
     await client.query(
-      "insert into smackosoft.sessions (id, label, date, start_time, end_time, created_by) values ($1, $2, $3, $4, $5, $6)",
-      [id, input.label, input.date, input.startTime ?? null, input.endTime ?? null, ownerId],
+      "insert into smackosoft.sessions (id, label, date, timezone, start_time, end_time, created_by) values ($1, $2, $3, $4, $5, $6, $7)",
+      [id, input.label, input.date, input.timezone ?? "Asia/Kuala_Lumpur", input.startTime ?? null, input.endTime ?? null, ownerId],
     );
     await client.query(
       "insert into smackosoft.session_access (session_id, account_id, role, created_by) values ($1, $2, 'OWNER', $2)",
