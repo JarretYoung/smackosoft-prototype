@@ -49,13 +49,39 @@ A new Google user lands on onboarding to pick a handle, like any new user. On th
 
 ### Regenerating database types
 
-Run `pnpm db:types` after every migration. It reads `DATABASE_URL` from `.env.local` and rewrites `src/server/db/types.ts`. Commit the result.
+Run `pnpm db:types` after every migration and after every `pnpm supabase db reset`. It reads `DATABASE_URL` from `.env.local` and rewrites `src/server/db/types.ts`. Commit the result.
 
 ### Tests
 
-`pnpm test` starts a disposable Postgres in Docker, runs the suite and stops it. Docker must be running. `pnpm test:coverage` adds a coverage report. `pnpm test:shuffle` runs in random order.
+| Command | What it runs | Needs |
+|---|---|---|
+| `pnpm test` | Unit and backend tests in `tests/`. A disposable Postgres starts in Docker and stops after. | Docker running |
+| `pnpm test:coverage` | Same, with a coverage report | Docker running |
+| `pnpm test:shuffle` | Same, in random order | Docker running |
+| `pnpm test:e2e` | Playwright smoke tests in `e2e/` against the real app | Steps below |
 
-Tests create their own people and ids, so they never touch the local Supabase database.
+`pnpm test` tests create their own people and ids, so they never touch the local Supabase database.
+
+### End to end smoke tests
+
+Five tests cover log in and out, sign up with the confirmation email, creating a session, scoring a match and syncing a video. They run on demand and are not part of `pnpm test`.
+
+1. `pnpm supabase start`
+2. `pnpm supabase db reset`. The tests log in as `ian@smacko.test`.
+3. `pnpm dev`
+4. `pnpm test:e2e`
+
+Rules:
+
+- The tests never start a server and never reset the database. A global setup checks the app (port 3000), the Supabase API (54321) and Mailpit (54324). It lists what is missing.
+- Each test makes its own data with unique ids. Run them as often as you like without a reset.
+- The sign-up test reads its confirmation link from the Mailpit API.
+- One worker, phone size viewport, address `127.0.0.1` (not `localhost`). Supabase email links use `127.0.0.1`, and `next.config.ts` only hydrates pages opened there.
+- The HTML report lands in `playwright-report/`.
+
+### Unused code check
+
+`pnpm knip` lists unused files, exports and dependencies. Run it before you merge. It should report nothing.
 
 ### Known environment issue
 

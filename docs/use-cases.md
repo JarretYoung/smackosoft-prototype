@@ -1,6 +1,6 @@
 # Backend use cases and design guidelines
 
-The contract is in `src/contract/`, one file per feature. The implementation is in `src/server/` and the tests are in `tests/`.
+The contract is in `src/contract/`, one file per feature. The implementation is in `src/server/` and the tests are in `tests/`. Layers, folders and names are in [architecture.md](architecture.md).
 
 ## Principles
 
@@ -40,8 +40,8 @@ Everything below follows from five principles. When a new case does not fit a gu
 | G12 | `remove` of a missing row succeeds. So does `remove` of a row the actor cannot see. If the actor can see it but lacks the role, the result is `FORBIDDEN`. | Replayable |
 | G12a | `save` replaces all editable fields of the row. Omitted optional fields become null. There are no partial updates. | Declarative |
 | G13 | Writes return a minimal acknowledgement. The frontend revalidates and re-reads. | Minimal |
-| G14 | Hard delete removes dependents in order inside the transaction. Only accounts soft delete. Videos survive session deletion. Only their linkages go. | Minimal |
-| G15 | No concurrency control for now. Last write wins. Known gaps: two concurrent `matches.savePlayers` calls can put one account on both teams of a match, and `members.remove` can race with `matches.savePlayers`. Closing the first needs a `match_id` column on `match_players` with a unique index. | Minimal |
+| G14 | Hard delete removes dependents in order inside the transaction. Only accounts soft delete. Videos survive session deletion. Only their session and game links go. In the UI, "Delete" is the word for `remove` on a record, and "Remove" is the word for a link or member. | Minimal |
+| G15 | No concurrency control for now. Last write wins. Known gaps: two concurrent `matches.saveMatchPlayers` calls can put one account on both teams of a match, and `members.remove` can race with `matches.saveMatchPlayers`. Closing the first needs a `match_id` column on `match_players` with a unique index. | Minimal |
 
 ### Cross-cutting
 
@@ -73,7 +73,7 @@ Notes:
 
 - `ON CONFLICT DO UPDATE` is atomic under concurrency and fails if one statement touches the same row twice ([PostgreSQL INSERT docs](https://www.postgresql.org/docs/current/sql-insert.html)). That is why G10 exists.
 - Rows that fail the `WHERE` are not returned. Compare the returned count to the input count to detect a blocked row, then return `FORBIDDEN` or `NOT_FOUND`.
-- Videos use two tables, `video_sessions` (the pool) and `video_games` (game links), so each has one plain unique key and no `NULL` arbiter.
+- Videos use two tables, `video_sessions` (the video is in the session) and `video_games` (the video is linked to a game), so each has one plain unique key and no `NULL` arbiter.
 
 ## Error model
 
@@ -107,27 +107,27 @@ There is no `reason` field. Every error points at the input item that caused it 
 
 | Rule | Where it lives |
 |---|---|
-| The creator of a session becomes `OWNER`. `organiser_id` is plain metadata. | `sessions.save` on insert |
+| The creator of a session becomes `OWNER`. | `sessions.save` on insert |
 | A player is always a member. A member may or may not be a player. | Invariant, see below |
-| Saving a match player makes the account a `VIEWER` member if it is not one. It never lowers an existing role. | `matches.savePlayers` |
-| Removing a match player does not remove membership. | `matches.removePlayers` |
+| Saving a match player makes the account a `VIEWER` member if it is not one. It never lowers an existing role. | `matches.saveMatchPlayers` |
+| Removing a match player does not remove membership. | `matches.removeMatchPlayers` |
 | Removing a member who is still a player fails with `CONFLICT`. Remove the player first. | `members.remove` |
 | Anyone can remove themselves from a session, which is how a member leaves. The owner cannot. | `members.remove` |
 | Exactly one `OWNER`, the creator. No transfer, no demotion. `members.save` cannot grant `OWNER` or touch the owner's row. | `members.save`, `members.remove` |
-| Every account may change its handle twice after it is first set. Saving the same handle is not a change. Backed by `accounts.handle_change_count`. | `accounts.saveGuests`, later the profile |
+| Every account may change its handle twice after it is first set. Saving the same handle is not a change. Backed by `accounts.handle_change_count`. | `accounts.saveGuests`, `accounts.saveCurrent` |
 | Handles are free for anyone once released. | Accounts |
-| An editor links a video they own, or a video already in that session's pool. | `videos.saveLinkages` |
-| A game link also puts the video in the pool. A pool link has no offset. A game link with no offset is not synced yet. | `videos.saveLinkages` |
-| Removing a pool link removes the video's game links in that session. Removing a game link keeps the pool link. | `videos.removeLinkages` |
+| An editor puts a video in a session if they own it, or if it is already in that session. | `videos.saveVideoSessions` |
+| A game link also puts the video in the game's session. A game link with a null `canonicalOffset` is not synced yet. A session link has no offset. | `videos.saveVideoGames` |
+| Removing a session link removes the video's game links in that session. Removing a game link keeps the session link. | `videos.removeVideoSessions`, `videos.removeVideoGames` |
 | A new auth user gets an account from an explicit `accounts.saveCurrent` call on onboarding. No lazy creation. | `accounts.saveCurrent` |
-| A player cannot be on both teams of one match. | `matches.savePlayers` |
-| A score's team and game must belong to the same match. | `matches.saveScores` |
-| A game link must point at a game of that same session. | `videos.saveLinkages` |
+| A player cannot be on both teams of one match. | `matches.saveMatchPlayers` |
+| A score's team and game must belong to the same match. | `matches.saveGameScores` |
+| A game link needs `EDITOR` on the game's session. The session comes from the game, so a game link cannot point at another session. | `videos.saveVideoGames` |
 | Adding a member gives instant access. No acceptance step. | `members.save` |
 | A `VIEWER` reads everything in the session. | All reads |
 | Only the creator of a guest account can edit it. | `accounts.saveGuests` |
 | Removing a guest is a soft delete. Past matches keep it. The handle becomes free. | `accounts.removeGuests` |
-| A guest is claimed with a code the creator made. The guest row becomes the claimer's account, with its history. Only someone with no account can claim. | `accounts.createClaim`, `accounts.claim` |
+| A guest is claimed with a claim code the creator made. The guest row becomes the claimer's account, with its history. Only someone with no account can claim. | `accounts.createClaimCode`, `accounts.claim` |
 | Scores are stored as entered. Operational reads never mark winners. The frontend decides. | Operational reads |
 | Only the analytics surface defines "win". See below. | Analytics reads |
 
@@ -137,8 +137,10 @@ There is no `reason` field. Every error points at the input item that caused it 
 |---|---|
 | Member | Account with a `session_access` row. Has a role. |
 | Player | Account with a `match_players` row in a match of the session. Always a member. |
+| Guest | Account of type `GUEST`. Has no login until someone claims it. |
+| Claim code | Secret on a guest account. Whoever redeems it becomes that account. |
 
-The contract does not use the word "participant".
+Code says account. The UI says Profile for your own account. `accounts.handle_change_count` counts changes up. The contract field `handleChangesLeft` counts down.
 
 ## Two read surfaces
 
@@ -179,32 +181,34 @@ Reads are one per screen or lookup. Writes follow one pattern: `save` and `remov
 |---|---|---|
 | `sessions.list` | Sessions home | any member |
 | `sessions.get` | Session Details | `VIEWER` |
-| `getMatchDetails` | Folded into `sessions.get`, which nests matches, teams, games and scores. Add it back only if a screen needs it alone. | |
 | `accounts.getCurrent` | Dashboard header, onboarding check | signed in |
 | `sessions.list({ from?, to? })` | Sessions home, dashboard upcoming | signed in. Default window: last month through next month. The frontend may override. |
-| `accounts.findByHandle` | Add Participants | signed in |
+| `accounts.findByHandle` | Add members | signed in |
 | `accounts.isHandleFree` | Onboarding and Profile, checks a handle as it is typed. Your own handle counts as free. | signed in. Works before onboarding. |
-| `videos.listBySession` | Videos page, session videos row, Match Details video counts. Each link carries `changedBy` and `changedAt` (the last editor of the offset, or the person who made the link). | `VIEWER` |
-| `videos.listOwn({ sessionId? })` | Video management UI with session context | signed in. With `sessionId`, each video also lists its linkages in that session. |
+| `videos.listBySession` | Videos page, session videos row, Match Details video counts. Each row has a nullable `matchGameId` and `canonicalOffset`, plus `changedByName` and `changedAt` (the last editor of the offset, or the person who made the link). | `VIEWER` |
+| `videos.listOwn({ sessionId? })` | Video management UI with session context | signed in. With `sessionId`, each video also lists its links in that session. |
+
+`sessions.get` also nests matches, teams, games and scores. There is no separate match read.
 
 `stats.get` and `stats.getTeammates` live on the analytics surface above.
 
-`videos.listOwn` follows the fourth story in the story map: "link their own videos to session/match". The diagram shows "Trigger Video Management UI with session context" but no screen. This reading is my inference.
+Unverified: `videos.listOwn` follows the fourth story in the story map, "link their own videos to session/match". The story map shows no screen for it. This reading is an inference, and no page calls it today.
 
 ### Writes
 
 | Entity | Save | Remove | Key (G8) | Min role | Notes |
 |---|---|---|---|---|---|
-| Session | `sessions.save` | `sessions.remove` | client UUID | new: signed in. Existing: `MANAGER`. Remove: `OWNER` | Creator becomes `OWNER` on insert. Fee and currency saved together. |
+| Session | `sessions.save` | `sessions.remove` | client UUID | new: signed in. Existing: `MANAGER`. Remove: `OWNER` | Creator becomes `OWNER` on insert. Court fee and currency saved together. |
 | Member | `members.save` | `members.remove` | session, account | `MANAGER` | One call adds people and changes roles. Cannot grant `OWNER`. |
 | Match | `matches.save` | `matches.remove` | client UUID | `EDITOR` | |
 | Team | `matches.saveTeams` | `matches.removeTeams` | client UUID | `EDITOR` | |
-| Match player | `matches.savePlayers` | `matches.removePlayers` | team, account | `EDITOR` | Also makes the account a `VIEWER` member if missing. Adding a new member takes `MANAGER`. |
+| Match player | `matches.saveMatchPlayers` | `matches.removeMatchPlayers` | team, account | `EDITOR` | Also makes the account a `VIEWER` member if missing. Adding a new member takes `MANAGER`. |
 | Game | `matches.saveGames` | `matches.removeGames` | client UUID | `EDITOR` | Frontend supplies start and end time. |
-| Game score | `matches.saveScores` | `matches.removeScores` | team, game | `EDITOR` | Removing a game removes its scores. Clearing one team's score leaves the game and the other score. |
+| Game score | `matches.saveGameScores` | `matches.removeGameScores` | team, game | `EDITOR` | Removing a game removes its scores. Clearing one team's score leaves the game and the other score. No screen clears a score today. |
 | Guest account | `accounts.saveGuests` | `accounts.removeGuests` (soft delete) | client UUID | signed in | Creator edits it. Handle changes twice at most. `accounts.listGuests` reads them. |
 | Video | `videos.save` | none | client UUID | own videos only | Record only. No storage upload. |
-| Video linkage | `videos.saveLinkages` | `videos.removeLinkages` | video, session, game or none | `EDITOR` | The video is the actor's own, or already in the session pool |
+| Video in a session | `videos.saveVideoSessions` | `videos.removeVideoSessions` | video, session | `EDITOR` | The video is the actor's own, or already in the session. Removing also removes its game links in that session. |
+| Video in a game | `videos.saveVideoGames` | `videos.removeVideoGames` | video, game | `EDITOR` | Also puts the video in the game's session. `canonicalOffset` is seconds, null when not synced. Saving again only updates the offset. |
 
 ## Side effects are documented, not named
 
@@ -213,18 +217,19 @@ Methods are `save` and `remove`, namespaced by feature (`videos.save`). A comman
 | Command | Also writes |
 |---|---|
 | `sessions.save` | The creator's `OWNER` member row, on insert only |
-| `matches.savePlayers` | A `VIEWER` member row if the account is not a member yet |
+| `matches.saveMatchPlayers` | A `VIEWER` member row if the account is not a member yet |
+| `videos.saveVideoGames` | A `video_sessions` row if the video is not in the game's session yet |
 
-Not built, because no screen needs them: highlights, video deletion, guest deletion.
+Not built, because no screen needs them: highlights and video deletion.
 
-### Order of saves for a frontend "Save all"
+### Order of saves for a frontend save
 
 Foreign keys fix the order. Replaying the whole sequence is always safe.
 
 1. `sessions.save`
 2. `members.save`, `matches.save`
 3. `matches.saveTeams`, `matches.saveGames`
-4. `matches.savePlayers`, `matches.saveScores`
+4. `matches.saveMatchPlayers`, `matches.saveGameScores`
 5. Then `remove*` calls
 
 ## Schema notes
@@ -264,10 +269,10 @@ What the code does that the tables above do not say.
 | Parent pinning | `matches`, `match_teams` and `match_games` upserts only update when the parent is unchanged. Moving a row returns `CONFLICT`. |
 | Manager role | Granting, changing or removing a `MANAGER` needs `OWNER`. |
 | Owner row | `members.save` and `members.remove` return `CONFLICT` for the owner's row. |
-| Player on one team | `matches.savePlayers` returns `CONFLICT` if the account is on another team of the match, in the call or already saved. |
-| Score and game | `matches.saveScores` returns `CONFLICT` when the team and game belong to different matches. |
-| Video linkage | One insert into the pool (do nothing on conflict), one upsert into game links. |
-| Deletes | `remove*` deletes dependents first, in order. Videos stay. Their pool and game links go. |
+| Player on one team | `matches.saveMatchPlayers` returns `CONFLICT` if the account is on another team of the match, in the call or already saved. |
+| Score and game | `matches.saveGameScores` returns `CONFLICT` when the team and game belong to different matches. |
+| Video in a game | One insert into `video_sessions` (do nothing on conflict), one upsert into `video_games`. |
+| Deletes | `remove*` deletes dependents first, in order. Videos stay. Their session and game links go. |
 | Stats | Computed in memory from the actor's matches. Provisional. |
 
 ### Known limits

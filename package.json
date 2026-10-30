@@ -9,7 +9,8 @@
     "db:types": "kysely-codegen --env-file .env.local",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:shuffle": "vitest run --sequence.shuffle"
+    "test:shuffle": "vitest run --sequence.shuffle",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

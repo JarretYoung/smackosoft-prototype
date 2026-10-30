@@ -2,7 +2,7 @@
 
 Next.js App Router prototype with Supabase auth, running against a local Supabase stack in Docker.
 
-Tech stack decisions: [docs/architecture.md](docs/architecture.md). First-deploy steps: [docs/runbook.md](docs/runbook.md).
+Architecture: [docs/architecture.md](docs/architecture.md). Local setup, tests and first-deploy steps: [docs/runbook.md](docs/runbook.md).
 
 | Component | Technology |
 |-----------|-----------|
@@ -46,10 +46,12 @@ Tech stack decisions: [docs/architecture.md](docs/architecture.md). First-deploy
    |---------|------------------|
    | `NEXT_PUBLIC_SUPABASE_URL` | **APIs** table, `Project URL` row |
    | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | **Authentication Keys** table, `Publishable` row |
+   | `DATABASE_URL` | See [docs/runbook.md](docs/runbook.md) |
 
    ```env
    NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+   DATABASE_URL=postgres://smackosoft_service:postgres@127.0.0.1:54322/postgres
    ```
 
    Use the `Publishable` key, not `Secret`. `NEXT_PUBLIC_` vars ship to the browser.
@@ -107,7 +109,7 @@ On Windows, `supabase start` warns that analytics needs Docker exposed on `tcp:/
 ```bash
 pnpm supabase stop                 # stop containers, keep data
 pnpm supabase stop --no-backup     # stop and wipe local data
-pnpm supabase db reset             # re-apply migrations and seeds
+pnpm supabase db reset             # re-apply migrations and seeds, then run pnpm db:types
 pnpm supabase migration new <name> # create a migration file
 ```
 
@@ -120,31 +122,28 @@ All application code lives under `src/`. The `@/*` alias maps to the repo root, 
 ```
 src/
   app/                  Next.js App Router routes
-    auth/               login, sign-up, password reset, confirm route handler
-    protected/          auth-gated pages
-    layout.tsx          root layout
-    page.tsx            landing page
-  components/
-    ui/                 shadcn/ui primitives
-    tutorial/           starter-kit onboarding steps
-    *.tsx               auth forms, header, theme switcher
-  lib/
-    supabase/
-      client.ts         browser client
-      server.ts         server component and route handler client
-      proxy.ts          session refresh helper
-    utils.ts
+    (app)/              signed-in screens
+    auth/               login, sign-up, password reset, confirm and callback route handlers
+    onboarding/         first-sign-in profile step
+  contract/             the Backend interface, input schemas, read types
+  server/               the real backend (Kysely over pg)
+  features/<name>/      components, hooks and server actions per feature
+  components/           shared components. ui/ holds shadcn primitives
+  hooks/                shared client hooks, including useAppForm
+  lib/                  pure helpers
+    supabase/           server client and session refresh helper
   proxy.ts              Next.js proxy (middleware) entry point
 
-supabase/
-  config.toml           local stack configuration
+tests/                  backend and unit tests (pnpm test)
+e2e/                    Playwright smoke tests (pnpm test:e2e)
+supabase/               local stack config, migrations, seed data
 bruno/                  Bruno OpenAPI documentation
-docs/
-  architecture.md
-  runbook.md
+docs/                   architecture, use cases, runbook, UAT, schema gaps
 ```
 
-`src/proxy.ts` runs on every request to refresh the session cookie. Server code must build a fresh client per request via `src/lib/supabase/server.ts` — never share one across requests.
+`src/proxy.ts` runs on every request to refresh the session cookie. Server code must build a fresh client per request via `src/lib/supabase/server.ts`. Never share one across requests.
+
+Layers and folder rules are in [docs/architecture.md](docs/architecture.md).
 
 ---
 
