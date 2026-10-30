@@ -1,13 +1,12 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/src/components/ui/field";
 import { Input } from "@/src/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
 import { Spinner } from "@/src/components/ui/spinner";
-import { formatOffset, OFFSET_LIMIT, parseOffset } from "@/src/features/videos/offset";
+import { useSyncForm } from "@/src/features/videos/use-sync-form";
 import { OffsetRuler } from "./offset-ruler";
 
 export type SyncTarget = {
@@ -55,26 +54,16 @@ function SyncForm({
   onClose: () => void;
   onSave: (target: SyncTarget, offset: number | null) => void;
 }) {
-  const [value, setValue] = useState(target.offset ?? 0);
-  const [draft, setDraft] = useState(formatOffset(target.offset ?? 0));
-  const typed = parseOffset(draft);
-  const invalid = typed === null;
+  const { value, draft, valid, set, type, tidy, clear, onSubmit } = useSyncForm({
+    offset: target.offset,
+    pending,
+    save: (offset) => onSave(target, offset),
+  });
+  const invalid = !valid;
   const synced = target.offset !== null;
 
-  const set = (seconds: number) => {
-    const next = Math.max(-OFFSET_LIMIT, Math.min(OFFSET_LIMIT, seconds));
-    setValue(next);
-    setDraft(formatOffset(next));
-  };
-
   return (
-    <form
-      className="flex min-h-0 flex-1 flex-col gap-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!pending && !invalid) onSave(target, value);
-      }}
-    >
+    <form className="flex min-h-0 flex-1 flex-col gap-4" onSubmit={onSubmit}>
       <SheetHeader className="px-5 pt-2 pb-0">
         <SheetTitle>Sync video</SheetTitle>
         <SheetDescription>
@@ -98,12 +87,8 @@ function SyncForm({
               enterKeyHint="done"
               autoComplete="off"
               aria-invalid={invalid}
-              onChange={(e) => {
-                setDraft(e.target.value);
-                const parsed = parseOffset(e.target.value);
-                if (parsed !== null) setValue(parsed);
-              }}
-              onBlur={() => setDraft(formatOffset(value))}
+              onChange={(e) => type(e.target.value)}
+              onBlur={tidy}
               className="h-14 flex-1 text-center text-3xl font-bold tracking-tight tabular-nums"
             />
             <Button type="button" variant="secondary" size="icon" aria-label="One second later" onClick={() => set(value + 1)}>
@@ -130,7 +115,7 @@ function SyncForm({
               variant="ghost"
               className="text-destructive hover:text-destructive"
               disabled={pending}
-              onClick={() => onSave(target, null)}
+              onClick={clear}
             >
               Clear
             </Button>

@@ -9,12 +9,10 @@ import { Input } from "@/src/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
 import { Spinner } from "@/src/components/ui/spinner";
 import type { Account } from "@/src/contract";
+import type { NewGuest } from "@/src/features/sessions/members-draft";
 import { errorMessage } from "@/src/lib/errors";
 import { guestHandle } from "@/src/lib/guest";
 import { cn } from "@/src/lib/utils";
-
-/** A guest that does not exist yet. It is created when the session is saved. */
-export type NewGuest = Account & { isNew: true };
 
 type Person = Account | NewGuest;
 

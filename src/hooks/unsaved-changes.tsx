@@ -18,6 +18,7 @@ import {
  * Guard against losing work. A form reports whether it has unsaved changes. Anything that
  * would leave the page then asks first, and closing the tab warns too.
  * It lives outside React state because the back button and the form are far apart in the tree.
+ * Every form feeds it from `useAppForm`, which reports the form's own dirty state.
  */
 let dirty = false;
 

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/src/components/page-header";
 import { SessionForm } from "@/src/features/sessions/session-form";
+import { editSessionInitial } from "@/src/features/sessions/session-defaults";
 import { loadPeople } from "@/src/features/sessions/people";
 import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";
@@ -18,26 +19,7 @@ export default async function EditSessionPage({ params }: { params: Promise<{ id
         mode="edit"
         viewerRole={session.myRole}
         people={people}
-        initial={{
-          id: session.id,
-          label: session.label,
-          date: session.date,
-          location: session.location ?? "",
-          locationUrl: session.locationUrl ?? "",
-          latitude: session.latitude,
-          longitude: session.longitude,
-          startTime: session.startTime ?? "",
-          endTime: session.endTime ?? "",
-          coverUrl: session.coverUrl ?? "",
-          courtFee: session.courtFee == null ? "" : String(session.courtFee),
-          currency: session.currency ?? "MYR",
-          members: session.members.map((m) => ({
-            account: m,
-            role: m.role,
-            isPlayer: m.isPlayer,
-            newGuest: false,
-          })),
-        }}
+        initial={editSessionInitial(session)}
       />
     </main>
   );

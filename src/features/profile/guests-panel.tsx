@@ -1,9 +1,6 @@
 "use client";
 
 import { Check, Copy, MoreHorizontal, Plus, UserRound } from "lucide-react";
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
-import { createClaimCode, removeGuests, saveGuests } from "@/src/features/accounts/actions";
 import { PersonAvatar } from "@/src/components/avatar-stack";
 import {
   AlertDialog,
@@ -25,69 +22,20 @@ import {
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Input } from "@/src/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
-import { Spinner } from "@/src/components/ui/spinner";
 import type { Guest } from "@/src/contract";
-import { errorMessage } from "@/src/lib/errors";
-import { guestHandle } from "@/src/lib/guest";
-
-type Dialogs =
-  | { kind: "add" }
-  | { kind: "edit"; guest: Guest }
-  | { kind: "delete"; guest: Guest }
-  | { kind: "claim"; guest: Guest; code: string };
+import { GuestSheetForm } from "@/src/features/profile/guest-sheet-form";
+import { claimLink, useGuestsPanel } from "@/src/features/profile/use-guests-panel";
 
 /**
  * The guests you created. Add one, rename it, give it a new handle, hand it over with a claim
  * code, or delete it. A deleted guest stays in past matches and frees its handle.
  */
 export function GuestsPanel({ guests }: { guests: Guest[] }) {
-  const [dialog, setDialog] = useState<Dialogs | null>(null);
-  const [name, setName] = useState("");
-  const [handle, setHandle] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [pending, start] = useTransition();
-
-  const close = () => setDialog(null);
-
-  /** A problem with what was typed shows in the form it came from. Other failures are a toast. */
-  function run(action: () => Promise<{ ok: true } | { ok: false; error: Parameters<typeof errorMessage>[0] }>, done: string) {
-    start(async () => {
-      const result = await action();
-      if (!result.ok) {
-        if (dialog?.kind === "add" || dialog?.kind === "edit") setErrors({ form: errorMessage(result.error) });
-        else toast.error(errorMessage(result.error));
-        return;
-      }
-      toast.success(done);
-      close();
-    });
-  }
-
-  function openAdd() {
-    setName("");
-    setErrors({});
-    setDialog({ kind: "add" });
-  }
-  function openEdit(guest: Guest) {
-    setName(guest.displayName);
-    setHandle(guest.handle);
-    setErrors({});
-    setDialog({ kind: "edit", guest });
-  }
-  function makeClaim(guest: Guest) {
-    start(async () => {
-      const result = await createClaimCode({ guestId: guest.id });
-      if (!result.ok) return void toast.error(errorMessage(result.error));
-      setCopied(false);
-      setDialog({ kind: "claim", guest, code: result.data.code });
-    });
-  }
-
-  const claimLink = (code: string) => `${window.location.origin}/onboarding?claim=${code}`;
+  const { dialog, setDialog, close, formTarget, openForm, copied, copyClaimLink, pending, makeClaim, remove } =
+    useGuestsPanel();
 
   return (
     <section aria-labelledby="guests-heading" className="flex flex-col gap-2">
@@ -95,7 +43,7 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
         <h2 id="guests-heading" className="section-label">
           Guests you created
         </h2>
-        <Button size="sm" variant="text" className="-mr-3" onClick={openAdd}>
+        <Button size="sm" variant="text" className="-mr-3" onClick={() => openForm()}>
           <Plus /> Add guest
         </Button>
       </div>
@@ -129,7 +77,7 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="min-w-48">
-                  <DropdownMenuItem onSelect={() => openEdit(guest)}>Edit</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => openForm(guest)}>Edit</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => makeClaim(guest)}>Get claim code</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem variant="destructive" onSelect={() => setDialog({ kind: "delete", guest })}>
@@ -142,113 +90,9 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
         </ul>
       )}
 
-      <Sheet open={dialog?.kind === "add"} onOpenChange={(open) => !open && close()}>
+      <Sheet open={dialog?.kind === "add" || dialog?.kind === "edit"} onOpenChange={(open) => !open && close()}>
         <SheetContent side="bottom">
-          <form
-            className="flex min-h-0 flex-1 flex-col gap-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (!name.trim() || pending) return;
-              run(() => saveGuests([{ id: crypto.randomUUID(), displayName: name.trim(), handle: guestHandle(name) }]), "Guest added");
-            }}
-          >
-            <SheetHeader className="px-5 pt-2 pb-0">
-              <SheetTitle>Add a guest</SheetTitle>
-              <SheetDescription>A guest can play in your sessions without signing up.</SheetDescription>
-            </SheetHeader>
-            <FieldGroup className="px-5">
-              <Field data-invalid={!!errors.form}>
-                <FieldLabel htmlFor="guest-name">Display name</FieldLabel>
-                <Input
-                  id="guest-name"
-                  value={name}
-                  autoFocus
-                  autoComplete="off"
-                  enterKeyHint="done"
-                  aria-invalid={!!errors.form}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    setErrors({});
-                  }}
-                  placeholder="Aadit"
-                />
-                <FieldError>{errors.form}</FieldError>
-              </Field>
-            </FieldGroup>
-            <SheetFooter className="px-5 pb-6">
-              <Button type="submit" size="lg" disabled={pending || !name.trim()}>
-                {pending && <Spinner />}
-                Add guest
-              </Button>
-              <Button type="button" variant="ghost" onClick={close} disabled={pending}>
-                Cancel
-              </Button>
-            </SheetFooter>
-          </form>
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={dialog?.kind === "edit"} onOpenChange={(open) => !open && close()}>
-        <SheetContent side="bottom">
-          <form
-            className="flex min-h-0 flex-1 flex-col gap-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (dialog?.kind !== "edit" || !name.trim() || !handle.trim() || pending) return;
-              const guest = dialog.guest;
-              run(
-                () => saveGuests([{ id: guest.id, displayName: name.trim(), handle: handle.trim().toLowerCase() }]),
-                "Guest saved",
-              );
-            }}
-          >
-            <SheetHeader className="px-5 pt-2 pb-0">
-              <SheetTitle>Edit guest</SheetTitle>
-              <SheetDescription>A handle can change a few times in total, so pick it with care.</SheetDescription>
-            </SheetHeader>
-            <FieldGroup className="px-5">
-              <Field>
-                <FieldLabel htmlFor="edit-name">Display name</FieldLabel>
-                <Input id="edit-name" value={name} autoComplete="off" onChange={(e) => setName(e.target.value)} />
-              </Field>
-              <Field data-invalid={!!errors.form}>
-                <FieldLabel htmlFor="edit-handle">Handle</FieldLabel>
-                <Input
-                  id="edit-handle"
-                  value={handle}
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  autoComplete="off"
-                  enterKeyHint="done"
-                  aria-invalid={!!errors.form}
-                  onChange={(e) => {
-                    setHandle(e.target.value);
-                    setErrors({});
-                  }}
-                />
-                <FieldError>{errors.form}</FieldError>
-              </Field>
-            </FieldGroup>
-            <SheetFooter className="px-5 pb-6">
-              <Button
-                type="submit"
-                size="lg"
-                disabled={
-                  pending ||
-                  !name.trim() ||
-                  !handle.trim() ||
-                  (dialog?.kind === "edit" && name.trim() === dialog.guest.displayName && handle.trim() === dialog.guest.handle)
-                }
-              >
-                {pending && <Spinner />}
-                Save changes
-              </Button>
-              <Button type="button" variant="ghost" onClick={close} disabled={pending}>
-                Cancel
-              </Button>
-            </SheetFooter>
-          </form>
+          {formTarget && <GuestSheetForm key={formTarget.key} guest={formTarget.guest} onClose={close} />}
         </SheetContent>
       </Sheet>
 
@@ -266,7 +110,7 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
               disabled={pending}
               onClick={(event) => {
                 event.preventDefault();
-                if (dialog?.kind === "delete") run(() => removeGuests([dialog.guest.id]), "Guest deleted");
+                if (dialog?.kind === "delete") remove(dialog.guest);
               }}
             >
               Delete guest
@@ -298,10 +142,7 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
                     variant="tinted"
                     size="icon"
                     aria-label="Copy link"
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(claimLink(dialog.code));
-                      setCopied(true);
-                    }}
+                    onClick={() => copyClaimLink(dialog.code)}
                   >
                     {copied ? <Check /> : <Copy />}
                   </Button>

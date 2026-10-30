@@ -1,44 +1,17 @@
 "use client";
 
-import { requestPasswordReset } from "@/src/features/auth/actions";
 import { AuthShell } from "@/src/features/auth/auth-shell";
+import { useForgotPasswordForm } from "@/src/features/auth/use-forgot-password-form";
 import { Button } from "@/src/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Input } from "@/src/components/ui/input";
 import { Spinner } from "@/src/components/ui/spinner";
-import { emailProblem } from "@/src/features/auth/auth-errors";
-import { errorMessage } from "@/src/lib/errors";
-import { useRevealFirstError } from "@/src/hooks/reveal-errors";
 import Link from "next/link";
-import { useState, useTransition } from "react";
 
 export function ForgotPasswordForm() {
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [left, setLeft] = useState(false);
-  const [rejections, setRejections] = useState(0);
-  const [success, setSuccess] = useState(false);
-  const [isLoading, start] = useTransition();
-  useRevealFirstError(rejections);
+  const { form, formProps, errorOf, inputProps, pending, sent } = useForgotPasswordForm();
 
-  const emailError = (left || rejections > 0 ? emailProblem(email) : undefined) ?? error ?? undefined;
-
-  // A plain onSubmit, not a form action: React clears an action form after it runs.
-  const handleForgotPassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (emailProblem(email)) return setRejections((n) => n + 1);
-    setError(null);
-    start(async () => {
-      const result = await requestPasswordReset({ email });
-      if (result.ok) setSuccess(true);
-      else {
-        setError(errorMessage(result.error));
-        setRejections((n) => n + 1);
-      }
-    });
-  };
-
-  if (success) {
+  if (sent) {
     return (
       <AuthShell title="Check your email" description="Password reset instructions sent.">
         <p className="text-subhead text-muted-foreground">
@@ -53,33 +26,31 @@ export function ForgotPasswordForm() {
 
   return (
     <AuthShell title="Reset your password" description="Type in your email and we will send you a link to reset it.">
-      <form onSubmit={handleForgotPassword} noValidate className="flex flex-col gap-6">
+      <form {...formProps} className="flex flex-col gap-6">
         <FieldGroup>
-          <Field data-invalid={!!emailError}>
-            <FieldLabel htmlFor="email">Email</FieldLabel>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              autoComplete="email"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              enterKeyHint="send"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setError(null);
-              }}
-              onBlur={() => setLeft(true)}
-              aria-invalid={!!emailError}
-            />
-            <FieldError>{emailError}</FieldError>
-          </Field>
+          <form.Field name="email">
+            {(field) => (
+              <Field data-invalid={!!errorOf(field)}>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <Input
+                  {...inputProps(field)}
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="send"
+                />
+                <FieldError>{errorOf(field)}</FieldError>
+              </Field>
+            )}
+          </form.Field>
         </FieldGroup>
-        <Button type="submit" size="lg" disabled={isLoading}>
-          {isLoading && <Spinner />}
-          {isLoading ? "Sending" : "Send reset email"}
+        <Button type="submit" size="lg" disabled={pending}>
+          {pending && <Spinner />}
+          {pending ? "Sending" : "Send reset email"}
         </Button>
         <p className="text-center text-subhead text-muted-foreground">
           Remembered it?{" "}

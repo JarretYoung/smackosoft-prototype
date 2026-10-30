@@ -1,6 +1,7 @@
 import { PageHeader } from "@/src/components/page-header";
 import { SessionForm } from "@/src/features/sessions/session-form";
 import { today } from "@/src/lib/format";
+import { newSessionInitial } from "@/src/features/sessions/session-defaults";
 import { loadPeople } from "@/src/features/sessions/people";
 import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";
@@ -28,23 +29,8 @@ export default async function NewSessionPage() {
         viewerRole="OWNER"
         people={people}
         prefilledFrom={last?.date}
-        initial={{
-          // The client picks the id, so a retried save cannot create a second session.
-          id: crypto.randomUUID(),
-          label: "",
-          date: today(),
-          location: last?.location ?? "",
-          locationUrl: last?.locationUrl ?? "",
-          latitude: last?.latitude ?? null,
-          longitude: last?.longitude ?? null,
-          // Only the time of day and the length are reused. The form reads them in the browser's timezone.
-          startTime: last?.startTime ?? "",
-          endTime: last?.endTime ?? "",
-          coverUrl: "",
-          courtFee: last?.courtFee != null ? String(last.courtFee) : "",
-          currency: last?.currency ?? "MYR",
-          members: [{ account: me.account, role: "OWNER", isPlayer: false, newGuest: false }],
-        }}
+        // The client picks the id, so a retried save cannot create a second session.
+        initial={newSessionInitial({ id: crypto.randomUUID(), today: today(), me: me.account, last })}
       />
     </main>
   );
