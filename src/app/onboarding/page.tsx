@@ -21,7 +21,10 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   const parsedPicture = AvatarUrl.safeParse(picture?.replace(/=s96-c$/, "=s256-c"));
 
   return (
-    <AuthShell title="Pick your name" description="Friends find you by your handle.">
+    <AuthShell
+      title={claim ? "Claim your guest account" : "Pick your name"}
+      description={claim ? "Your matches and history come with you." : "Friends find you by your handle."}
+    >
       <OnboardingForm
         claimCode={claim ?? ""}
         suggestedName={providerName?.trim() ?? ""}

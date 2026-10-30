@@ -14,7 +14,9 @@ export type NewGuest = Account & { isNew: true };
 export type MembersAction =
   | { type: "add"; accounts: (Account | NewGuest)[] }
   | { type: "role"; id: string; role: Role }
-  | { type: "remove"; id: string };
+  | { type: "remove"; id: string }
+  /** Undo a removal. Does nothing when the person is back already. */
+  | { type: "restore"; member: MemberDraft; index: number };
 
 /** The staged member list. The owner never changes, and a person is never listed twice. */
 export function membersReducer(list: MemberDraft[], action: MembersAction): MemberDraft[] {
@@ -34,6 +36,9 @@ export function membersReducer(list: MemberDraft[], action: MembersAction): Memb
       return list.map((m) => (m.account.id === action.id && m.role !== "OWNER" ? { ...m, role: action.role } : m));
     case "remove":
       return list.filter((m) => m.account.id !== action.id || m.role === "OWNER");
+    case "restore":
+      if (list.some((m) => m.account.id === action.member.account.id)) return list;
+      return [...list.slice(0, action.index), action.member, ...list.slice(action.index)];
   }
 }
 

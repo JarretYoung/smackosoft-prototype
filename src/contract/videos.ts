@@ -54,7 +54,8 @@ export type Video = {
   createdAt: string;
 };
 
-export type VideoLinkage = {
+/** A video's place in a session (a video_sessions row) or in a game (a video_games row). */
+export type VideoLink = {
   videoId: string;
   sessionId: string;
   /** Null for a video_sessions row, set for a video_games row. */
@@ -66,10 +67,10 @@ export type VideoLinkage = {
   changedAt: string;
 };
 
-/** With a sessionId, `linkages` holds this video's links in that session. Otherwise it is empty. */
-export type OwnVideo = Video & { linkages: VideoLinkage[] };
+/** With a sessionId, `links` holds this video's links in that session. Otherwise it is empty. */
+export type OwnVideo = Video & { links: VideoLink[] };
 
-export type SessionVideo = VideoLinkage & { video: Video };
+export type SessionVideo = VideoLink & { video: Video };
 
 // --------------------------------------------------------------- interface
 

@@ -25,7 +25,7 @@ describe("videos", () => {
     ]);
     const own = ok(await w.b.videos.listOwn({ sessionId }));
     expect(own).toHaveLength(1);
-    expect(own[0].linkages).toHaveLength(2);
+    expect(own[0].links).toHaveLength(2);
 
     const details = ok(await w.b.sessions.get({ sessionId }));
     expect(details.matches[0].games.find((g) => g.id === game1)?.videoCount).toBe(1);

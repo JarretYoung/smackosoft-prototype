@@ -1,8 +1,8 @@
 "use client";
 
 import { CalendarDays, House, Plus, User } from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LeaveLink } from "@/src/hooks/unsaved-changes";
 import { cn } from "@/src/lib/utils";
 
 const tabs = [
@@ -35,7 +35,7 @@ export function BottomNav() {
         {tabs.map(({ href, label, Icon }) => {
           const active = isActive(href);
           return (
-            <Link
+            <LeaveLink
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
@@ -46,17 +46,17 @@ export function BottomNav() {
             >
               <Icon className="size-5" strokeWidth={active ? 2.5 : 2} />
               {label}
-            </Link>
+            </LeaveLink>
           );
         })}
       </div>
-      <Link
+      <LeaveLink
         href="/sessions/new"
         aria-label="New session"
         className="pressable pointer-events-auto flex size-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-float"
       >
         <Plus className="size-7" strokeWidth={2.5} />
-      </Link>
+      </LeaveLink>
     </nav>
   );
 }

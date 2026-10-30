@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ComponentProps, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,7 +48,56 @@ export function useConfirmDiscard(): { discard: (action: () => void) => void; di
   };
 
   const dialog = (
-    <AlertDialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
+    <DiscardDialog
+      open={pending !== null}
+      onKeep={() => setPending(null)}
+      onDiscard={() => {
+        dirty = false;
+        pending?.();
+      }}
+    />
+  );
+
+  return { discard, dialog };
+}
+
+/**
+ * The same guard for a sheet that holds a small form. The form reports its dirty state with
+ * `setDirty`, and anything that would close the sheet (the close button, a tap outside, Cancel)
+ * goes through `guard(close)`. A save closes the sheet directly, so it never asks.
+ * It keeps its own state, apart from the page guard above, because a sheet closes in place.
+ */
+export function useSheetDiscard(): {
+  setDirty: (isDirty: boolean) => void;
+  guard: (close: () => void) => void;
+  dialog: ReactNode;
+} {
+  const sheetDirty = useRef(false);
+  const [pending, setPending] = useState<(() => void) | null>(null);
+
+  return {
+    setDirty: (isDirty) => void (sheetDirty.current = isDirty),
+    guard: (close) => {
+      if (sheetDirty.current) setPending(() => close);
+      else close();
+    },
+    dialog: (
+      <DiscardDialog
+        open={pending !== null}
+        onKeep={() => setPending(null)}
+        onDiscard={() => {
+          sheetDirty.current = false;
+          pending?.();
+          setPending(null);
+        }}
+      />
+    ),
+  };
+}
+
+function DiscardDialog({ open, onKeep, onDiscard }: { open: boolean; onKeep: () => void; onDiscard: () => void }) {
+  return (
+    <AlertDialog open={open} onOpenChange={(next) => !next && onKeep()}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Discard your changes?</AlertDialogTitle>
@@ -56,21 +105,13 @@ export function useConfirmDiscard(): { discard: (action: () => void) => void; di
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel variant="secondary">Keep editing</AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            onClick={() => {
-              dirty = false;
-              pending?.();
-            }}
-          >
+          <AlertDialogAction variant="destructive" onClick={onDiscard}>
             Discard
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );
-
-  return { discard, dialog };
 }
 
 /** A link that confirms first when the page has unsaved changes. Behaves like a plain link otherwise. */

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useSheetDiscard } from "@/src/hooks/unsaved-changes";
 import { OptionalTag } from "@/src/components/optional-tag";
 import { Button } from "@/src/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
@@ -20,25 +22,40 @@ export function AddVideoSheet({
   onClose: () => void;
   onAdd: (video: NewVideo) => void;
 }) {
+  const discard = useSheetDiscard();
+
   return (
-    <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
-      <SheetContent side="bottom" className="overflow-y-auto">
-        {open && <AddVideoForm pending={pending} onClose={onClose} onAdd={onAdd} />}
-      </SheetContent>
-    </Sheet>
+    <>
+      <Sheet open={open} onOpenChange={(next) => !next && discard.guard(onClose)}>
+        <SheetContent side="bottom" className="overflow-y-auto">
+          {open && (
+            <AddVideoForm
+              pending={pending}
+              onCancel={() => discard.guard(onClose)}
+              onDirtyChange={discard.setDirty}
+              onAdd={onAdd}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
+      {discard.dialog}
+    </>
   );
 }
 
 function AddVideoForm({
   pending,
-  onClose,
+  onCancel,
+  onDirtyChange,
   onAdd,
 }: {
   pending: boolean;
-  onClose: () => void;
+  onCancel: () => void;
+  onDirtyChange: (dirty: boolean) => void;
   onAdd: (video: NewVideo) => void;
 }) {
-  const { form, formProps, errorOf, inputProps } = useAddVideoForm({ pending, onAdd });
+  const { form, formProps, errorOf, inputProps, dirty } = useAddVideoForm({ pending, onAdd });
+  useEffect(() => onDirtyChange(dirty && !pending), [dirty, pending, onDirtyChange]);
 
   return (
     <form {...formProps} className="flex min-h-0 flex-1 flex-col gap-4">
@@ -108,7 +125,7 @@ function AddVideoForm({
           {pending && <Spinner />}
           {pending ? "Adding" : "Add video"}
         </Button>
-        <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>
           Cancel
         </Button>
       </SheetFooter>

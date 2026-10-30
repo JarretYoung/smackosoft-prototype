@@ -23,7 +23,7 @@ import type { SessionFormState } from "./use-session-form";
 
 /** The staged members, each with a menu to change the role or remove them. */
 export function MembersSection({ session, people }: { session: SessionFormState; people: Account[] }) {
-  const { values, changeMembers, canGrantManager } = session;
+  const { values, changeMembers, removeMember, canGrantManager } = session;
   const [adding, setAdding] = useState(false);
 
   return (
@@ -70,7 +70,7 @@ export function MembersSection({ session, people }: { session: SessionFormState;
                       ))}
                   </DropdownMenuRadioGroup>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem variant="destructive" onSelect={() => changeMembers({ type: "remove", id: p.account.id })}>
+                  <DropdownMenuItem variant="destructive" onSelect={() => removeMember(p)}>
                     Remove
                   </DropdownMenuItem>
                 </DropdownMenuContent>

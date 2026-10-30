@@ -28,6 +28,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import type { Guest } from "@/src/contract";
 import { GuestSheetForm } from "@/src/features/profile/guest-sheet-form";
 import { claimLink, useGuestsPanel } from "@/src/features/profile/use-guests-panel";
+import { useSheetDiscard } from "@/src/hooks/unsaved-changes";
 
 /**
  * The guests you created. Add one, rename it, give it a new handle, hand it over with a claim
@@ -36,6 +37,7 @@ import { claimLink, useGuestsPanel } from "@/src/features/profile/use-guests-pan
 export function GuestsPanel({ guests }: { guests: Guest[] }) {
   const { dialog, setDialog, close, formTarget, openForm, copied, copyClaimLink, pending, makeClaim, remove } =
     useGuestsPanel();
+  const discard = useSheetDiscard();
 
   return (
     <section aria-labelledby="guests-heading" className="flex flex-col gap-2">
@@ -90,11 +92,20 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
         </ul>
       )}
 
-      <Sheet open={dialog?.kind === "add" || dialog?.kind === "edit"} onOpenChange={(open) => !open && close()}>
+      <Sheet open={dialog?.kind === "add" || dialog?.kind === "edit"} onOpenChange={(open) => !open && discard.guard(close)}>
         <SheetContent side="bottom">
-          {formTarget && <GuestSheetForm key={formTarget.key} guest={formTarget.guest} onClose={close} />}
+          {formTarget && (
+            <GuestSheetForm
+              key={formTarget.key}
+              guest={formTarget.guest}
+              onClose={close}
+              onCancel={() => discard.guard(close)}
+              onDirtyChange={discard.setDirty}
+            />
+          )}
         </SheetContent>
       </Sheet>
+      {discard.dialog}
 
       <AlertDialog open={dialog?.kind === "delete"} onOpenChange={(open) => !open && close()}>
         <AlertDialogContent>

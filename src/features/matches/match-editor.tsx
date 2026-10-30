@@ -104,8 +104,7 @@ export function MatchEditor({
             game={game}
             index={index}
             teams={values.teams}
-            winner={state.winnerOf(game)}
-            timesOpen={state.openTimes.has(game.id)}
+            winner={state.winnerOf(game)}            timesOpen={state.openTimes.has(game.id)}
             onShowTimes={() => state.showTimes(game.id)}
             onTime={(field, time) => state.setGameTime(game.id, field, time)}
             onScore={(teamId, value, input) => state.setScore(game.id, teamId, value, input)}
@@ -127,12 +126,16 @@ export function MatchEditor({
 
       <TeamPlayersSheet
         open={editingTeam !== undefined}
-        onOpenChange={(open) => !open && state.editTeam(null)}
+        teamId={editingTeam?.id ?? ""}
         teamLabel={editingTeam?.label ?? ""}
         candidates={members}
-        selected={new Set(editingTeam?.playerIds ?? [])}
+        playerIds={editingTeam?.playerIds ?? []}
         takenElsewhere={new Set(otherTeams.flatMap((t) => t.playerIds))}
-        onChange={(ids) => editingTeam && state.setTeamPlayers(editingTeam.id, [...ids])}
+        onClose={() => state.editTeam(null)}
+        onSave={(ids) => {
+          if (editingTeam) state.setTeamPlayers(editingTeam.id, ids);
+          state.editTeam(null);
+        }}
       />
     </div>
   );

@@ -6,7 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { saveGuests } from "@/src/features/accounts/actions";
 import { removeMembers, saveMembers, saveSessions } from "@/src/features/sessions/actions";
-import { membersReducer, planMembers, type MembersAction } from "@/src/features/sessions/members-draft";
+import { membersReducer, planMembers, type MemberDraft, type MembersAction } from "@/src/features/sessions/members-draft";
 import { sessionTimes } from "@/src/features/sessions/session-times";
 import {
   isDirty,
@@ -21,6 +21,7 @@ import { useMapsPlace } from "@/src/features/sessions/use-maps-place";
 import { ok, type Result, type Role } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
 import { useAppForm } from "@/src/hooks/use-app-form";
+import { undoToast } from "@/src/lib/undo-toast";
 
 /**
  * Form state for creating or editing a session and its members. Everything is staged here.
@@ -90,6 +91,12 @@ export function useSessionForm({
   const changeMembers = (action: MembersAction) =>
     app.form.setFieldValue("members", (list) => membersReducer(list, action));
 
+  function removeMember(member: MemberDraft) {
+    const index = values.members.indexOf(member);
+    changeMembers({ type: "remove", id: member.account.id });
+    undoToast(`${member.account.displayName} removed`, () => changeMembers({ type: "restore", member, index }));
+  }
+
   return {
     ...app,
     mode,
@@ -99,6 +106,7 @@ export function useSessionForm({
     busy,
     saveDisabled,
     changeMembers,
+    removeMember,
     canGrantManager: viewerRole === "OWNER",
   };
 }

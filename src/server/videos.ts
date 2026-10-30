@@ -10,7 +10,7 @@ import {
   type OwnVideo,
   type SessionVideo,
   type Video,
-  type VideoLinkage,
+  type VideoLink,
 } from "../contract";
 import {
   removableOnParents,
@@ -49,10 +49,10 @@ const toVideo = (row: {
 
 const canonicalOffset = sql<number | null>`extract(epoch from video_games.canonical_offset)`.as("canonical_offset");
 
-type Linked = { linkage: VideoLinkage; video: Video };
+type Linked = { link: VideoLink; video: Video };
 
 /** Session rows first, then game rows, each in the order they were made. */
-async function linkagesIn(db: Db, sessionId: string, videoIds?: string[]): Promise<Linked[]> {
+async function linksIn(db: Db, sessionId: string, videoIds?: string[]): Promise<Linked[]> {
   let sessionRows = db
     .selectFrom("video_sessions")
     .innerJoin("videos", "videos.id", "video_sessions.video_id")
@@ -85,7 +85,7 @@ async function linkagesIn(db: Db, sessionId: string, videoIds?: string[]): Promi
   const [inSession, inGames] = await Promise.all([sessionRows.execute(), gameRows.execute()]);
   return [
     ...inSession.map((row) => ({
-      linkage: {
+      link: {
         videoId: row.id,
         sessionId,
         matchGameId: null,
@@ -96,7 +96,7 @@ async function linkagesIn(db: Db, sessionId: string, videoIds?: string[]): Promi
       video: toVideo(row),
     })),
     ...inGames.map((row) => ({
-      linkage: {
+      link: {
         videoId: row.id,
         sessionId,
         matchGameId: row.match_game_id,
@@ -122,16 +122,16 @@ export const listOwnVideos = read(ListOwnVideosInput, async ({ db, actor }, inpu
     .where("videos.created_by", "=", actor.accountId)
     .orderBy("videos.created_at", "desc")
     .execute();
-  const linked = sessionId && videos.length ? await linkagesIn(db, sessionId, videos.map((v) => v.id)) : [];
+  const linked = sessionId && videos.length ? await linksIn(db, sessionId, videos.map((v) => v.id)) : [];
   return videos.map((v) => ({
     ...toVideo(v),
-    linkages: linked.filter((l) => l.linkage.videoId === v.id).map((l) => l.linkage),
+    links: linked.filter((l) => l.link.videoId === v.id).map((l) => l.link),
   }));
 });
 
 export const listSessionVideos = read(ListSessionVideosInput, async ({ db, actor }, { sessionId }): Promise<SessionVideo[]> => {
   requireRole(await rolesIn(db, actor, [sessionId]), sessionId, "VIEWER", ["sessionId"]);
-  return (await linkagesIn(db, sessionId)).map(({ linkage, video }) => ({ ...linkage, video }));
+  return (await linksIn(db, sessionId)).map(({ link, video }) => ({ ...link, video }));
 });
 
 // ------------------------------------------------------------------ writes

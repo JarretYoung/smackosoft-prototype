@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Input } from "@/src/components/ui/input";
@@ -8,9 +9,23 @@ import { Spinner } from "@/src/components/ui/spinner";
 import type { Guest } from "@/src/contract";
 import { useGuestForm } from "@/src/features/profile/use-guest-form";
 
-/** The body of the add guest and edit guest sheets. Mount it fresh for each opening. */
-export function GuestSheetForm({ guest, onClose }: { guest?: Guest; onClose: () => void }) {
-  const { form, formProps, errorOf, inputProps, pending, canSave } = useGuestForm({ guest, onDone: onClose });
+/**
+ * The body of the add guest and edit guest sheets. Mount it fresh for each opening.
+ * `onClose` runs after a save. `onCancel` is Cancel, and `onDirtyChange` lets the sheet ask before discarding.
+ */
+export function GuestSheetForm({
+  guest,
+  onClose,
+  onCancel,
+  onDirtyChange,
+}: {
+  guest?: Guest;
+  onClose: () => void;
+  onCancel: () => void;
+  onDirtyChange: (dirty: boolean) => void;
+}) {
+  const { form, formProps, errorOf, inputProps, pending, canSave, dirty } = useGuestForm({ guest, onDone: onClose });
+  useEffect(() => onDirtyChange(dirty && !pending), [dirty, pending, onDirtyChange]);
 
   return (
     <form {...formProps} className="flex min-h-0 flex-1 flex-col gap-4">
@@ -42,15 +57,20 @@ export function GuestSheetForm({ guest, onClose }: { guest?: Guest; onClose: () 
             {(field) => (
               <Field data-invalid={!!errorOf(field)}>
                 <FieldLabel htmlFor="guest-handle">Handle</FieldLabel>
-                <Input
-                  {...inputProps(field)}
-                  id="guest-handle"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  autoComplete="off"
-                  enterKeyHint="done"
-                />
+                <div className="flex items-center gap-2">
+                  <span aria-hidden className="text-lg font-semibold text-muted-foreground">
+                    @
+                  </span>
+                  <Input
+                    {...inputProps(field)}
+                    id="guest-handle"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    autoComplete="off"
+                    enterKeyHint="done"
+                  />
+                </div>
                 <FieldError>{errorOf(field)}</FieldError>
               </Field>
             )}
@@ -62,7 +82,7 @@ export function GuestSheetForm({ guest, onClose }: { guest?: Guest; onClose: () 
           {pending && <Spinner />}
           {guest ? "Save changes" : "Add guest"}
         </Button>
-        <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>
           Cancel
         </Button>
       </SheetFooter>

@@ -20,12 +20,15 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
+/** Below the 3.5rem sticky page header, with a little air. */
+const TOAST_TOP = "calc(env(safe-area-inset-top) + 4rem)";
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body className={`${geistSans.variable} font-sans antialiased`}>
         {children}
-        <Toaster position="top-center" />
+        <Toaster position="top-center" offset={TOAST_TOP} mobileOffset={TOAST_TOP} />
       </body>
     </html>
   );

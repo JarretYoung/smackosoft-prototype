@@ -54,6 +54,17 @@ describe("session members", () => {
     expect(membersReducer(list, { type: "remove", id: me.id })).toEqual(list);
   });
 
+  it("puts a removed member back with their role, where they were, once", () => {
+    const sam = account("Sam");
+    const kim = account("Kim");
+    const editor = draft(sam, "EDITOR");
+    const list = [draft(me, "OWNER"), editor, draft(kim)];
+    const removed = membersReducer(list, { type: "remove", id: sam.id });
+    const undone = membersReducer(removed, { type: "restore", member: editor, index: 1 });
+    expect(undone).toEqual(list);
+    expect(membersReducer(undone, { type: "restore", member: editor, index: 1 })).toBe(undone);
+  });
+
   it("writes only what changed since the last save", () => {
     const sam = account("Sam");
     const kim = account("Kim");

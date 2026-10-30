@@ -29,6 +29,7 @@ import {
 import { ok, type Match, type Result } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
 import { useAppForm } from "@/src/hooks/use-app-form";
+import { undoToast } from "@/src/lib/undo-toast";
 
 /**
  * Form state for one match. Everything is staged here and Save sends the changes in dependency
@@ -104,9 +105,7 @@ export function useMatchForm({ sessionId, match }: { sessionId: string; match: M
 
   function removeGame(game: GameDraft, index: number) {
     changeGames({ type: "remove", id: game.id });
-    toast(`Game ${index + 1} removed`, {
-      action: { label: "Undo", onClick: () => changeGames({ type: "restore", game, index }) },
-    });
+    undoToast(`Game ${index + 1} removed`, () => changeGames({ type: "restore", game, index }));
   }
 
   return {

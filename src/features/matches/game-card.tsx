@@ -95,7 +95,7 @@ export function GameCard({
                 enterKeyHint="next"
                 autoComplete="off"
                 aria-label={`${team.label} score for game ${index + 1}`}
-                placeholder="0"
+                placeholder="-"
                 className="score h-14 rounded-lg bg-card text-center text-3xl"
                 value={game.scores[team.id] ?? ""}
                 onFocus={(e) => e.currentTarget.select()}
