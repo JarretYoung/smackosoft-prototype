@@ -1,34 +1,34 @@
-import { Banknote, ChevronLeft, Crown, MapPin, Plus, Users, Video } from "lucide-react";
+import { Banknote, ChevronLeft, MapPin, Plus, Users, Video } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { AvatarStack } from "@/src/components/avatar-stack";
 import { SessionCover } from "@/src/components/court-art";
-import { MembersSheetRow } from "@/src/components/members-sheet";
-import { RowChevron } from "@/src/components/row-chevron";
-import { SessionMenu } from "@/src/components/session-menu";
 import { LocalTimeRange } from "@/src/components/local-time";
+import { RowChevron } from "@/src/components/row-chevron";
 import { Button } from "@/src/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/components/ui/empty";
-import { cn } from "@/src/lib/utils";
+import { atLeast } from "@/src/contract";
+import { MatchCard } from "@/src/features/matches/match-card";
+import { FactRow, RowIcon } from "@/src/features/sessions/fact-row";
+import { MembersSheetRow } from "@/src/features/sessions/members-sheet";
+import { SessionMenu } from "@/src/features/sessions/session-menu";
+import { attentionOf } from "@/src/features/videos/videos";
 import { longDate, money, plural } from "@/src/lib/format";
-import { summarize } from "@/src/lib/matches";
-import { MATCH_TYPE_LABEL } from "@/src/lib/match-type";
 import { unwrap } from "@/src/lib/result";
-import { attentionOf } from "@/src/lib/videos";
-import { atLeast, type Match, type Team } from "@/src/contract";
 import { backend } from "@/src/server";
-
-const names = (team: Team) =>
-  team.players.length ? team.players.map((p) => p.displayName.split(" ")[0]).join(" & ") : team.label;
 
 export default async function SessionDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = unwrap(await backend.sessions.get({ sessionId: id }));
-  const me = unwrap(await backend.accounts.getCurrent());
+  const [sessionResult, meResult, videosResult] = await Promise.all([
+    backend.sessions.get({ sessionId: id }),
+    backend.accounts.getCurrent(),
+    backend.videos.listBySession({ sessionId: id }),
+  ]);
+  const session = unwrap(sessionResult);
+  const me = unwrap(meResult);
+  const videos = unwrap(videosResult);
   const fee = money(session.courtFee, session.currency);
   const canManage = atLeast(session.myRole, "MANAGER");
   const canScore = atLeast(session.myRole, "EDITOR");
-  const videos = unwrap(await backend.videos.listBySession({ sessionId: id }));
   const { unsynced, unassigned } = attentionOf(
     videos,
     session.matches.flatMap((m) => m.games.map((g) => g.id)),
@@ -175,79 +175,5 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
         </section>
       </div>
     </main>
-  );
-}
-
-function RowIcon({ children }: { children: ReactNode }) {
-  return (
-    <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-accent text-primary [&_svg]:size-[1.125rem]">
-      {children}
-    </span>
-  );
-}
-
-function FactRow({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
-  return (
-    <div className="list-row">
-      <RowIcon>{icon}</RowIcon>
-      <div className="min-w-0 flex-1">
-        <p className="text-footnote text-muted-foreground">{label}</p>
-        <p className="mt-0.5 truncate text-body">{children}</p>
-      </div>
-    </div>
-  );
-}
-
-function MatchCard({ sessionId, match, index }: { sessionId: string; match: Match; index: number }) {
-  const { rows, winnerId } = summarize(match);
-  const [left, right] = rows;
-  return (
-    <Link
-      href={`/sessions/${sessionId}/matches/${match.id}`}
-      className="pressable block rounded-2xl bg-card p-4 shadow-card"
-    >
-      <div className="flex items-center justify-between">
-        <span className="text-footnote font-semibold tracking-wide text-muted-foreground uppercase">
-          {match.label || `Match ${index + 1}`} · {MATCH_TYPE_LABEL[match.matchType]}
-        </span>
-        <RowChevron />
-      </div>
-      {left && right ? (
-        <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <Side team={left.team} won={winnerId === left.team.id} />
-          <div className="score flex items-center gap-2.5 text-[2.25rem] leading-none">
-            <span className={cn(winnerId === left.team.id ? "text-primary" : winnerId ? "text-muted-foreground/60" : "")}>
-              {left.wins}
-            </span>
-            <span className="text-lg font-medium text-muted-foreground/60">:</span>
-            <span className={cn(winnerId === right.team.id ? "text-primary" : winnerId ? "text-muted-foreground/60" : "")}>
-              {right.wins}
-            </span>
-          </div>
-          <Side team={right.team} won={winnerId === right.team.id} align="end" />
-        </div>
-      ) : (
-        <p className="mt-3 text-sm text-muted-foreground">Teams are not set up yet.</p>
-      )}
-    </Link>
-  );
-}
-
-function Side({ team, won, align }: { team: Team; won: boolean; align?: "end" }) {
-  return (
-    <div className={cn("flex min-w-0 flex-col gap-1.5", align === "end" ? "items-end" : "items-start")}>
-      <div className="relative">
-        <AvatarStack people={team.players} max={2} />
-        {won && (
-          <Crown
-            aria-label="Winner"
-            className={cn("absolute -top-3.5 size-4 fill-gold text-gold", align === "end" ? "right-1" : "left-1")}
-          />
-        )}
-      </div>
-      <p className={cn("w-full truncate text-sm", won ? "font-semibold" : "text-muted-foreground", align === "end" && "text-right")}>
-        {names(team)}
-      </p>
-    </div>
   );
 }

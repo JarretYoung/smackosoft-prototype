@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SessionSave } from "../src/contract";
-import { validate, visibleErrors } from "../src/lib/validate";
+import { validate, visibleErrors } from "../src/features/sessions/validate";
 
 const session = { id: crypto.randomUUID(), label: "Friday", date: "2026-11-06" };
 

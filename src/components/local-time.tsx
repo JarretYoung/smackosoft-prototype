@@ -1,7 +1,7 @@
 "use client";
 
 import { clock12, isoToTimeInput, timeRange } from "@/src/lib/format";
-import { useHydrated } from "@/src/lib/use-hydrated";
+import { useHydrated } from "@/src/hooks/use-hydrated";
 
 /**
  * "9:00 am to 11:00 am" in the viewer's timezone, or nothing when there is no start.

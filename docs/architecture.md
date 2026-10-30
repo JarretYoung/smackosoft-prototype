@@ -20,14 +20,15 @@ The frontend codes against one TypeScript interface, `Backend` in `src/contract`
 |---|---|---|
 | `src/contract/` | The `Backend` interface, input schemas, read types, error model | Yes |
 | `src/server/` | The real implementation. Server only. | No |
-| `src/app/actions.ts` | Thin server actions. One per write. They call `backend` and refresh the pages. | Called from them |
+| `src/features/*/actions.ts` | Thin server actions, one file per feature. One per write. They call `backend` and refresh the pages. | Called from them |
 | `src/app/(app)/` | Signed-in screens. They read through `backend` in Server Components. | Server |
+| `src/features/` | Components, hooks and actions that belong to one feature. | Yes |
 | `src/components/` | Shared UI. `ui/` is shadcn. | Yes |
 
 Rules the frontend follows:
 
 - Read in Server Components with `backend.x.y()` and unwrap with `unwrap` from `src/lib/result.ts`.
-- Write from Client Components through `src/app/actions.ts`. Show `errorMessage(error)` in a toast, or `fieldErrors(error)` under a field.
+- Write from Client Components through the `actions.ts` of the feature. Show `errorMessage(error)` in a toast, or `fieldErrors(error)` under a field.
 - The client picks the id for anything it creates, so a retried save never duplicates.
 - Hide controls by role with `can(role, min)`. The backend still refuses anything not allowed.
 - Pages read the session, so the `(app)` layout sets `export const instant = false`.

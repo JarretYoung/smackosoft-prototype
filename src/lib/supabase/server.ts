@@ -32,3 +32,10 @@ export async function createClient() {
     },
   );
 }
+
+/** The verified claims of the signed in user, or null. Checks the token without a network call. */
+export async function getClaims() {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  return data?.claims ?? null;
+}

@@ -1,6 +1,6 @@
 import { ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
-import { LeaveLink } from "@/src/lib/unsaved-changes";
+import { LeaveLink } from "@/src/hooks/unsaved-changes";
 
 /** Navigation bar for sub pages: a back button, a centered title and an optional action. */
 export function PageHeader({

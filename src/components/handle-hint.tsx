@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 import { Spinner } from "@/src/components/ui/spinner";
-import type { HandleCheck } from "@/src/lib/use-handle-check";
+import type { HandleCheck } from "@/src/hooks/use-handle-check";
 
 /** The message a handle check earns. "Too short" waits until the person leaves the field. */
 export function handleProblem(check: HandleCheck, left: boolean): string | null {

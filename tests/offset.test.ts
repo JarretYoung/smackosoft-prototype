@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SessionVideo } from "../src/contract";
-import { formatOffset, OFFSET_LIMIT, parseOffset } from "../src/lib/offset";
-import { attentionOf } from "../src/lib/videos";
+import { formatOffset, OFFSET_LIMIT, parseOffset } from "../src/features/videos/offset";
+import { attentionOf } from "../src/features/videos/videos";
 
 describe("sync point text", () => {
   it("formats whole seconds, with a minus before the start", () => {

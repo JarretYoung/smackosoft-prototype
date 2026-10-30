@@ -35,10 +35,8 @@ export function stop(code: ErrorCode, path: Path, message: string): never {
  */
 export const authSource = {
   async userId(): Promise<string | null> {
-    const { createClient } = await import("@/src/lib/supabase/server");
-    const supabase = await createClient();
-    const { data } = await supabase.auth.getClaims();
-    return data?.claims?.sub ?? null;
+    const { getClaims } = await import("@/src/lib/supabase/server");
+    return (await getClaims())?.sub ?? null;
   },
 };
 

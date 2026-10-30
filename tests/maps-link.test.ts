@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parseMapsLink } from "../src/lib/maps-link";
-import { resolveMapsShortLink } from "../src/lib/maps-resolve";
+import { parseMapsLink } from "../src/features/sessions/maps-link";
+import { resolveMapsShortLink } from "../src/features/sessions/maps-resolve";
 
 const NONE = { latitude: null, longitude: null };
 

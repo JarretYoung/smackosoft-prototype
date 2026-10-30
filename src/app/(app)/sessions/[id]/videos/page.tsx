@@ -1,4 +1,4 @@
-import { VideosPanel } from "@/src/components/videos/videos-panel";
+import { VideosPanel } from "@/src/features/videos/videos-panel";
 import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";
 import { atLeast } from "@/src/contract";
@@ -13,8 +13,12 @@ export default async function VideosPage({
   const { id } = await params;
   const { game } = await searchParams;
 
-  const session = unwrap(await backend.sessions.get({ sessionId: id }));
-  const linked = unwrap(await backend.videos.listBySession({ sessionId: id }));
+  const [sessionResult, linkedResult] = await Promise.all([
+    backend.sessions.get({ sessionId: id }),
+    backend.videos.listBySession({ sessionId: id }),
+  ]);
+  const session = unwrap(sessionResult);
+  const linked = unwrap(linkedResult);
 
   const matches = session.matches.map((match, mi) => ({
     id: match.id,

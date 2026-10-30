@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/src/components/page-header";
-import { SessionForm } from "@/src/components/session-form/session-form";
-import { loadPeople } from "@/src/lib/people";
+import { SessionForm } from "@/src/features/sessions/session-form";
+import { loadPeople } from "@/src/features/sessions/people";
 import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";
 import { atLeast } from "@/src/contract";

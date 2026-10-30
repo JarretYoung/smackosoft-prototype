@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { AvatarStack, PersonAvatar } from "@/src/components/avatar-stack";
 import { DateTile } from "@/src/components/date-tile";
-import { HomeCalendar } from "@/src/components/home-calendar";
+import { HeroStat } from "@/src/features/home/hero-stat";
+import { HomeCalendar } from "@/src/features/sessions/home-calendar";
 import { RowChevron } from "@/src/components/row-chevron";
 import { LocalTimeRange } from "@/src/components/local-time";
 import { Badge } from "@/src/components/ui/badge";
@@ -13,10 +14,16 @@ import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";
 
 export default async function HomePage() {
-  const me = unwrap(await backend.accounts.getCurrent());
-  const stats = unwrap(await backend.stats.get());
-  const teammates = unwrap(await backend.stats.getTeammates());
-  const sessions = unwrap(await backend.sessions.list());
+  const [meResult, statsResult, teammatesResult, sessionsResult] = await Promise.all([
+    backend.accounts.getCurrent(),
+    backend.stats.get(),
+    backend.stats.getTeammates(),
+    backend.sessions.list(),
+  ]);
+  const me = unwrap(meResult);
+  const stats = unwrap(statsResult);
+  const teammates = unwrap(teammatesResult);
+  const sessions = unwrap(sessionsResult);
 
   const now = today();
   const upcoming = sessions.filter((s) => s.date >= now).slice(0, 3);
@@ -128,14 +135,5 @@ export default async function HomePage() {
         )}
       </section>
     </main>
-  );
-}
-
-function HeroStat({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="rounded-xl bg-white/15 px-4 py-3">
-      <dd className="score text-3xl leading-none">{value}</dd>
-      <dt className="mt-1 text-sm text-primary-foreground/90">{label}</dt>
-    </div>
   );
 }

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { MatchEditor } from "@/src/components/match-editor/match-editor";
-import { MatchSwitcher } from "@/src/components/match-editor/match-switcher";
+import { MatchEditor } from "@/src/features/matches/match-editor";
+import { MatchSwitcher } from "@/src/features/matches/match-switcher";
 import { PageHeader } from "@/src/components/page-header";
 import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";

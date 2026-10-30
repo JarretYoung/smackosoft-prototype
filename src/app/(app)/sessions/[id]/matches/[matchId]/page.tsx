@@ -1,22 +1,19 @@
 import { Crown, Pencil, Video } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AvatarStack } from "@/src/components/avatar-stack";
 import { CourtArt } from "@/src/components/court-art";
 import { PageHeader } from "@/src/components/page-header";
 import { RowChevron } from "@/src/components/row-chevron";
 import { Button } from "@/src/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/components/ui/empty";
 import { cn } from "@/src/lib/utils";
-import { gameWinnerId, scoreOf, summarize } from "@/src/lib/matches";
+import { Scoreboard } from "@/src/features/matches/scoreboard";
+import { gameWinnerId, scoreOf, summarize, teamNames } from "@/src/features/matches/scores";
 import { plural } from "@/src/lib/format";
-import { MATCH_TYPE_LABEL } from "@/src/lib/match-type";
+import { MATCH_TYPE_LABEL } from "@/src/features/matches/match-type";
 import { unwrap } from "@/src/lib/result";
-import { atLeast, type Team } from "@/src/contract";
+import { atLeast } from "@/src/contract";
 import { backend } from "@/src/server";
-
-const names = (team: Team) =>
-  team.players.length ? team.players.map((p) => p.displayName.split(" ")[0]).join(" & ") : team.label;
 
 export default async function MatchDetailsPage({ params }: { params: Promise<{ id: string; matchId: string }> }) {
   const { id, matchId } = await params;
@@ -96,7 +93,7 @@ export default async function MatchDetailsPage({ params }: { params: Promise<{ i
                 {match.teams.map((team) => (
                   <div key={team.id} className="flex items-center gap-2">
                     <span className={cn("min-w-0 flex-1 truncate text-sm", winner === team.id ? "font-semibold" : "text-muted-foreground")}>
-                      {names(team)}
+                      {teamNames(team)}
                     </span>
                     {winner === team.id && <Crown aria-label="Won" className="size-4 shrink-0 fill-gold text-gold" />}
                     <span className={cn("score w-7 text-right text-base", winner !== team.id && "text-muted-foreground")}>
@@ -110,18 +107,5 @@ export default async function MatchDetailsPage({ params }: { params: Promise<{ i
         })}
       </section>
     </main>
-  );
-}
-
-function Scoreboard({ team, wins, won, lost }: { team: Team; wins: number; won: boolean; lost: boolean }) {
-  return (
-    <div className="flex min-w-0 flex-col items-center gap-3">
-      <div className="relative">
-        <AvatarStack people={team.players} max={2} size="lg" ringClassName="ring-white/30" />
-        {won && <Crown aria-label="Winner" className="absolute -top-4 left-1/2 size-5 -translate-x-1/2 fill-gold text-gold" />}
-      </div>
-      <p className={cn("score text-[4rem] leading-none", lost && "text-primary-foreground/65")}>{wins}</p>
-      <p className="w-full truncate text-center text-sm font-medium text-primary-foreground/90">{names(team)}</p>
-    </div>
   );
 }

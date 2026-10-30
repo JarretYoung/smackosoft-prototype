@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { AuthShell } from "@/src/components/auth-shell";
+import { AuthShell } from "@/src/features/auth/auth-shell";
 import { AvatarUrl } from "@/src/contract";
-import { createClient } from "@/src/lib/supabase/server";
+import { getClaims } from "@/src/lib/supabase/server";
 import { backend } from "@/src/server";
-import { OnboardingForm } from "./onboarding-form";
+import { OnboardingForm } from "@/src/features/onboarding/onboarding-form";
 
 export const instant = false;
 
@@ -14,9 +14,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   if (me.ok) redirect("/home");
 
   // Google hands back the name on the account. Email sign ups have none, so the field stays empty.
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  const meta = data?.claims?.user_metadata;
+  const meta = (await getClaims())?.user_metadata;
   const providerName = [meta?.full_name, meta?.name].find((v) => typeof v === "string" && v.trim());
   // Google sends a 96px picture. Ask for a sharper one, the largest avatar is 80px on a 2x screen.
   const picture = [meta?.picture, meta?.avatar_url].find((v) => typeof v === "string");
