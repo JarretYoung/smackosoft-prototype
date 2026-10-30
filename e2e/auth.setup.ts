@@ -1,5 +1,5 @@
 import { logIn, SEEDED, VIEWER } from "./support/app";
-import { test as setup } from "./support/test";
+import { expect, test as setup } from "./support/test";
 
 /**
  * Log in each seeded user once per run and keep the cookies, so specs start signed in.
@@ -11,6 +11,7 @@ for (const [file, user] of [
 ] as const) {
   setup(`log in as ${file}`, async ({ page }) => {
     await logIn(page, user);
+    await expect(page).toHaveURL(/\/home/);
     await page.context().storageState({ path: `e2e/.auth/${file}.json` });
   });
 }

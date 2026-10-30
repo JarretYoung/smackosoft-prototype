@@ -1,12 +1,14 @@
 import { expect, test } from "./support/test";
-import { addMatch, createSession, go, scoreFirstGame, unique } from "./support/app";
+import { go, SEEDED, unique } from "./support/app";
+import { accountOf, createMatch, createSession } from "./support/db";
+import { todayIso } from "./support/time";
 
 test("a user adds a video to a game and syncs it", async ({ page }) => {
   const id = unique();
   const label = `Court ${id}`;
-  const sessionId = await createSession(page, { name: `E2e video ${id}` });
-  await addMatch(page, sessionId);
-  await scoreFirstGame(page, { team1: "21", team2: "15" });
+  const ownerId = await accountOf(SEEDED.handle);
+  const sessionId = await createSession({ ownerId, label: `E2e video ${id}`, date: todayIso() });
+  await createMatch({ sessionId, createdBy: ownerId, games: [[21, 15]] });
 
   await go(page, `/sessions/${sessionId}/videos`);
   await page.getByRole("group", { name: "Game 1" }).getByRole("button", { name: "Add video" }).click();

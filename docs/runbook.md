@@ -93,8 +93,9 @@ Commands:
 
 Rules:
 
-- The tests never start a server and never reset the database. A global setup checks the app (port 3000), the Supabase API (54321) and Mailpit (54324). It lists what is missing.
+- Locally the tests never start a server and never reset the database. A global setup checks the app (port 3000), the Supabase API (54321) and Mailpit (54324). It lists what is missing.
 - Each test makes its own data with unique names. Run them as often as you like without a reset.
+- Only the spec for a flow drives that flow through the UI. Other specs insert their prerequisites with `e2e/support/db.ts`, which uses `DATABASE_URL` from `.env.local`.
 - A setup project logs in once and saves the cookies in `e2e/.auth` (not committed). Specs that test signed out screens opt out with `storageState`.
 - Every test fails on a browser console error, an uncaught page error or a 5xx response. The exclusions are listed in `e2e/support/test.ts`.
 - The `newUser` fixture signs up a fresh person through the real forms and Mailpit.
@@ -103,6 +104,13 @@ Rules:
 - Local Supabase allows 20 emails an hour. A full run sends 4. Wait if you see "Too many emails sent".
 - CI retries a failed test once. Locally nothing retries.
 - The HTML report lands in `playwright-report/`.
+
+### Running the e2e tests in CI
+
+- Start Supabase and apply the migrations and seed first (`pnpm supabase db reset`).
+- Set `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+- Run `CI=1 pnpm test:e2e`. It builds the app, starts the production server on port 3000, retries once and fails a test that only passes on retry.
+- Run `pnpm check` for types, lint, unused code and the unit tests.
 
 ### Unused code check
 

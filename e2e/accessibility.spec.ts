@@ -1,7 +1,12 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { createSession, go, unique } from "./support/app";
+import { go, unique } from "./support/app";
+import { createSession } from "./support/db";
 import { expect, test } from "./support/test";
+import { todayIso, zonedIso } from "./support/time";
+
+/** The mobile project runs in this timezone. See playwright.config.ts. */
+const KUALA_LUMPUR = "Asia/Kuala_Lumpur";
 
 /**
  * Runs axe-core on the main screens and fails on serious or critical violations.
@@ -21,7 +26,14 @@ const SIGNED_IN_SCREENS: { name: string; open: (page: Page) => Promise<void> }[]
   {
     name: "session details",
     open: async (page) => {
-      await createSession(page, { name: `E2e a11y ${unique()}`, times: { start: "19:00", end: "21:00" } });
+      const date = todayIso();
+      const sessionId = await createSession({
+        label: `E2e a11y ${unique()}`,
+        date,
+        startTime: zonedIso(date, "19:00", KUALA_LUMPUR),
+        endTime: zonedIso(date, "21:00", KUALA_LUMPUR),
+      });
+      await go(page, `/sessions/${sessionId}`);
       // The time range shows once the page has hydrated.
       await expect(page.getByText("7:00 pm to 9:00 pm")).toBeVisible();
     },
@@ -35,13 +47,13 @@ test.describe("signed out", () => {
 
   test("the log in screen has no serious accessibility violations", async ({ page }) => {
     await go(page, "/auth/login");
-    expect(await seriousViolations(page)).toEqual([]);
+    expect(await seriousViolations(page)).toStrictEqual([]);
   });
 });
 
 for (const screen of SIGNED_IN_SCREENS) {
   test(`the ${screen.name} screen has no serious accessibility violations`, async ({ page }) => {
     await screen.open(page);
-    expect(await seriousViolations(page)).toEqual([]);
+    expect(await seriousViolations(page)).toStrictEqual([]);
   });
 }

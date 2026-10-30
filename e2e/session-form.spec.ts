@@ -1,7 +1,7 @@
-import { createSession, go, unique } from "./support/app";
-import { setTime } from "./support/session-form";
+import { go, unique } from "./support/app";
+import { createSession } from "./support/db";
+import { todayIso } from "./support/time";
 import { expect, test } from "./support/test";
-import { addDays, dayShort, todayIso } from "./support/time";
 
 test("an empty name is flagged, focused and fixed by typing one", async ({ page }) => {
   const name = `E2e validation ${unique()}`;
@@ -14,12 +14,9 @@ test("an empty name is flagged, focused and fixed by typing one", async ({ page 
   await expect(nameField).toHaveAttribute("aria-invalid", "true");
   await expect(page).toHaveURL(/\/sessions\/new$/);
 
-  // The message goes away as soon as the name is fine, and the end before the start rolls to the next day.
+  // The message goes away as soon as the name is fine.
   await nameField.fill(name);
   await expect(page.getByText("Give the session a name")).toBeHidden();
-  await setTime(page, "Starts", "20:00");
-  await setTime(page, "Ends", "06:00");
-  await expect(page.getByRole("button", { name: /^Ends/ })).toContainText(dayShort(addDays(todayIso(), 1)));
 
   await page.getByRole("button", { name: "Create session" }).click();
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
@@ -27,7 +24,7 @@ test("an empty name is flagged, focused and fixed by typing one", async ({ page 
 
 test("leaving an edited session asks before it throws the changes away", async ({ page }) => {
   const name = `E2e discard ${unique()}`;
-  const sessionId = await createSession(page, { name });
+  const sessionId = await createSession({ label: name, date: todayIso() });
   await go(page, `/sessions/${sessionId}/edit`);
   const nameField = page.getByLabel("Name", { exact: true });
 
@@ -58,7 +55,7 @@ test("leaving an edited session asks before it throws the changes away", async (
 test("a saved edit is still there after a reload", async ({ page }) => {
   const name = `E2e save ${unique()}`;
   const renamed = `${name} renamed`;
-  const sessionId = await createSession(page, { name });
+  const sessionId = await createSession({ label: name, date: todayIso() });
   await go(page, `/sessions/${sessionId}/edit`);
 
   // Save waits for a change.

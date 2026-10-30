@@ -14,7 +14,8 @@ const HARMLESS_CONSOLE: { pattern: RegExp; why: string }[] = [
   },
   {
     // The Next.js dev server replays this as console.error when it checks /home for instant navigation.
-    // docs/uat.md calls the dev "Insight" hints "a dev hint, not an error". Not verified against a production build.
+    // docs/uat.md calls the dev "Insight" hints "a dev hint, not an error". The roadmap tracks the
+    // real fix as the parked timezone item, so keep this filter until that lands.
     pattern: /Next\.js encountered the unstable value `new Date\(\)` while prerendering/,
     why: "Next.js dev only hint about today() on the Home page",
   },
@@ -53,7 +54,7 @@ export const test = base.extend<{ failOnBrowserErrors: void; newUser: NewUser }>
 
       await provide();
 
-      expect(problems, "The browser reported errors").toEqual([]);
+      expect(problems, "The browser reported errors").toStrictEqual([]);
     },
     { auto: true },
   ],

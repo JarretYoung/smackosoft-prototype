@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:shuffle": "vitest run --sequence.shuffle",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "check": "tsc --noEmit && eslint . && knip && vitest run"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -43,6 +44,7 @@
     "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^9",
     "eslint-config-next": "^16.4.3",
+    "eslint-plugin-playwright": "^2.12.1",
     "knip": "^6.43.0",
     "kysely-codegen": "^0.20.0",
     "postcss": "^8",

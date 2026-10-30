@@ -1,10 +1,18 @@
 import { expect, test } from "./support/test";
-import { addMatch, createSession, scoreFirstGame, SEEDED, unique } from "./support/app";
+import { addMatch, scoreFirstGame, SEEDED, unique } from "./support/app";
+import { accountOf, createGuest, createSession } from "./support/db";
+import { todayIso } from "./support/time";
 
 test("a user scores a match with two teams and a game", async ({ page }) => {
   const id = unique();
   const guest = `Bob${id}`;
-  const sessionId = await createSession(page, { name: `E2e match ${id}`, guest });
+  const ownerId = await accountOf(SEEDED.handle);
+  const sessionId = await createSession({
+    ownerId,
+    label: `E2e match ${id}`,
+    date: todayIso(),
+    members: [await createGuest(ownerId, guest)],
+  });
 
   await addMatch(page, sessionId);
 

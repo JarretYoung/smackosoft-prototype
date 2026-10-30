@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { AvatarStack, PersonAvatar } from "@/src/components/avatar-stack";
 import { DateTile } from "@/src/components/date-tile";
 import { HeroStat } from "@/src/features/home/hero-stat";
@@ -14,6 +15,9 @@ import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";
 
 export default async function HomePage() {
+  // Cache Components refuses to prerender a read of the clock. This page is per request, so say so.
+  // The roadmap item "server today uses the server timezone" replaces this with the viewer's timezone.
+  await connection();
   const now = today();
   const [meResult, statsResult, teammatesResult, sessionsResult] = await Promise.all([
     backend.accounts.getCurrent(),

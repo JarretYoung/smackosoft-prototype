@@ -1,7 +1,8 @@
-import { createSession, go, unique } from "./support/app";
+import { go, unique } from "./support/app";
+import { createSession } from "./support/db";
 import { setDate, setTime } from "./support/session-form";
 import { expect, test } from "./support/test";
-import { addDays, clock12, dayShort, longDate, timeRange, todayIso } from "./support/time";
+import { addDays, clock12, dayShort, longDate, timeRange, todayIso, zonedIso } from "./support/time";
 
 /**
  * The session times are the browser's local time, so these specs run in several timezones.
@@ -42,10 +43,15 @@ test("a session that ends after midnight shows its time range and the next day",
   await expect(page.getByText(timeRange(START, END))).toBeVisible();
 });
 
-test("an edited session keeps its new times when you reopen it", async ({ page }) => {
+test("an edited session keeps its new times when you reopen it", async ({ page, timezoneId }) => {
   const name = `E2e edit times ${unique()}`;
   const date = todayIso();
-  const sessionId = await createSession(page, { name, times: { start: START, end: END } });
+  const sessionId = await createSession({
+    label: name,
+    date,
+    startTime: zonedIso(date, START, timezoneId!),
+    endTime: zonedIso(addDays(date, 1), END, timezoneId!),
+  });
 
   await go(page, `/sessions/${sessionId}/edit`);
   await expect(page.getByRole("button", { name: /^Starts/ })).toContainText(clock12(START));

@@ -17,6 +17,29 @@ export function addDays(iso: string, days: number): string {
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
 
+/** The UTC instant at which a wall clock in `timeZone` reads `iso` and `time` ("HH:mm"), as an ISO string. */
+export function zonedIso(iso: string, time: string, timeZone: string): string {
+  const { year, month, day } = parts(iso);
+  const [h, m] = time.split(":").map(Number);
+  const wall = Date.UTC(year, month - 1, day, h, m);
+  const zoneFormat = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+  });
+  const offsetAt = (instant: number) => {
+    const p = Object.fromEntries(zoneFormat.formatToParts(instant).map((part) => [part.type, Number(part.value)]));
+    return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) - Math.floor(instant / 60_000) * 60_000;
+  };
+  // The offset depends on the instant, so settle it in two passes.
+  const firstGuess = wall - offsetAt(wall);
+  return new Date(wall - offsetAt(firstGuess)).toISOString();
+}
+
 /** "22:00" as "10:00 pm". */
 export function clock12(time: string): string {
   const [h, m] = time.split(":").map(Number);

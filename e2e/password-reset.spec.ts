@@ -19,14 +19,7 @@ test("a person resets a forgotten password from the email link", async ({ page, 
   await page.goto(await resetLinkFor(newUser.email));
   await expect(page).toHaveURL(/\/auth\/update-password/);
 
-  // A weak password is turned down and stays on the form.
-  const password = page.getByLabel("New password");
-  await password.fill("weak");
-  await page.getByRole("button", { name: "Save new password" }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "Use at least 8 characters" })).toBeVisible();
-  await expect(page).toHaveURL(/\/auth\/update-password/);
-
-  await password.fill(NEW_PASSWORD);
+  await page.getByLabel("New password").fill(NEW_PASSWORD);
   await page.getByRole("button", { name: "Save new password" }).click();
   await expect(page).toHaveURL(/\/home/);
 

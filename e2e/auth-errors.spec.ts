@@ -34,12 +34,11 @@ test("sign up rejects a weak password and an email that already has an account",
   const rule = page.getByRole("alert").filter({ hasText: PASSWORD_RULE });
 
   await email.fill("e2e-weak@smacko.test");
-  for (const weak of ["short1A", "alllowercase1", "NOLOWERCASE1", "NoDigitsHere"]) {
-    await password.fill(weak);
-    await page.getByRole("button", { name: "Sign up" }).click();
-    await expect(rule, `"${weak}" should be rejected`).toBeVisible();
-    await expect(page).toHaveURL(/\/auth\/sign-up$/);
-  }
+  // One weak password proves the message reaches the screen. The rules are in tests/auth-errors.test.ts.
+  await password.fill("short1A");
+  await page.getByRole("button", { name: "Sign up" }).click();
+  await expect(rule).toBeVisible();
+  await expect(page).toHaveURL(/\/auth\/sign-up$/);
 
   // A strong password for an address that is taken: the problem sits under the email.
   await email.fill(SEEDED.email);
