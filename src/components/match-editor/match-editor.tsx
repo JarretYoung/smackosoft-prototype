@@ -6,12 +6,12 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   removeGames,
-  removePlayers,
+  removeMatchPlayers,
   saveGames,
   saveMatches,
-  savePlayers,
-  removeScores,
-  saveScores,
+  saveMatchPlayers,
+  removeGameScores,
+  saveGameScores,
   saveTeams,
 } from "@/src/app/actions";
 import { AvatarStack } from "@/src/components/avatar-stack";
@@ -51,7 +51,7 @@ function initialGames(match: Match): GameState[] {
     gameNumber: game.gameNumber,
     startTime: game.startTime,
     endTime: game.endTime,
-    scores: Object.fromEntries(game.scores.map((s) => [s.teamId, String(s.score)])),
+    scores: Object.fromEntries(game.scores.map((s) => [s.matchTeamId, String(s.score)])),
   }));
 }
 
@@ -166,18 +166,18 @@ export function MatchEditor({
 
       // Players. Removals go first so someone can move between teams in one save.
       const before = new Set(match.teams.flatMap((t) => t.players.map((p) => `${t.id}:${p.id}`)));
-      const after = teams.flatMap((t) => [...t.playerIds].map((id) => ({ teamId: t.id, accountId: id })));
-      const afterKeys = new Set(after.map((p) => `${p.teamId}:${p.accountId}`));
+      const after = teams.flatMap((t) => [...t.playerIds].map((id) => ({ matchTeamId: t.id, accountId: id })));
+      const afterKeys = new Set(after.map((p) => `${p.matchTeamId}:${p.accountId}`));
       const removedPlayers = [...before]
         .filter((key) => !afterKeys.has(key))
-        .map((key) => ({ teamId: key.split(":")[0], accountId: key.split(":")[1] }));
-      const addedPlayers = after.filter((p) => !before.has(`${p.teamId}:${p.accountId}`));
+        .map((key) => ({ matchTeamId: key.split(":")[0], accountId: key.split(":")[1] }));
+      const addedPlayers = after.filter((p) => !before.has(`${p.matchTeamId}:${p.accountId}`));
       if (removedPlayers.length) {
-        const result = await removePlayers(removedPlayers);
+        const result = await removeMatchPlayers(removedPlayers);
         if (!result.ok) return fail(result.error);
       }
       if (addedPlayers.length) {
-        const result = await savePlayers(addedPlayers);
+        const result = await saveMatchPlayers(addedPlayers);
         if (!result.ok) return fail(result.error);
       }
 
@@ -206,21 +206,21 @@ export function MatchEditor({
         const game = games.find((g) => g.id === saved.id);
         if (!game) return []; // The game was removed, and its scores went with it.
         return saved.scores
-          .filter((s) => (game.scores[s.teamId] ?? "") === "")
-          .map((s) => ({ teamId: s.teamId, gameId: saved.id }));
+          .filter((s) => (game.scores[s.matchTeamId] ?? "") === "")
+          .map((s) => ({ matchTeamId: s.matchTeamId, matchGameId: saved.id }));
       });
       if (cleared.length) {
-        const result = await removeScores(cleared);
+        const result = await removeGameScores(cleared);
         if (!result.ok) return fail(result.error);
       }
       const scores = games.flatMap((g) =>
         teams.flatMap((t) => {
           const text = g.scores[t.id];
-          return text === undefined || text === "" ? [] : [{ teamId: t.id, gameId: g.id, score: Number(text) }];
+          return text === undefined || text === "" ? [] : [{ matchTeamId: t.id, matchGameId: g.id, score: Number(text) }];
         }),
       );
       if (scores.length) {
-        const result = await saveScores(scores);
+        const result = await saveGameScores(scores);
         if (!result.ok) return fail(result.error);
       }
 

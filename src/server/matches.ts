@@ -17,11 +17,8 @@ import {
   requireOnParents,
   requireRole,
   rolesIn,
-  sessionsOfGames,
-  sessionsOfMatches,
-  sessionsOfSessions,
-  sessionsOfTeams,
 } from "./access";
+import { sessionsOfGames, sessionsOfMatches, sessionsOfSessions, sessionsOfTeams } from "./queries/parents";
 import { expectAll, stop, unique, write } from "./core";
 import type { Db } from "./db/client";
 import { removeGameRows, removeMatchRows, removePlayerRows, removeTeamRows } from "./remove";
@@ -148,18 +145,18 @@ export const removeTeams = write(RemoveTeamsInput, async ({ db, actor }, teamIds
 // ------------------------------------------------------------------ players
 
 export const saveMatchPlayers = write(SaveMatchPlayersInput, async ({ db, actor }, items) => {
-  const lookup = await sessionsOfTeams(db, items.map((p) => p.teamId));
-  const sessionIds = await requireOnParents(db, actor, items, (p) => p.teamId, lookup, "EDITOR", "teamId");
+  const lookup = await sessionsOfTeams(db, items.map((p) => p.matchTeamId));
+  const sessionIds = await requireOnParents(db, actor, items, (p) => p.matchTeamId, lookup, "EDITOR", "matchTeamId");
 
   // An account plays for one team per match. Check inside the call, then against saved players.
-  const matchOf = (p: { teamId: string }) => lookup.get(p.teamId)!.matchId;
+  const matchOf = (p: { matchTeamId: string }) => lookup.get(p.matchTeamId)!.matchId;
   await lockMatches(db, items.map(matchOf));
   const teamByMatchAccount = new Map<string, string>();
   items.forEach((p, index) => {
     const slot = `${matchOf(p)}:${p.accountId}`;
     const team = teamByMatchAccount.get(slot);
-    if (team && team !== p.teamId) stop("CONFLICT", [index, "accountId"], "Already on the other team of this match");
-    teamByMatchAccount.set(slot, p.teamId);
+    if (team && team !== p.matchTeamId) stop("CONFLICT", [index, "accountId"], "Already on the other team of this match");
+    teamByMatchAccount.set(slot, p.matchTeamId);
   });
   const saved = await db
     .selectFrom("match_players")
@@ -169,13 +166,13 @@ export const saveMatchPlayers = write(SaveMatchPlayersInput, async ({ db, actor 
     .where("match_players.account_id", "in", unique(items.map((p) => p.accountId)))
     .execute();
   items.forEach((p, index) => {
-    const clash = saved.find((s) => s.match_id === matchOf(p) && s.account_id === p.accountId && s.team_id !== p.teamId);
+    const clash = saved.find((s) => s.match_id === matchOf(p) && s.account_id === p.accountId && s.team_id !== p.matchTeamId);
     if (clash) stop("CONFLICT", [index, "accountId"], "Already on the other team of this match");
   });
 
   await db
     .insertInto("match_players")
-    .values(items.map((p) => ({ match_team_id: p.teamId, account_id: p.accountId, created_by: actor.accountId })))
+    .values(items.map((p) => ({ match_team_id: p.matchTeamId, account_id: p.accountId, created_by: actor.accountId })))
     .onConflict((oc) => oc.columns(["match_team_id", "account_id"]).doNothing())
     .execute();
 
@@ -205,7 +202,7 @@ export const saveMatchPlayers = write(SaveMatchPlayersInput, async ({ db, actor 
         fresh.map((m) => ({
           session_id: m.sessionId,
           account_id: m.accountId,
-          role_type: "VIEWER" as const,
+          role: "VIEWER" as const,
           created_by: actor.accountId,
         })),
       )
@@ -215,8 +212,8 @@ export const saveMatchPlayers = write(SaveMatchPlayersInput, async ({ db, actor 
 });
 
 export const removeMatchPlayers = write(RemoveMatchPlayersInput, async ({ db, actor }, items) => {
-  const lookup = await sessionsOfTeams(db, items.map((p) => p.teamId));
-  const allowed = await removableOnParents(db, actor, items, (p) => p.teamId, lookup, "EDITOR", "teamId");
+  const lookup = await sessionsOfTeams(db, items.map((p) => p.matchTeamId));
+  const allowed = await removableOnParents(db, actor, items, (p) => p.matchTeamId, lookup, "EDITOR", "matchTeamId");
   if (!allowed.length) return;
   const rows = await db
     .selectFrom("match_players")
@@ -224,7 +221,7 @@ export const removeMatchPlayers = write(RemoveMatchPlayersInput, async ({ db, ac
     .where((eb) =>
       eb.or(
         allowed.map((p) =>
-          eb.and([eb("match_team_id", "=", p.teamId), eb("account_id", "=", p.accountId)]),
+          eb.and([eb("match_team_id", "=", p.matchTeamId), eb("account_id", "=", p.accountId)]),
         ),
       ),
     )
@@ -277,14 +274,14 @@ export const removeGames = write(RemoveGamesInput, async ({ db, actor }, gameIds
 
 export const saveGameScores = write(SaveGameScoresInput, async ({ db, actor }, items) => {
   // Team and game must share a match, so authorizing the team covers the game.
-  const teams = await sessionsOfTeams(db, items.map((s) => s.teamId));
-  await requireOnParents(db, actor, items, (s) => s.teamId, teams, "EDITOR", "teamId");
-  const games = await sessionsOfGames(db, items.map((s) => s.gameId));
+  const teams = await sessionsOfTeams(db, items.map((s) => s.matchTeamId));
+  await requireOnParents(db, actor, items, (s) => s.matchTeamId, teams, "EDITOR", "matchTeamId");
+  const games = await sessionsOfGames(db, items.map((s) => s.matchGameId));
   items.forEach((s, index) => {
-    const game = games.get(s.gameId);
-    if (!game) stop("NOT_FOUND", [index, "gameId"], "Not found");
-    if (game.matchId !== teams.get(s.teamId)!.matchId) {
-      stop("CONFLICT", [index, "gameId"], "Team and game belong to different matches");
+    const game = games.get(s.matchGameId);
+    if (!game) stop("NOT_FOUND", [index, "matchGameId"], "Not found");
+    if (game.matchId !== teams.get(s.matchTeamId)!.matchId) {
+      stop("CONFLICT", [index, "matchGameId"], "Team and game belong to different matches");
     }
   });
 
@@ -292,8 +289,8 @@ export const saveGameScores = write(SaveGameScoresInput, async ({ db, actor }, i
     .insertInto("match_game_scores")
     .values(
       items.map((s) => ({
-        match_team_id: s.teamId,
-        match_game_id: s.gameId,
+        match_team_id: s.matchTeamId,
+        match_game_id: s.matchGameId,
         score: s.score,
         created_by: actor.accountId,
       })),
@@ -309,15 +306,15 @@ export const saveGameScores = write(SaveGameScoresInput, async ({ db, actor }, i
 });
 
 export const removeGameScores = write(RemoveGameScoresInput, async ({ db, actor }, items) => {
-  const teams = await sessionsOfTeams(db, items.map((s) => s.teamId));
-  const allowed = await removableOnParents(db, actor, items, (s) => s.teamId, teams, "EDITOR", "teamId");
+  const teams = await sessionsOfTeams(db, items.map((s) => s.matchTeamId));
+  const allowed = await removableOnParents(db, actor, items, (s) => s.matchTeamId, teams, "EDITOR", "matchTeamId");
   if (!allowed.length) return;
   await db
     .deleteFrom("match_game_scores")
     .where((eb) =>
       eb.or(
         allowed.map((s) =>
-          eb.and([eb("match_team_id", "=", s.teamId), eb("match_game_id", "=", s.gameId)]),
+          eb.and([eb("match_team_id", "=", s.matchTeamId), eb("match_game_id", "=", s.matchGameId)]),
         ),
       ),
     )

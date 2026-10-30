@@ -8,7 +8,7 @@ describe("matches, teams, games and scores", () => {
   test("an account plays for one team per match", async ({ world: w }) => {
     const { team2 } = await scoredMatch(w);
     // The owner already plays for team 1 of this match.
-    const result = await w.b.matches.savePlayers([{ teamId: team2, accountId: w.owner.accountId }]);
+    const result = await w.b.matches.saveMatchPlayers([{ matchTeamId: team2, accountId: w.owner.accountId }]);
     expect(failure(result)).toEqual({ code: "CONFLICT", paths: [[0, "accountId"]] });
   });
 
@@ -78,8 +78,8 @@ describe("matches, teams, games and scores", () => {
 
       const results = await whileLocked(w.admin, ...lockTeams([team1, team2]), () =>
         Promise.all([
-          w.b.matches.savePlayers([{ teamId: team1, accountId: w.mate.accountId }]),
-          w.b.matches.savePlayers([{ teamId: team2, accountId: w.mate.accountId }]),
+          w.b.matches.saveMatchPlayers([{ matchTeamId: team1, accountId: w.mate.accountId }]),
+          w.b.matches.saveMatchPlayers([{ matchTeamId: team2, accountId: w.mate.accountId }]),
         ]),
       );
       expect(results.map(code).sort()).toEqual(["CONFLICT", "ok"]);
@@ -92,15 +92,15 @@ describe("matches, teams, games and scores", () => {
     ok(await w.b.matches.save([{ id: otherMatch, sessionId, label: "Match 2", matchType: "MS" }]));
     ok(await w.b.matches.saveTeams([{ id: otherTeam, matchId: otherMatch, label: "X" }]));
 
-    const result = await w.b.matches.saveScores([{ teamId: otherTeam, gameId: game1, score: 5 }]);
-    expect(failure(result)).toEqual({ code: "CONFLICT", paths: [[0, "gameId"]] });
+    const result = await w.b.matches.saveGameScores([{ matchTeamId: otherTeam, matchGameId: game1, score: 5 }]);
+    expect(failure(result)).toEqual({ code: "CONFLICT", paths: [[0, "matchGameId"]] });
   });
 
   test("a cleared score leaves the game and the other team's score", async ({ world: w }) => {
     const { sessionId, matchId, team2, game1 } = await scoredMatch(w);
-    ok(await w.b.matches.removeScores([{ teamId: team2, gameId: game1 }]));
+    ok(await w.b.matches.removeGameScores([{ matchTeamId: team2, matchGameId: game1 }]));
     // Clearing a score that is already gone is not an error.
-    ok(await w.b.matches.removeScores([{ teamId: team2, gameId: game1 }]));
+    ok(await w.b.matches.removeGameScores([{ matchTeamId: team2, matchGameId: game1 }]));
 
     const session = ok(await w.b.sessions.get({ sessionId }));
     const game = session.matches.find((m) => m.id === matchId)!.games.find((g) => g.id === game1)!;

@@ -8,7 +8,7 @@
  * Computed at query time in memory. Move it into SQL when it gets slow.
  */
 import type { Stats, TeammateStat } from "../contract";
-import { toAccount, accountColumns } from "./accounts";
+import { accountColumns, toAccount } from "./queries/accounts";
 import { NoInput, read } from "./core";
 import type { Db } from "./db/client";
 

@@ -54,11 +54,11 @@ describe("sessions", () => {
       { id: first.team1, matchId: first.matchId, label: "Team 1" },
       { id: first.team2, matchId: first.matchId, label: "Team 2" },
     ]));
-    ok(await w.b.matches.savePlayers([
-      { teamId: first.team1, accountId: w.owner.accountId },
-      { teamId: first.team2, accountId: w.stranger.accountId },
+    ok(await w.b.matches.saveMatchPlayers([
+      { matchTeamId: first.team1, accountId: w.owner.accountId },
+      { matchTeamId: first.team2, accountId: w.stranger.accountId },
     ]));
-    ok(await w.b.matches.saveScores([{ teamId: first.team1, gameId: first.game1, score: 21 }]));
+    ok(await w.b.matches.saveGameScores([{ matchTeamId: first.team1, matchGameId: first.game1, score: 21 }]));
     expect(ok(await w.b.sessions.get({ sessionId: first.sessionId }))).toEqual(before);
   });
 
@@ -66,7 +66,7 @@ describe("sessions", () => {
     const { sessionId, game1 } = await scoredMatch(w);
     const video = id();
     ok(await w.b.videos.save([{ id: video, label: "Court", videoUrl: "r2://x" }]));
-    ok(await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: game1, offsetSeconds: 3 }]));
+    ok(await w.b.videos.saveVideoGames([{ videoId: video, matchGameId: game1, canonicalOffset: 3 }]));
 
     expect(code(await w.b.sessions.remove([sessionId]))).toBe("ok");
     expect(code(await w.b.sessions.remove([sessionId]))).toBe("ok");

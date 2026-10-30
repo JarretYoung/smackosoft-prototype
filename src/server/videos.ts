@@ -2,15 +2,23 @@ import { sql } from "kysely";
 import {
   ListOwnVideosInput,
   ListSessionVideosInput,
-  RemoveVideoLinkagesInput,
-  SaveVideoLinkagesInput,
+  RemoveVideoGamesInput,
+  RemoveVideoSessionsInput,
+  SaveVideoGamesInput,
+  SaveVideoSessionsInput,
   SaveVideosInput,
   type OwnVideo,
   type SessionVideo,
   type Video,
   type VideoLinkage,
 } from "../contract";
-import { removableOnParents, requireOnParents, requireRole, rolesIn, sessionsOfGames, sessionsOfSessions } from "./access";
+import {
+  removableOnParents,
+  requireOnParents,
+  requireRole,
+  rolesIn,
+} from "./access";
+import { sessionsOfGames, sessionsOfSessions } from "./queries/parents";
 import { expectAll, read, stop, unique, write } from "./core";
 import type { Db } from "./db/client";
 
@@ -39,20 +47,20 @@ const toVideo = (row: {
   createdAt: row.created_at.toISOString(),
 });
 
-const offsetSeconds = sql<number | null>`extract(epoch from video_games.canonical_offset)`.as("offset_seconds");
+const canonicalOffset = sql<number | null>`extract(epoch from video_games.canonical_offset)`.as("canonical_offset");
 
 type Linked = { linkage: VideoLinkage; video: Video };
 
-/** Pool links first, then game links, each in the order they were made. */
+/** Session rows first, then game rows, each in the order they were made. */
 async function linkagesIn(db: Db, sessionId: string, videoIds?: string[]): Promise<Linked[]> {
-  let pool = db
+  let sessionRows = db
     .selectFrom("video_sessions")
     .innerJoin("videos", "videos.id", "video_sessions.video_id")
     .leftJoin("accounts as maker", "maker.id", "video_sessions.created_by")
     .select([...videoColumns, "maker.display_name as maker_name", "video_sessions.created_at as linked_at"])
     .where("video_sessions.session_id", "=", sessionId)
     .orderBy("video_sessions.created_at");
-  let games = db
+  let gameRows = db
     .selectFrom("video_games")
     .innerJoin("videos", "videos.id", "video_games.video_id")
     .innerJoin("match_games", "match_games.id", "video_games.match_game_id")
@@ -66,35 +74,35 @@ async function linkagesIn(db: Db, sessionId: string, videoIds?: string[]): Promi
       "editor.display_name as editor_name",
       "video_games.created_at as linked_at",
       "video_games.updated_at as edited_at",
-      offsetSeconds,
+      canonicalOffset,
     ])
     .where("matches.session_id", "=", sessionId)
     .orderBy("video_games.created_at");
   if (videoIds) {
-    pool = pool.where("video_sessions.video_id", "in", videoIds);
-    games = games.where("video_games.video_id", "in", videoIds);
+    sessionRows = sessionRows.where("video_sessions.video_id", "in", videoIds);
+    gameRows = gameRows.where("video_games.video_id", "in", videoIds);
   }
-  const [poolRows, gameRows] = await Promise.all([pool.execute(), games.execute()]);
+  const [inSession, inGames] = await Promise.all([sessionRows.execute(), gameRows.execute()]);
   return [
-    ...poolRows.map((row) => ({
+    ...inSession.map((row) => ({
       linkage: {
         videoId: row.id,
         sessionId,
         matchGameId: null,
-        offsetSeconds: null,
-        changedBy: row.maker_name ?? "Someone",
+        canonicalOffset: null,
+        changedByName: row.maker_name ?? "Someone",
         changedAt: row.linked_at.toISOString(),
       },
       video: toVideo(row),
     })),
-    ...gameRows.map((row) => ({
+    ...inGames.map((row) => ({
       linkage: {
         videoId: row.id,
         sessionId,
         matchGameId: row.match_game_id,
-        offsetSeconds: row.offset_seconds,
+        canonicalOffset: row.canonical_offset,
         // The last edit wins. A link that was never edited was last changed when it was made.
-        changedBy: (row.edited_at ? row.editor_name : row.maker_name) ?? "Someone",
+        changedByName: (row.edited_at ? row.editor_name : row.maker_name) ?? "Someone",
         changedAt: (row.edited_at ?? row.linked_at).toISOString(),
       },
       video: toVideo(row),
@@ -158,78 +166,77 @@ export const saveVideos = write(SaveVideosInput, async ({ db, actor }, items) =>
   expectAll(items, new Set(written.map((r) => r.id)), (v) => v.id, "Id already used");
 });
 
-export const saveVideoLinkages = write(SaveVideoLinkagesInput, async ({ db, actor }, items) => {
-  const sessions = sessionsOfSessions(items.map((l) => l.sessionId));
-  await requireOnParents(db, actor, items, (l) => l.sessionId, sessions, "EDITOR", "sessionId");
-
-  // The video is the actor's own, or already in this session's pool.
-  const videos = await db
-    .selectFrom("videos")
-    .select(["id", "created_by"])
-    .where("id", "in", unique(items.map((l) => l.videoId)))
-    .execute();
+/** The video is the actor's own, or already in the session. */
+async function requireOwnOrInSession(db: Db, actor: { accountId: string }, items: { videoId: string; sessionId: string }[]) {
+  const videoIds = unique(items.map((l) => l.videoId));
+  const videos = await db.selectFrom("videos").select(["id", "created_by"]).where("id", "in", videoIds).execute();
   const owner = new Map(videos.map((v) => [v.id, v.created_by]));
   const linked = await db
     .selectFrom("video_sessions")
     .select(["video_id", "session_id"])
-    .where("video_id", "in", unique(items.map((l) => l.videoId)))
+    .where("video_id", "in", videoIds)
     .where("session_id", "in", unique(items.map((l) => l.sessionId)))
     .execute();
-  const linkedPairs = new Set(linked.map((l) => `${l.video_id}:${l.session_id}`));
+  const inSession = new Set(linked.map((l) => `${l.video_id}:${l.session_id}`));
   items.forEach((l, index) => {
-    const createdBy = owner.get(l.videoId);
-    if (createdBy !== actor.accountId && !linkedPairs.has(`${l.videoId}:${l.sessionId}`)) {
+    if (owner.get(l.videoId) !== actor.accountId && !inSession.has(`${l.videoId}:${l.sessionId}`)) {
       stop("NOT_FOUND", [index, "videoId"], "Not found");
     }
   });
+}
 
-  // A game-level linkage must point at a game of the same session.
-  const games = await sessionsOfGames(db, items.flatMap((l) => (l.matchGameId ? [l.matchGameId] : [])));
-  items.forEach((l, index) => {
-    if (l.matchGameId && games.get(l.matchGameId)?.sessionId !== l.sessionId) {
-      stop("CONFLICT", [index, "matchGameId"], "Game is not part of this session");
-    }
-  });
-
-  // Every link puts the video in the pool. A game link adds its offset on top.
-  const pool = unique(items.map((l) => `${l.videoId}:${l.sessionId}`)).map((key) => {
+async function putInSessions(db: Db, actor: { accountId: string }, items: { videoId: string; sessionId: string }[]) {
+  const rows = unique(items.map((l) => `${l.videoId}:${l.sessionId}`)).map((key) => {
     const [videoId, sessionId] = key.split(":");
     return { video_id: videoId, session_id: sessionId, created_by: actor.accountId };
   });
   await db
     .insertInto("video_sessions")
-    .values(pool)
+    .values(rows)
     .onConflict((oc) => oc.columns(["video_id", "session_id"]).doNothing())
     .execute();
+}
 
-  const gameLinks = items.filter((l) => l.matchGameId !== null);
-  if (gameLinks.length) {
-    await db
-      .insertInto("video_games")
-      .values(
-        gameLinks.map((l) => ({
-          video_id: l.videoId,
-          match_game_id: l.matchGameId!,
-          canonical_offset: l.offsetSeconds == null ? null : sql<string>`make_interval(secs => ${l.offsetSeconds})`,
-          created_by: actor.accountId,
-        })),
-      )
-      .onConflict((oc) =>
-        oc.columns(["video_id", "match_game_id"]).doUpdateSet((eb) => ({
-          canonical_offset: eb.ref("excluded.canonical_offset"),
-          updated_at: sql`now()`,
-          updated_by: actor.accountId,
-        })),
-      )
-      .execute();
-  }
+export const saveVideoSessions = write(SaveVideoSessionsInput, async ({ db, actor }, items) => {
+  const sessions = sessionsOfSessions(items.map((l) => l.sessionId));
+  await requireOnParents(db, actor, items, (l) => l.sessionId, sessions, "EDITOR", "sessionId");
+  await requireOwnOrInSession(db, actor, items);
+  await putInSessions(db, actor, items);
 });
 
-export const removeVideoLinkages = write(RemoveVideoLinkagesInput, async ({ db, actor }, items) => {
+export const saveVideoGames = write(SaveVideoGamesInput, async ({ db, actor }, items) => {
+  const games = await sessionsOfGames(db, items.map((l) => l.matchGameId));
+  await requireOnParents(db, actor, items, (l) => l.matchGameId, games, "EDITOR", "matchGameId");
+
+  const inSessions = items.map((l) => ({ videoId: l.videoId, sessionId: games.get(l.matchGameId)!.sessionId }));
+  await requireOwnOrInSession(db, actor, inSessions);
+  await putInSessions(db, actor, inSessions);
+
+  await db
+    .insertInto("video_games")
+    .values(
+      items.map((l) => ({
+        video_id: l.videoId,
+        match_game_id: l.matchGameId,
+        canonical_offset: l.canonicalOffset == null ? null : sql<string>`make_interval(secs => ${l.canonicalOffset})`,
+        created_by: actor.accountId,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.columns(["video_id", "match_game_id"]).doUpdateSet((eb) => ({
+        canonical_offset: eb.ref("excluded.canonical_offset"),
+        updated_at: sql`now()`,
+        updated_by: actor.accountId,
+      })),
+    )
+    .execute();
+});
+
+export const removeVideoSessions = write(RemoveVideoSessionsInput, async ({ db, actor }, items) => {
   const sessions = sessionsOfSessions(items.map((l) => l.sessionId));
   const visible = await removableOnParents(db, actor, items, (l) => l.sessionId, sessions, "EDITOR", "sessionId");
   if (!visible.length) return;
-  // A pool link takes the video's game links in that session with it. A game link leaves the pool alone.
+  // The video's game links in that session go with it.
   await db
     .deleteFrom("video_games")
     .where((eb) => {
@@ -239,22 +246,21 @@ export const removeVideoLinkages = write(RemoveVideoLinkagesInput, async ({ db, 
           .innerJoin("matches", "matches.id", "match_games.match_id")
           .select("match_games.id")
           .where("matches.session_id", "=", sessionId);
-      return eb.or(
-        visible.map((l) =>
-          eb.and([
-            eb("video_id", "=", l.videoId),
-            l.matchGameId ? eb("match_game_id", "=", l.matchGameId) : eb("match_game_id", "is not", null),
-            eb("match_game_id", "in", gamesOf(l.sessionId)),
-          ]),
-        ),
-      );
+      return eb.or(visible.map((l) => eb.and([eb("video_id", "=", l.videoId), eb("match_game_id", "in", gamesOf(l.sessionId))])));
     })
     .execute();
-  const pool = visible.filter((l) => l.matchGameId === null);
-  if (pool.length) {
-    await db
-      .deleteFrom("video_sessions")
-      .where((eb) => eb.or(pool.map((l) => eb.and([eb("video_id", "=", l.videoId), eb("session_id", "=", l.sessionId)]))))
-      .execute();
-  }
+  await db
+    .deleteFrom("video_sessions")
+    .where((eb) => eb.or(visible.map((l) => eb.and([eb("video_id", "=", l.videoId), eb("session_id", "=", l.sessionId)]))))
+    .execute();
+});
+
+export const removeVideoGames = write(RemoveVideoGamesInput, async ({ db, actor }, items) => {
+  const games = await sessionsOfGames(db, items.map((l) => l.matchGameId));
+  const visible = await removableOnParents(db, actor, items, (l) => l.matchGameId, games, "EDITOR", "matchGameId");
+  if (!visible.length) return;
+  await db
+    .deleteFrom("video_games")
+    .where((eb) => eb.or(visible.map((l) => eb.and([eb("video_id", "=", l.videoId), eb("match_game_id", "=", l.matchGameId)]))))
+    .execute();
 });

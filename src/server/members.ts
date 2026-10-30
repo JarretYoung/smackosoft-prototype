@@ -9,10 +9,10 @@ export const saveMembers = write(SaveMembersInput, async ({ db, actor }, items) 
   const roles = await rolesIn(db, actor, items.map((m) => m.sessionId));
   const current = await db
     .selectFrom("session_access")
-    .select(["session_id", "account_id", "role_type"])
+    .select(["session_id", "account_id", "role"])
     .where(matchesPairs(items))
     .execute();
-  const currentRole = new Map(current.map((r) => [`${r.session_id}:${r.account_id}`, r.role_type]));
+  const currentRole = new Map(current.map((r) => [`${r.session_id}:${r.account_id}`, r.role]));
 
   items.forEach((member, index) => {
     requireRole(roles, member.sessionId, "MANAGER", [index, "sessionId"]);
@@ -30,7 +30,7 @@ export const saveMembers = write(SaveMembersInput, async ({ db, actor }, items) 
       items.map((m) => ({
         session_id: m.sessionId,
         account_id: m.accountId,
-        role_type: m.role,
+        role: m.role,
         created_by: actor.accountId,
       })),
     )
@@ -38,11 +38,11 @@ export const saveMembers = write(SaveMembersInput, async ({ db, actor }, items) 
       oc
         .columns(["session_id", "account_id"])
         .doUpdateSet((eb) => ({
-          role_type: eb.ref("excluded.role_type"),
+          role: eb.ref("excluded.role"),
           updated_at: sql`now()`,
           updated_by: actor.accountId,
         }))
-        .where("session_access.role_type", "<>", "OWNER"),
+        .where("session_access.role", "<>", "OWNER"),
     )
     .returning(["session_id", "account_id"])
     .execute();
@@ -69,10 +69,10 @@ export const removeMembers = write(RemoveMembersInput, async ({ db, actor }, ite
 
   const current = await db
     .selectFrom("session_access")
-    .select(["session_id", "account_id", "role_type"])
+    .select(["session_id", "account_id", "role"])
     .where(matchesPairs(visible.map((v) => v.member)))
     .execute();
-  const currentRole = new Map(current.map((r) => [`${r.session_id}:${r.account_id}`, r.role_type]));
+  const currentRole = new Map(current.map((r) => [`${r.session_id}:${r.account_id}`, r.role]));
 
   const players = await db
     .selectFrom("match_players")

@@ -2,7 +2,7 @@
 
 import { Check, Search, UserPlus } from "lucide-react";
 import { useState, useTransition } from "react";
-import { findAccountByHandle } from "@/src/app/actions";
+import { findByHandle } from "@/src/app/actions";
 import { PersonAvatar } from "@/src/components/avatar-stack";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -23,7 +23,7 @@ type Person = Account | NewGuest;
  * by handle to find someone new, or type a name to make a guest. Nothing is saved here.
  * The parent decides what to do on confirm.
  */
-export function AddParticipantsSheet({
+export function AddMembersSheet({
   open,
   onOpenChange,
   people,
@@ -91,7 +91,7 @@ function Picker({
   function lookup() {
     setLookupError(null);
     start(async () => {
-      const result = await findAccountByHandle({ handle });
+      const result = await findByHandle({ handle });
       if (!result.ok) return void setLookupError(errorMessage(result.error));
       const found = result.data;
       if (!found) return void setLookupError(`No one has the handle @${handle}`);
@@ -119,7 +119,7 @@ function Picker({
   return (
     <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-4">
       <SheetHeader className="px-5 pt-2 pb-0">
-        <SheetTitle>Add participants</SheetTitle>
+        <SheetTitle>Add members</SheetTitle>
         <SheetDescription>Pick people you have played with, or search by name or handle.</SheetDescription>
       </SheetHeader>
 

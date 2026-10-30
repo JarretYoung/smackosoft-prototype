@@ -1,7 +1,7 @@
 import { VideosPanel } from "@/src/components/videos/videos-panel";
 import { unwrap } from "@/src/lib/result";
-import { can } from "@/src/lib/roles";
 import { backend } from "@/src/server";
+import { atLeast } from "@/src/contract";
 
 export default async function VideosPage({
   params,
@@ -19,12 +19,12 @@ export default async function VideosPage({
   const matches = session.matches.map((match, mi) => ({
     id: match.id,
     label: match.label || `Match ${mi + 1}`,
-    games: match.games.map((g, gi) => ({ id: g.id, number: gi + 1 })),
+    games: match.games.map((g) => ({ id: g.id, gameNumber: g.gameNumber })),
   }));
 
   return (
     <main>
-      <VideosPanel sessionId={id} canEdit={can(session.myRole, "EDITOR")} matches={matches} linked={linked} focus={game ?? null} />
+      <VideosPanel sessionId={id} canEdit={atLeast(session.myRole, "EDITOR")} matches={matches} linked={linked} focus={game ?? null} />
     </main>
   );
 }

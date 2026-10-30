@@ -3,7 +3,7 @@
 import { Check, Copy, MoreHorizontal, Plus, UserRound } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { createClaim, removeGuests, saveGuests } from "@/src/app/actions";
+import { createClaimCode, removeGuests, saveGuests } from "@/src/app/actions";
 import { PersonAvatar } from "@/src/components/avatar-stack";
 import {
   AlertDialog,
@@ -37,7 +37,7 @@ type Dialogs =
   | { kind: "add" }
   | { kind: "edit"; guest: Guest }
   | { kind: "delete"; guest: Guest }
-  | { kind: "claim"; guest: Guest; token: string };
+  | { kind: "claim"; guest: Guest; code: string };
 
 /**
  * The guests you created. Add one, rename it, give it a new handle, hand it over with a claim
@@ -80,14 +80,14 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
   }
   function makeClaim(guest: Guest) {
     start(async () => {
-      const result = await createClaim({ guestId: guest.id });
+      const result = await createClaimCode({ guestId: guest.id });
       if (!result.ok) return void toast.error(errorMessage(result.error));
       setCopied(false);
-      setDialog({ kind: "claim", guest, token: result.data.token });
+      setDialog({ kind: "claim", guest, code: result.data.code });
     });
   }
 
-  const claimLink = (token: string) => `${window.location.origin}/onboarding?claim=${token}`;
+  const claimLink = (code: string) => `${window.location.origin}/onboarding?claim=${code}`;
 
   return (
     <section aria-labelledby="guests-heading" className="flex flex-col gap-2">
@@ -130,7 +130,7 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="min-w-48">
                   <DropdownMenuItem onSelect={() => openEdit(guest)}>Edit</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => makeClaim(guest)}>Invite to claim</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => makeClaim(guest)}>Get claim code</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem variant="destructive" onSelect={() => setDialog({ kind: "delete", guest })}>
                     Delete
@@ -158,7 +158,7 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
             </SheetHeader>
             <FieldGroup className="px-5">
               <Field data-invalid={!!errors.form}>
-                <FieldLabel htmlFor="guest-name">Name</FieldLabel>
+                <FieldLabel htmlFor="guest-name">Display name</FieldLabel>
                 <Input
                   id="guest-name"
                   value={name}
@@ -208,7 +208,7 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
             </SheetHeader>
             <FieldGroup className="px-5">
               <Field>
-                <FieldLabel htmlFor="edit-name">Name</FieldLabel>
+                <FieldLabel htmlFor="edit-name">Display name</FieldLabel>
                 <Input id="edit-name" value={name} autoComplete="off" onChange={(e) => setName(e.target.value)} />
               </Field>
               <Field data-invalid={!!errors.form}>
@@ -278,7 +278,7 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
       <Sheet open={dialog?.kind === "claim"} onOpenChange={(open) => !open && close()}>
         <SheetContent side="bottom">
           <SheetHeader className="px-5 pt-2 pb-0">
-            <SheetTitle>Invite {dialog?.kind === "claim" ? dialog.guest.displayName : ""} to claim</SheetTitle>
+            <SheetTitle>Claim code for {dialog?.kind === "claim" ? dialog.guest.displayName : ""}</SheetTitle>
             <SheetDescription>
               Send them this link. When they sign up and open it, this guest becomes their account with all its history.
               Making a new code stops the old one working.
@@ -288,18 +288,18 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
             <FieldGroup className="px-5">
               <Field>
                 <FieldLabel>Code</FieldLabel>
-                <p className="rounded-xl bg-muted px-3.5 py-3 font-mono text-sm break-all">{dialog.token}</p>
+                <p className="rounded-xl bg-muted px-3.5 py-3 font-mono text-sm break-all">{dialog.code}</p>
               </Field>
               <Field>
-                <FieldLabel htmlFor="claim-link">Link</FieldLabel>
+                <FieldLabel htmlFor="claim-link">Claim link</FieldLabel>
                 <div className="flex gap-2">
-                  <Input id="claim-link" readOnly value={claimLink(dialog.token)} />
+                  <Input id="claim-link" readOnly value={claimLink(dialog.code)} />
                   <Button
                     variant="tinted"
                     size="icon"
                     aria-label="Copy link"
                     onClick={async () => {
-                      await navigator.clipboard.writeText(claimLink(dialog.token));
+                      await navigator.clipboard.writeText(claimLink(dialog.code));
                       setCopied(true);
                     }}
                   >

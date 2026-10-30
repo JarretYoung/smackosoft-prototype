@@ -3,11 +3,12 @@
  * Import `backend` from Server Components and from thin "use server" action wrappers.
  * Never import this from a Client Component.
  */
+import "server-only";
 import type { Backend } from "../contract";
 import {
   claimGuest,
-  createGuestClaim,
-  findAccountByHandle,
+  createClaimCode,
+  findByHandle,
   getCurrentAccount,
   isHandleFree,
   listGuests,
@@ -19,18 +20,18 @@ import { removeGameScores, removeMatches, removeMatchPlayers, removeGames, remov
 import { removeMembers, saveMembers } from "./members";
 import { getSessionDetails, listSessions, removeSessions, saveSessions } from "./sessions";
 import { getStats, getTeammateStats } from "./stats";
-import { listOwnVideos, listSessionVideos, removeVideoLinkages, saveVideoLinkages, saveVideos } from "./videos";
+import { listOwnVideos, listSessionVideos, removeVideoGames, removeVideoSessions, saveVideoGames, saveVideoSessions, saveVideos } from "./videos";
 
 export const backend: Backend = {
   accounts: {
     getCurrent: getCurrentAccount,
     saveCurrent: saveCurrentAccount,
-    findByHandle: findAccountByHandle,
+    findByHandle,
     isHandleFree,
     saveGuests,
     listGuests,
     removeGuests,
-    createClaim: createGuestClaim,
+    createClaimCode,
     claim: claimGuest,
   },
   sessions: {
@@ -48,19 +49,21 @@ export const backend: Backend = {
     remove: removeMatches,
     saveTeams,
     removeTeams,
-    savePlayers: saveMatchPlayers,
-    removePlayers: removeMatchPlayers,
+    saveMatchPlayers,
+    removeMatchPlayers,
     saveGames,
     removeGames,
-    saveScores: saveGameScores,
-    removeScores: removeGameScores,
+    saveGameScores,
+    removeGameScores,
   },
   videos: {
     listOwn: listOwnVideos,
     listBySession: listSessionVideos,
     save: saveVideos,
-    saveLinkages: saveVideoLinkages,
-    removeLinkages: removeVideoLinkages,
+    saveVideoSessions,
+    removeVideoSessions,
+    saveVideoGames,
+    removeVideoGames,
   },
   stats: {
     get: getStats,

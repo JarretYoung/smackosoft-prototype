@@ -3,8 +3,8 @@ import { MatchEditor } from "@/src/components/match-editor/match-editor";
 import { MatchSwitcher } from "@/src/components/match-editor/match-switcher";
 import { PageHeader } from "@/src/components/page-header";
 import { unwrap } from "@/src/lib/result";
-import { can } from "@/src/lib/roles";
 import { backend } from "@/src/server";
+import { atLeast } from "@/src/contract";
 
 export default async function EditMatchPage({
   params,
@@ -16,7 +16,7 @@ export default async function EditMatchPage({
   const { id } = await params;
   const { m } = await searchParams;
   const session = unwrap(await backend.sessions.get({ sessionId: id }));
-  if (!can(session.myRole, "EDITOR")) notFound();
+  if (!atLeast(session.myRole, "EDITOR")) notFound();
 
   const match = session.matches.find((x) => x.id === m) ?? session.matches[0] ?? null;
 

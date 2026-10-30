@@ -31,16 +31,16 @@ export async function scoredMatch(w: Who) {
     { id: game1, matchId, gameNumber: 1, startTime, endTime },
     { id: game2, matchId, gameNumber: 2, startTime, endTime },
   ]));
-  ok(await w.b.matches.savePlayers([
-    { teamId: team1, accountId: w.owner.accountId },
-    { teamId: team1, accountId: w.mate.accountId },
-    { teamId: team2, accountId: w.stranger.accountId },
+  ok(await w.b.matches.saveMatchPlayers([
+    { matchTeamId: team1, accountId: w.owner.accountId },
+    { matchTeamId: team1, accountId: w.mate.accountId },
+    { matchTeamId: team2, accountId: w.stranger.accountId },
   ]));
-  ok(await w.b.matches.saveScores([
-    { teamId: team1, gameId: game1, score: 21 },
-    { teamId: team2, gameId: game1, score: 17 },
-    { teamId: team1, gameId: game2, score: 21 },
-    { teamId: team2, gameId: game2, score: 19 },
+  ok(await w.b.matches.saveGameScores([
+    { matchTeamId: team1, matchGameId: game1, score: 21 },
+    { matchTeamId: team2, matchGameId: game1, score: 17 },
+    { matchTeamId: team1, matchGameId: game2, score: 21 },
+    { matchTeamId: team2, matchGameId: game2, score: 19 },
   ]));
   return { sessionId, matchId, team1, team2, game1, game2 };
 }

@@ -69,11 +69,11 @@ describe("membership rules", () => {
     const [matchId, team] = [id(), id()];
     ok(await w.b.matches.save([{ id: matchId, sessionId, label: "M", matchType: "MS" }]));
     ok(await w.b.matches.saveTeams([{ id: team, matchId, label: "T" }]));
-    ok(await w.b.matches.savePlayers([{ teamId: team, accountId: w.mate.accountId }]));
+    ok(await w.b.matches.saveMatchPlayers([{ matchTeamId: team, accountId: w.mate.accountId }]));
 
     const remove = [{ sessionId, accountId: w.mate.accountId }];
     expect(failure(await w.b.members.remove(remove))).toEqual({ code: "CONFLICT", paths: [[0, "accountId"]] });
-    ok(await w.b.matches.removePlayers([{ teamId: team, accountId: w.mate.accountId }]));
+    ok(await w.b.matches.removeMatchPlayers([{ matchTeamId: team, accountId: w.mate.accountId }]));
     expect(code(await w.b.members.remove(remove))).toBe("ok");
   });
 
@@ -82,7 +82,7 @@ describe("membership rules", () => {
     const [matchId, team] = [id(), id()];
     ok(await w.b.matches.save([{ id: matchId, sessionId, label: "M", matchType: "MS" }]));
     ok(await w.b.matches.saveTeams([{ id: team, matchId, label: "T" }]));
-    ok(await w.b.matches.savePlayers([{ teamId: team, accountId: w.mate.accountId }]));
+    ok(await w.b.matches.saveMatchPlayers([{ matchTeamId: team, accountId: w.mate.accountId }]));
 
     w.as(w.mate);
     expect(ok(await w.b.sessions.get({ sessionId })).myRole).toBe("VIEWER");
@@ -96,7 +96,7 @@ describe("membership rules", () => {
     ok(await w.b.members.save([{ sessionId, accountId: w.mate.accountId, role: "EDITOR" }]));
 
     w.as(w.mate);
-    const add = (accountId: string) => w.b.matches.savePlayers([{ teamId: team, accountId }]);
+    const add = (accountId: string) => w.b.matches.saveMatchPlayers([{ matchTeamId: team, accountId }]);
     expect(failure(await add(w.stranger.accountId))).toEqual({ code: "FORBIDDEN", paths: [[0, "accountId"]] });
     expect(code(await add(w.owner.accountId))).toBe("ok"); // already a member
   });

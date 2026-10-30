@@ -117,23 +117,23 @@ describe("guests", () => {
   test("a guest is claimed with a code and keeps its history", async ({ world: w }) => {
     const guest = { id: id(), displayName: "Dina", handle: handle() };
     ok(await w.b.accounts.saveGuests([guest]));
-    const { token } = ok(await w.b.accounts.createClaim({ guestId: guest.id }));
+    const { code: claimCode } = ok(await w.b.accounts.createClaimCode({ guestId: guest.id }));
     expect(ok(await w.b.accounts.listGuests()).find((g) => g.id === guest.id)?.hasClaimCode).toBe(true);
 
     // Someone else cannot make a code for it.
     w.as(w.mate);
-    expect(failure(await w.b.accounts.createClaim({ guestId: guest.id }))).toEqual({ code: "NOT_FOUND", paths: [["guestId"]] });
+    expect(failure(await w.b.accounts.createClaimCode({ guestId: guest.id }))).toEqual({ code: "NOT_FOUND", paths: [["guestId"]] });
 
     // A person with an account cannot claim. A wrong code finds nothing.
-    expect(failure(await w.b.accounts.claim({ token }))).toEqual({ code: "CONFLICT", paths: [["token"]] });
+    expect(failure(await w.b.accounts.claim({ code: claimCode }))).toEqual({ code: "CONFLICT", paths: [["code"]] });
     const fresh = await w.newUser();
     w.as(fresh);
-    expect(failure(await w.b.accounts.claim({ token: "not-a-real-code" }))).toEqual({ code: "NOT_FOUND", paths: [["token"]] });
+    expect(failure(await w.b.accounts.claim({ code: "not-a-real-code" }))).toEqual({ code: "NOT_FOUND", paths: [["code"]] });
 
-    expect(code(await w.b.accounts.claim({ token }))).toBe("ok");
+    expect(code(await w.b.accounts.claim({ code: claimCode }))).toBe("ok");
     const mine = ok(await w.b.accounts.getCurrent());
     expect(mine.account).toMatchObject({ id: guest.id, displayName: "Dina", isGuest: false });
-    expect(failure(await w.b.accounts.claim({ token }))).toEqual({ code: "CONFLICT", paths: [["token"]] });
+    expect(failure(await w.b.accounts.claim({ code: claimCode }))).toEqual({ code: "CONFLICT", paths: [["code"]] });
 
     w.as(w.owner);
     expect(ok(await w.b.accounts.listGuests()).map((g) => g.id)).not.toContain(guest.id);

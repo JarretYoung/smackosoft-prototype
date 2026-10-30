@@ -5,7 +5,7 @@ import { unwrap } from "./result";
 
 /**
  * People the viewer is likely to add to a session: teammates they have played with, most games
- * first, then the guests they created. Offered in the participant picker so nobody has to remember a handle.
+ * first, then the guests they created. Offered in the member picker so nobody has to remember a handle.
  */
 export async function loadPeople(): Promise<Account[]> {
   const [teammates, guests] = await Promise.all([backend.stats.getTeammates(), backend.accounts.listGuests()]);

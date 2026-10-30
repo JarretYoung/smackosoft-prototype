@@ -13,7 +13,7 @@ const AMOUNTS = ["50", "55", "60", "65", "70"];
  * The court fee as one big amount with its currency in front, and common amounts under it.
  * The amount stays text so a half typed number is never rewritten. The parent validates it.
  */
-export function FeeField({
+export function CourtFeeField({
   id,
   amount,
   currency,

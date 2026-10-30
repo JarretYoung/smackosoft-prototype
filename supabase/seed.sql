@@ -55,13 +55,13 @@ INSERT INTO smackosoft.accounts (id, account_type, display_name, handle, created
 --   s2 and s3 upcoming. s4 last week, Jarret owns, Ian is a viewer.
 -- ------------------------------------------------------------
 
-INSERT INTO smackosoft.sessions (id, label, date, start_time, end_time, location, location_url, latitude, longitude, court_fee, currency, organiser_id, created_by) VALUES
-  ('5a27b3f7-4464-4a5a-a97b-7d20ad844b50', 'Badminton with da Laddies', current_date, (current_date + time '09:00') AT TIME ZONE 'Asia/Kuala_Lumpur', (current_date + time '11:00') AT TIME ZONE 'Asia/Kuala_Lumpur', 'Sunway Serene', 'https://maps.google.com/?q=Sunway+Serene', 3.0906026, 101.6063411, 20, 'MYR', '5b60f606-2850-4943-a964-ae4285d7db92', '5b60f606-2850-4943-a964-ae4285d7db92'),
-  ('2732fcf3-fdd9-45c4-9d55-6afaade0f1f8', 'Thursday Smash',            current_date + 3, ((current_date + 3) + time '20:00') AT TIME ZONE 'Asia/Kuala_Lumpur', ((current_date + 3) + time '22:00') AT TIME ZONE 'Asia/Kuala_Lumpur', 'Bukit Jalil', NULL, NULL, NULL, NULL, NULL, NULL, '5b60f606-2850-4943-a964-ae4285d7db92'),
-  ('46e7531b-ab17-4680-8a94-5f900b1b33f8', 'Monday Singles',            current_date + 7, NULL, NULL, 'Setia Alam', NULL, NULL, NULL, 15, 'MYR', NULL, '5b60f606-2850-4943-a964-ae4285d7db92'),
-  ('c88c8371-e40a-4ba5-8188-3dff895ebd29', 'Last Week Doubles',         current_date - 7, ((current_date - 7) + time '09:00') AT TIME ZONE 'Asia/Kuala_Lumpur', ((current_date - 7) + time '11:00') AT TIME ZONE 'Asia/Kuala_Lumpur', 'Sunway Serene', NULL, 3.0906026, 101.6063411, 18, 'MYR', NULL, '60357636-416a-4a5e-b954-637beb84143b');
+INSERT INTO smackosoft.sessions (id, label, date, start_time, end_time, location, location_url, latitude, longitude, court_fee, currency, created_by) VALUES
+  ('5a27b3f7-4464-4a5a-a97b-7d20ad844b50', 'Badminton with da Laddies', current_date, (current_date + time '09:00') AT TIME ZONE 'Asia/Kuala_Lumpur', (current_date + time '11:00') AT TIME ZONE 'Asia/Kuala_Lumpur', 'Sunway Serene', 'https://maps.google.com/?q=Sunway+Serene', 3.0906026, 101.6063411, 20, 'MYR', '5b60f606-2850-4943-a964-ae4285d7db92'),
+  ('2732fcf3-fdd9-45c4-9d55-6afaade0f1f8', 'Thursday Smash',            current_date + 3, ((current_date + 3) + time '20:00') AT TIME ZONE 'Asia/Kuala_Lumpur', ((current_date + 3) + time '22:00') AT TIME ZONE 'Asia/Kuala_Lumpur', 'Bukit Jalil', NULL, NULL, NULL, NULL, NULL, '5b60f606-2850-4943-a964-ae4285d7db92'),
+  ('46e7531b-ab17-4680-8a94-5f900b1b33f8', 'Monday Singles',            current_date + 7, NULL, NULL, 'Setia Alam', NULL, NULL, NULL, 15, 'MYR', '5b60f606-2850-4943-a964-ae4285d7db92'),
+  ('c88c8371-e40a-4ba5-8188-3dff895ebd29', 'Last Week Doubles',         current_date - 7, ((current_date - 7) + time '09:00') AT TIME ZONE 'Asia/Kuala_Lumpur', ((current_date - 7) + time '11:00') AT TIME ZONE 'Asia/Kuala_Lumpur', 'Sunway Serene', NULL, 3.0906026, 101.6063411, 18, 'MYR', '60357636-416a-4a5e-b954-637beb84143b');
 
-INSERT INTO smackosoft.session_access (session_id, account_id, role_type, created_by) VALUES
+INSERT INTO smackosoft.session_access (session_id, account_id, role, created_by) VALUES
   -- s1
   ('5a27b3f7-4464-4a5a-a97b-7d20ad844b50', '5b60f606-2850-4943-a964-ae4285d7db92', 'OWNER',   '5b60f606-2850-4943-a964-ae4285d7db92'),
   ('5a27b3f7-4464-4a5a-a97b-7d20ad844b50', 'db7b6603-77f2-488f-94f8-7906072e373c', 'VIEWER',  '5b60f606-2850-4943-a964-ae4285d7db92'),

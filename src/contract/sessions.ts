@@ -11,7 +11,6 @@ export const SessionSave = z
     id: UUID,
     label: z.string().trim().min(1),
     date: DateOnly,
-    organiserId: UUID.nullish(),
     location: z.string().trim().min(1).nullish(),
     /** A maps link for the location. */
     locationUrl: HttpUrl.nullish(),
@@ -89,7 +88,6 @@ export type SessionDetails = {
   coverUrl: string | null;
   courtFee: number | null;
   currency: string | null;
-  organiserId: string | null;
   myRole: Role;
   members: Member[];
   /** Ordered by creation time. */

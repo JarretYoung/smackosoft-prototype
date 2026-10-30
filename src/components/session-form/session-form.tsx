@@ -24,6 +24,7 @@ import {
 import { Input } from "@/src/components/ui/input";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Spinner } from "@/src/components/ui/spinner";
+import { ROLE_CAN, ROLE_LABEL } from "@/src/lib/roles";
 import { SessionSave, type Account, type GrantableRole, type Role } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
 import {
@@ -43,14 +44,14 @@ import { isShortMapsLink, parseMapsLink, type MapsLink } from "@/src/lib/maps-li
 import { useRevealFirstError } from "@/src/lib/reveal-errors";
 import { useUnsavedChanges } from "@/src/lib/unsaved-changes";
 import { validate, visibleErrors } from "@/src/lib/validate";
-import { AddParticipantsSheet, type NewGuest } from "./add-participants-sheet";
+import { AddMembersSheet, type NewGuest } from "./add-members-sheet";
 import { CoverTile } from "./cover-tile";
 import { DateSheet } from "./date-sheet";
-import { FeeField } from "./fee-field";
+import { CourtFeeField } from "./court-fee-field";
 import { TimeSheet, timeChips } from "./time-sheet";
 import { ValueRow } from "./value-row";
 
-export type Participant = {
+export type MemberDraft = {
   account: Account;
   role: Role;
   isPlayer: boolean;
@@ -74,14 +75,7 @@ export type SessionFormInitial = {
   coverUrl: string;
   courtFee: string;
   currency: string;
-  participants: Participant[];
-};
-
-const ROLE_LABEL: Record<Role, string> = { OWNER: "Owner", MANAGER: "Manager", EDITOR: "Editor", VIEWER: "Viewer" };
-const ROLE_CAN: Record<"VIEWER" | "EDITOR" | "MANAGER", string> = {
-  VIEWER: "Can see the session and its videos",
-  EDITOR: "Can also edit matches, scores and players",
-  MANAGER: "Can also edit the session and manage people",
+  members: MemberDraft[];
 };
 
 const DAY = 24 * 60;
@@ -93,7 +87,7 @@ const END_AFTER = [60, 90, 120, 150, 180];
 
 /** What to do about each field, in place of the contract's developer wording. */
 const COPY: Record<string, string> = {
-  label: "Give the session a title",
+  label: "Give the session a name",
   date: "Pick a date",
   endTime: "Pick an end after the start",
   locationUrl: "Paste a full link, starting with https://",
@@ -116,7 +110,7 @@ export function SessionForm({
   mode: "create" | "edit";
   initial: SessionFormInitial;
   viewerRole: Role;
-  /** Suggestions for the participant picker. */
+  /** Suggestions for the member picker. */
   people: Account[];
   /** The date of the session the defaults came from, so the form can say where they are from. */
   prefilledFrom?: string;
@@ -141,7 +135,7 @@ export function SessionForm({
   const [coverUrl, setCoverUrl] = useState(initial.coverUrl);
   const [courtFee, setCourtFee] = useState(initial.courtFee);
   const [currency, setCurrency] = useState(initial.currency || "MYR");
-  const [participants, setParticipants] = useState<Participant[]>(initial.participants);
+  const [members, setMembers] = useState<MemberDraft[]>(initial.members);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitted, setSubmitted] = useState(false);
   const [rejections, setRejections] = useState(0);
@@ -220,8 +214,8 @@ export function SessionForm({
     currency !== (initial.currency || "MYR") ||
     startTime !== (initial.startTime ? isoToTimeInput(initial.startTime) : "") ||
     endTime !== (initial.endTime ? isoToTimeInput(initial.endTime) : "") ||
-    participants.length !== initial.participants.length ||
-    participants.some((p) => initial.participants.find((q) => q.account.id === p.account.id)?.role !== p.role);
+    members.length !== initial.members.length ||
+    members.some((p) => initial.members.find((q) => q.account.id === p.account.id)?.role !== p.role);
   useUnsavedChanges(dirty && !pending);
   // A pin found from the link can be saved on its own, but it is not something to warn about when leaving.
   const pinChanged = pin?.latitude !== (initial.latitude ?? undefined) || pin?.longitude !== (initial.longitude ?? undefined);
@@ -229,7 +223,7 @@ export function SessionForm({
   const canGrantManager = viewerRole === "OWNER";
 
   function addAccounts(accounts: (Account | NewGuest)[]) {
-    setParticipants((list) => [
+    setMembers((list) => [
       ...list,
       ...accounts.map((account) => ({
         account,
@@ -241,8 +235,8 @@ export function SessionForm({
   }
 
   const setRole = (id: string, role: Role) =>
-    setParticipants((list) => list.map((p) => (p.account.id === id ? { ...p, role } : p)));
-  const removeParticipant = (id: string) => setParticipants((list) => list.filter((p) => p.account.id !== id));
+    setMembers((list) => list.map((p) => (p.account.id === id ? { ...p, role } : p)));
+  const removeMember = (id: string) => setMembers((list) => list.filter((p) => p.account.id !== id));
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -258,7 +252,7 @@ export function SessionForm({
       const saved = await saveSessions([session]);
       if (!saved.ok) return fail(saved.error);
 
-      const guests = participants.filter((p) => p.newGuest);
+      const guests = members.filter((p) => p.newGuest);
       if (guests.length) {
         const result = await saveGuests(
           guests.map((g) => ({ id: g.account.id, displayName: g.account.displayName, handle: g.account.handle })),
@@ -266,12 +260,12 @@ export function SessionForm({
         if (!result.ok) return fail(result.error);
       }
 
-      const wanted = new Map(participants.map((p) => [p.account.id, p]));
-      const before = new Map(initial.participants.map((p) => [p.account.id, p]));
-      const toSave = participants
+      const wanted = new Map(members.map((p) => [p.account.id, p]));
+      const before = new Map(initial.members.map((p) => [p.account.id, p]));
+      const toSave = members
         .filter((p) => p.role !== "OWNER" && (before.get(p.account.id)?.role !== p.role || !before.has(p.account.id)))
         .map((p) => ({ sessionId: initial.id, accountId: p.account.id, role: p.role as GrantableRole }));
-      const toRemove = initial.participants
+      const toRemove = initial.members
         .filter((p) => p.role !== "OWNER" && !wanted.has(p.account.id))
         .map((p) => ({ sessionId: initial.id, accountId: p.account.id }));
 
@@ -303,7 +297,7 @@ export function SessionForm({
         className="gap-1 rounded-2xl bg-card px-4 pt-3 pb-4 shadow-card transition-shadow focus-within:ring-[3px] focus-within:ring-ring"
       >
         <FieldLabel htmlFor="label" className="section-label px-0">
-          Title
+          Name
         </FieldLabel>
         <input
           id="label"
@@ -419,7 +413,7 @@ export function SessionForm({
         </h2>
         <div className="rounded-2xl bg-card p-4 shadow-card">
           <Field data-invalid={!!(errors.courtFee || errors.currency)}>
-            <FeeField
+            <CourtFeeField
               id="fee"
               amount={courtFee}
               currency={currency}
@@ -433,12 +427,12 @@ export function SessionForm({
         </div>
       </section>
 
-      <section aria-labelledby="participants-heading" className="flex flex-col gap-2">
-        <h2 id="participants-heading" className="section-label">
-          Participants
+      <section aria-labelledby="members-heading" className="flex flex-col gap-2">
+        <h2 id="members-heading" className="section-label">
+          Members
         </h2>
         <ul className="group-list">
-          {participants.map((p) => (
+          {members.map((p) => (
             <li key={p.account.id} className="list-row">
               <PersonAvatar person={p.account} />
               <div className="min-w-0 flex-1">
@@ -473,7 +467,7 @@ export function SessionForm({
                         ))}
                     </DropdownMenuRadioGroup>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem variant="destructive" onSelect={() => removeParticipant(p.account.id)}>
+                    <DropdownMenuItem variant="destructive" onSelect={() => removeMember(p.account.id)}>
                       Remove
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -482,7 +476,7 @@ export function SessionForm({
             </li>
           ))}
           <li>
-            <AddRow onClick={() => setAdding(true)}>Add participant</AddRow>
+            <AddRow onClick={() => setAdding(true)}>Add member</AddRow>
           </li>
         </ul>
       </section>
@@ -524,11 +518,11 @@ export function SessionForm({
         clearLabel="No end time"
       />
 
-      <AddParticipantsSheet
+      <AddMembersSheet
         open={adding}
         onOpenChange={setAdding}
         people={people}
-        existingIds={new Set(participants.map((p) => p.account.id))}
+        existingIds={new Set(members.map((p) => p.account.id))}
         onConfirm={addAccounts}
       />
     </form>

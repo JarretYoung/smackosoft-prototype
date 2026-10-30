@@ -14,9 +14,8 @@ import { longDate, money, plural } from "@/src/lib/format";
 import { summarize } from "@/src/lib/matches";
 import { MATCH_TYPE_LABEL } from "@/src/lib/match-type";
 import { unwrap } from "@/src/lib/result";
-import { can } from "@/src/lib/roles";
 import { attentionOf } from "@/src/lib/videos";
-import type { Match, Team } from "@/src/contract";
+import { atLeast, type Match, type Team } from "@/src/contract";
 import { backend } from "@/src/server";
 
 const names = (team: Team) =>
@@ -27,8 +26,8 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
   const session = unwrap(await backend.sessions.get({ sessionId: id }));
   const me = unwrap(await backend.accounts.getCurrent());
   const fee = money(session.courtFee, session.currency);
-  const canManage = can(session.myRole, "MANAGER");
-  const canScore = can(session.myRole, "EDITOR");
+  const canManage = atLeast(session.myRole, "MANAGER");
+  const canScore = atLeast(session.myRole, "EDITOR");
   const videos = unwrap(await backend.videos.listBySession({ sessionId: id }));
   const { unsynced, unassigned } = attentionOf(
     videos,

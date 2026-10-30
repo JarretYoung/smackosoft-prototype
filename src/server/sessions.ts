@@ -10,8 +10,9 @@ import {
   type SessionDetails,
   type SessionListItem,
 } from "../contract";
-import { removableOnParents, requireRole, rolesIn, sessionsOfSessions } from "./access";
-import { accountColumns, toAccount } from "./accounts";
+import { removableOnParents, requireRole, rolesIn } from "./access";
+import { accountColumns, toAccount } from "./queries/accounts";
+import { sessionsOfSessions } from "./queries/parents";
 import { expectAll, read, stop, write } from "./core";
 import type { Db } from "./db/client";
 import { removeSessionRows } from "./remove";
@@ -30,7 +31,7 @@ async function loadMembers(db: Db, sessionIds: string[]): Promise<Map<string, Me
     .select((eb) => [
       ...accountColumns,
       "session_access.session_id",
-      "session_access.role_type",
+      "session_access.role",
       eb
         .exists(
           eb
@@ -48,7 +49,7 @@ async function loadMembers(db: Db, sessionIds: string[]): Promise<Map<string, Me
     .execute();
   for (const row of rows) {
     const list = bySession.get(row.session_id) ?? [];
-    list.push({ ...toAccount(row), role: row.role_type, isPlayer: Boolean(row.is_player) });
+    list.push({ ...toAccount(row), role: row.role, isPlayer: Boolean(row.is_player) });
     bySession.set(row.session_id, list);
   }
   return bySession;
@@ -79,7 +80,6 @@ export const saveSessions = write(SaveSessionsInput, async ({ db, actor }, items
         id: s.id,
         label: s.label,
         date: s.date,
-        organiser_id: s.organiserId ?? null,
         location: s.location ?? null,
         location_url: s.locationUrl ?? null,
         latitude: s.latitude ?? null,
@@ -98,7 +98,6 @@ export const saveSessions = write(SaveSessionsInput, async ({ db, actor }, items
         .doUpdateSet((eb) => ({
           label: eb.ref("excluded.label"),
           date: eb.ref("excluded.date"),
-          organiser_id: eb.ref("excluded.organiser_id"),
           location: eb.ref("excluded.location"),
           location_url: eb.ref("excluded.location_url"),
           latitude: eb.ref("excluded.latitude"),
@@ -119,7 +118,7 @@ export const saveSessions = write(SaveSessionsInput, async ({ db, actor }, items
               .select(sql.lit(1).as("one"))
               .whereRef("session_access.session_id", "=", "sessions.id")
               .where("session_access.account_id", "=", actor.accountId)
-              .where("session_access.role_type", "in", ["MANAGER", "OWNER"]),
+              .where("session_access.role", "in", ["MANAGER", "OWNER"]),
           ),
         ),
     )
@@ -136,7 +135,7 @@ export const saveSessions = write(SaveSessionsInput, async ({ db, actor }, items
         created.map((s) => ({
           session_id: s.id,
           account_id: actor.accountId,
-          role_type: "OWNER" as const,
+          role: "OWNER" as const,
           created_by: actor.accountId,
         })),
       )
@@ -179,7 +178,7 @@ export const listSessions = read(ListSessionsInput, async ({ db, actor }, input)
       "sessions.end_time",
       "sessions.location",
       "sessions.cover_url",
-      "session_access.role_type",
+      "session_access.role",
     ])
     .where("session_access.account_id", "=", actor.accountId)
     .where("sessions.date", ">=", from)
@@ -209,7 +208,7 @@ export const listSessions = read(ListSessionsInput, async ({ db, actor }, input)
       location: s.location,
       coverUrl: s.cover_url,
       matchCount: matchCount.get(s.id) ?? 0,
-      myRole: s.role_type,
+      myRole: s.role,
       members: members.get(s.id) ?? [],
     }),
   );
@@ -235,7 +234,6 @@ export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { s
       "sessions.cover_url",
       "sessions.court_fee",
       "sessions.currency",
-      "sessions.organiser_id",
       jsonArrayFrom(
         eb
           .selectFrom("matches")
@@ -306,7 +304,6 @@ export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { s
     coverUrl: session.cover_url,
     courtFee: session.court_fee,
     currency: session.currency,
-    organiserId: session.organiser_id,
     myRole: roles.get(sessionId)!,
     members,
     matches: session.matches.map(
@@ -320,7 +317,7 @@ export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { s
           gameNumber: g.game_number,
           startTime: new Date(g.start_time).toISOString(),
           endTime: new Date(g.end_time).toISOString(),
-          scores: g.scores.map((s) => ({ teamId: s.match_team_id, score: s.score })),
+          scores: g.scores.map((s) => ({ matchTeamId: s.match_team_id, score: s.score })),
           videoCount: Number(g.video_count ?? 0),
         })),
       }),

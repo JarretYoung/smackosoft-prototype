@@ -4,10 +4,9 @@ import { useState, type ReactNode } from "react";
 import { PersonAvatar } from "@/src/components/avatar-stack";
 import { RowChevron } from "@/src/components/row-chevron";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
-import type { Member, Role } from "@/src/contract";
+import type { Member } from "@/src/contract";
 import { plural } from "@/src/lib/format";
-
-const ROLE_LABEL: Record<Role, string> = { OWNER: "Owner", MANAGER: "Manager", EDITOR: "Editor", VIEWER: "Viewer" };
+import { ROLE_LABEL } from "@/src/lib/roles";
 
 /**
  * A row that opens a read-only list of the session's members. For people who cannot edit them.

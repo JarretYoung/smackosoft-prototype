@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 import type {
   Ack,
   ClaimInput,
-  CreateClaimInput,
+  CreateClaimCodeInput,
   RemoveGuestsInput,
   FindAccountByHandleInput,
   RemoveGameScoresInput,
@@ -17,7 +17,8 @@ import type {
   RemoveMatchPlayersInput,
   RemoveMembersInput,
   RemoveSessionsInput,
-  RemoveVideoLinkagesInput,
+  RemoveVideoGamesInput,
+  RemoveVideoSessionsInput,
   SaveCurrentAccountInput,
   SaveGameScoresInput,
   SaveGamesInput,
@@ -27,7 +28,8 @@ import type {
   SaveMembersInput,
   SaveSessionsInput,
   SaveTeamsInput,
-  SaveVideoLinkagesInput,
+  SaveVideoGamesInput,
+  SaveVideoSessionsInput,
   SaveVideosInput,
 } from "@/src/contract";
 import { backend } from "@/src/server";
@@ -47,15 +49,15 @@ export async function saveGuests(input: SaveGuestsInput) {
 export async function removeGuests(input: RemoveGuestsInput) {
   return refreshed(backend.accounts.removeGuests(input));
 }
-export async function createClaim(input: CreateClaimInput) {
-  const result = await backend.accounts.createClaim(input);
+export async function createClaimCode(input: CreateClaimCodeInput) {
+  const result = await backend.accounts.createClaimCode(input);
   if (result.ok) revalidatePath("/", "layout");
   return result;
 }
 export async function claimGuest(input: ClaimInput) {
   return refreshed(backend.accounts.claim(input));
 }
-export async function findAccountByHandle(input: FindAccountByHandleInput) {
+export async function findByHandle(input: FindAccountByHandleInput) {
   return backend.accounts.findByHandle(input);
 }
 export async function isHandleFree(input: FindAccountByHandleInput) {
@@ -85,11 +87,11 @@ export async function removeMatches(input: RemoveMatchesInput) {
 export async function saveTeams(input: SaveTeamsInput) {
   return refreshed(backend.matches.saveTeams(input));
 }
-export async function savePlayers(input: SaveMatchPlayersInput) {
-  return refreshed(backend.matches.savePlayers(input));
+export async function saveMatchPlayers(input: SaveMatchPlayersInput) {
+  return refreshed(backend.matches.saveMatchPlayers(input));
 }
-export async function removePlayers(input: RemoveMatchPlayersInput) {
-  return refreshed(backend.matches.removePlayers(input));
+export async function removeMatchPlayers(input: RemoveMatchPlayersInput) {
+  return refreshed(backend.matches.removeMatchPlayers(input));
 }
 export async function saveGames(input: SaveGamesInput) {
   return refreshed(backend.matches.saveGames(input));
@@ -97,19 +99,25 @@ export async function saveGames(input: SaveGamesInput) {
 export async function removeGames(input: RemoveGamesInput) {
   return refreshed(backend.matches.removeGames(input));
 }
-export async function removeScores(input: RemoveGameScoresInput) {
-  return refreshed(backend.matches.removeScores(input));
+export async function removeGameScores(input: RemoveGameScoresInput) {
+  return refreshed(backend.matches.removeGameScores(input));
 }
-export async function saveScores(input: SaveGameScoresInput) {
-  return refreshed(backend.matches.saveScores(input));
+export async function saveGameScores(input: SaveGameScoresInput) {
+  return refreshed(backend.matches.saveGameScores(input));
 }
 
 export async function saveVideos(input: SaveVideosInput) {
   return refreshed(backend.videos.save(input));
 }
-export async function saveLinkages(input: SaveVideoLinkagesInput) {
-  return refreshed(backend.videos.saveLinkages(input));
+export async function saveVideoSessions(input: SaveVideoSessionsInput) {
+  return refreshed(backend.videos.saveVideoSessions(input));
 }
-export async function removeLinkages(input: RemoveVideoLinkagesInput) {
-  return refreshed(backend.videos.removeLinkages(input));
+export async function removeVideoSessions(input: RemoveVideoSessionsInput) {
+  return refreshed(backend.videos.removeVideoSessions(input));
+}
+export async function saveVideoGames(input: SaveVideoGamesInput) {
+  return refreshed(backend.videos.saveVideoGames(input));
+}
+export async function removeVideoGames(input: RemoveVideoGamesInput) {
+  return refreshed(backend.videos.removeVideoGames(input));
 }

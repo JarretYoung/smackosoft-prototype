@@ -10,16 +10,16 @@ describe("videos", () => {
     }
   });
 
-  test("pools a video, links it to a game, and replays with a new offset", async ({ world: w }) => {
+  test("puts a video in a session, links it to a game, and replays with a new offset", async ({ world: w }) => {
     const { sessionId, game1 } = await scoredMatch(w);
     const video = id();
     ok(await w.b.videos.save([{ id: video, label: "Court 1", videoUrl: "r2://a" }]));
-    ok(await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: null }]));
-    ok(await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: game1, offsetSeconds: 12.5 }]));
-    ok(await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: game1, offsetSeconds: 30 }]));
+    ok(await w.b.videos.saveVideoSessions([{ videoId: video, sessionId }]));
+    ok(await w.b.videos.saveVideoGames([{ videoId: video, matchGameId: game1, canonicalOffset: 12.5 }]));
+    ok(await w.b.videos.saveVideoGames([{ videoId: video, matchGameId: game1, canonicalOffset: 30 }]));
 
     const linked = ok(await w.b.videos.listBySession({ sessionId }));
-    expect(linked.map((l) => [l.matchGameId === null, l.offsetSeconds]).sort()).toEqual([
+    expect(linked.map((l) => [l.matchGameId === null, l.canonicalOffset]).sort()).toEqual([
       [false, 30],
       [true, null],
     ]);
@@ -31,79 +31,84 @@ describe("videos", () => {
     expect(details.matches[0].games.find((g) => g.id === game1)?.videoCount).toBe(1);
   });
 
-  test("a game link joins the pool, can be unsynced, and can be negative", async ({ world: w }) => {
+  test("a game link puts the video in the session, can be unsynced, and can be negative", async ({ world: w }) => {
     const { sessionId, game1, game2 } = await scoredMatch(w);
     const video = id();
     ok(await w.b.videos.save([{ id: video, label: "Late start", videoUrl: "r2://d" }]));
-    ok(await w.b.videos.saveLinkages([
-      { videoId: video, sessionId, matchGameId: game1, offsetSeconds: -5 },
-      { videoId: video, sessionId, matchGameId: game2 },
+    ok(await w.b.videos.saveVideoGames([
+      { videoId: video, matchGameId: game1, canonicalOffset: -5 },
+      { videoId: video, matchGameId: game2 },
     ]));
 
     const linked = ok(await w.b.videos.listBySession({ sessionId }));
     expect(linked).toHaveLength(3);
-    expect(linked.filter((l) => l.matchGameId === null).map((l) => l.offsetSeconds)).toEqual([null]);
-    expect(linked.find((l) => l.matchGameId === game1)?.offsetSeconds).toBe(-5);
-    expect(linked.find((l) => l.matchGameId === game2)?.offsetSeconds).toBeNull();
+    expect(linked.filter((l) => l.matchGameId === null).map((l) => l.canonicalOffset)).toEqual([null]);
+    expect(linked.find((l) => l.matchGameId === game1)?.canonicalOffset).toBe(-5);
+    expect(linked.find((l) => l.matchGameId === game2)?.canonicalOffset).toBeNull();
   });
 
   test("shows who last changed a link", async ({ world: w }) => {
     const { sessionId, game1 } = await scoredMatch(w);
     const video = id();
     ok(await w.b.videos.save([{ id: video, label: "V", videoUrl: "r2://g" }]));
-    ok(await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: game1 }]));
+    ok(await w.b.videos.saveVideoGames([{ videoId: video, matchGameId: game1 }]));
     const gameLink = async () => ok(await w.b.videos.listBySession({ sessionId })).find((l) => l.matchGameId === game1)!;
-    expect((await gameLink()).changedBy).toBe("owner");
+    expect((await gameLink()).changedByName).toBe("owner");
 
     ok(await w.b.members.save([{ sessionId, accountId: w.mate.accountId, role: "EDITOR" }]));
     w.as(w.mate);
-    ok(await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: game1, offsetSeconds: 4 }]));
-    expect(await gameLink()).toMatchObject({ changedBy: "mate", offsetSeconds: 4 });
+    ok(await w.b.videos.saveVideoGames([{ videoId: video, matchGameId: game1, canonicalOffset: 4 }]));
+    expect(await gameLink()).toMatchObject({ changedByName: "mate", canonicalOffset: 4 });
   });
 
-  test("a pool link cannot carry an offset", async ({ world: w }) => {
-    const { sessionId } = await scoredMatch(w);
-    const video = id();
-    ok(await w.b.videos.save([{ id: video, label: "V", videoUrl: "r2://e" }]));
-    const result = await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: null, offsetSeconds: 3 }]);
-    expect(code(result)).toBe("VALIDATION");
-  });
-
-  test("removing a pool link takes the game links, removing a game link keeps the pool link", async ({ world: w }) => {
+  test("removing a video from a session takes its game links, removing a game link keeps the session", async ({ world: w }) => {
     const { sessionId, game1, game2 } = await scoredMatch(w);
     const video = id();
     ok(await w.b.videos.save([{ id: video, label: "V", videoUrl: "r2://f" }]));
-    ok(await w.b.videos.saveLinkages([
-      { videoId: video, sessionId, matchGameId: game1, offsetSeconds: 1 },
-      { videoId: video, sessionId, matchGameId: game2, offsetSeconds: 2 },
+    ok(await w.b.videos.saveVideoGames([
+      { videoId: video, matchGameId: game1, canonicalOffset: 1 },
+      { videoId: video, matchGameId: game2, canonicalOffset: 2 },
     ]));
 
-    ok(await w.b.videos.removeLinkages([{ videoId: video, sessionId, matchGameId: game1 }]));
+    ok(await w.b.videos.removeVideoGames([{ videoId: video, matchGameId: game1 }]));
     expect(ok(await w.b.videos.listBySession({ sessionId })).map((l) => l.matchGameId === null).sort()).toEqual([false, true]);
 
-    ok(await w.b.videos.removeLinkages([{ videoId: video, sessionId, matchGameId: null }]));
+    ok(await w.b.videos.removeVideoSessions([{ videoId: video, sessionId }]));
     expect(ok(await w.b.videos.listBySession({ sessionId }))).toEqual([]);
   });
 
-  test("a game must belong to the session it is linked in", async ({ world: w }) => {
+  test("a game can only be linked by someone with access to its session", async ({ world: w }) => {
     const { game1 } = await scoredMatch(w);
-    const otherSession = await newSession(w);
     const video = id();
     ok(await w.b.videos.save([{ id: video, label: "V", videoUrl: "r2://b" }]));
-    const result = await w.b.videos.saveLinkages([{ videoId: video, sessionId: otherSession, matchGameId: game1, offsetSeconds: 1 }]);
-    expect(failure(result)).toEqual({ code: "CONFLICT", paths: [[0, "matchGameId"]] });
+    w.as(await w.person("outsider"));
+    const result = await w.b.videos.saveVideoGames([{ videoId: video, matchGameId: game1 }]);
+    expect(failure(result)).toEqual({ code: "NOT_FOUND", paths: [[0, "matchGameId"]] });
+  });
+
+  test("a video can only be put in another session by its owner", async ({ world: w }) => {
+    const { sessionId } = await scoredMatch(w);
+    const otherSession = await newSession(w);
+    const video = id();
+    ok(await w.b.videos.save([{ id: video, label: "V", videoUrl: "r2://h" }]));
+    ok(await w.b.videos.saveVideoSessions([{ videoId: video, sessionId }]));
+    ok(await w.b.members.save([{ sessionId: otherSession, accountId: w.mate.accountId, role: "EDITOR" }]));
+
+    w.as(w.mate);
+    const result = await w.b.videos.saveVideoSessions([{ videoId: video, sessionId: otherSession }]);
+    expect(failure(result)).toEqual({ code: "NOT_FOUND", paths: [[0, "videoId"]] });
   });
 
   test("an editor links a video already in the session, not an unrelated one", async ({ world: w }) => {
     const { sessionId, game1, game2 } = await scoredMatch(w);
     const video = id();
     ok(await w.b.videos.save([{ id: video, label: "V", videoUrl: "r2://c" }]));
-    ok(await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: game1, offsetSeconds: 1 }]));
+    ok(await w.b.videos.saveVideoGames([{ videoId: video, matchGameId: game1, canonicalOffset: 1 }]));
     ok(await w.b.members.save([{ sessionId, accountId: w.mate.accountId, role: "EDITOR" }]));
 
     w.as(w.mate);
-    expect(code(await w.b.videos.saveLinkages([{ videoId: video, sessionId, matchGameId: game2, offsetSeconds: 5 }]))).toBe("ok");
-    const unrelated = await w.b.videos.saveLinkages([{ videoId: id(), sessionId, matchGameId: game2, offsetSeconds: 5 }]);
+    expect(code(await w.b.videos.saveVideoGames([{ videoId: video, matchGameId: game2, canonicalOffset: 5 }]))).toBe("ok");
+    const unrelated = await w.b.videos.saveVideoGames([{ videoId: id(), matchGameId: game2, canonicalOffset: 5 }]);
     expect(failure(unrelated)).toEqual({ code: "NOT_FOUND", paths: [[0, "videoId"]] });
   });
 });

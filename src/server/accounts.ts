@@ -2,43 +2,19 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { sql } from "kysely";
 import {
   ClaimInput,
-  CreateClaimInput,
+  CreateClaimCodeInput,
   FindAccountByHandleInput,
   RemoveGuestsInput,
   SaveCurrentAccountInput,
   SaveGuestsInput,
-  type Account,
   type CurrentAccount,
   type Guest,
 } from "../contract";
 import { act, authSource, expectAll, Failure, guard, NoInput, parse, read, stop, write } from "./core";
 import { getDb, type Db } from "./db/client";
+import { accountColumns, toAccount } from "./queries/accounts";
 
 const HANDLE_CHANGES_ALLOWED = 2;
-
-type AccountRow = {
-  id: string;
-  display_name: string;
-  handle: string;
-  avatar_url: string | null;
-  account_type: "GUEST" | "STANDARD";
-};
-
-export const accountColumns = [
-  "accounts.id",
-  "accounts.display_name",
-  "accounts.handle",
-  "accounts.avatar_url",
-  "accounts.account_type",
-] as const;
-
-export const toAccount = (row: AccountRow): Account => ({
-  id: row.id,
-  displayName: row.display_name,
-  handle: row.handle,
-  avatarUrl: row.avatar_url,
-  isGuest: row.account_type === "GUEST",
-});
 
 /**
  * Handles are unique among live accounts. The unique index is the real guard.
@@ -78,7 +54,7 @@ export const getCurrentAccount = read(NoInput, async ({ db, actor }): Promise<Cu
   };
 });
 
-export const findAccountByHandle = read(FindAccountByHandleInput, async ({ db }, { handle }) => {
+export const findByHandle = read(FindAccountByHandleInput, async ({ db }, { handle }) => {
   const row = await db
     .selectFrom("accounts")
     .select(accountColumns)
@@ -220,20 +196,20 @@ export const saveGuests = write(SaveGuestsInput, async ({ db, actor }, items) =>
 export const listGuests = read(NoInput, async ({ db, actor }): Promise<Guest[]> => {
   const rows = await db
     .selectFrom("accounts")
-    .select([...accountColumns, "accounts.claim_token"])
+    .select([...accountColumns, "accounts.claim_code"])
     .where("accounts.created_by", "=", actor.accountId)
     .where("accounts.account_type", "=", "GUEST")
     .where("accounts.deleted", "=", false)
     .orderBy("accounts.display_name")
     .execute();
-  return rows.map((row) => ({ ...toAccount(row), hasClaimCode: row.claim_token !== null }));
+  return rows.map((row) => ({ ...toAccount(row), hasClaimCode: row.claim_code !== null }));
 });
 
 /** Soft delete. Other people's guests and unknown ids are skipped, so a replay is safe. */
 export const removeGuests = write(RemoveGuestsInput, async ({ db, actor }, ids) => {
   await db
     .updateTable("accounts")
-    .set({ deleted: true, claim_token: null, updated_at: sql`now()`, updated_by: actor.accountId })
+    .set({ deleted: true, claim_code: null, updated_at: sql`now()`, updated_by: actor.accountId })
     .where("id", "in", ids)
     .where("account_type", "=", "GUEST")
     .where("created_by", "=", actor.accountId)
@@ -241,11 +217,11 @@ export const removeGuests = write(RemoveGuestsInput, async ({ db, actor }, ids) 
     .execute();
 });
 
-export const createGuestClaim = act(CreateClaimInput, async ({ db, actor }, { guestId }) => {
-  const token = randomBytes(12).toString("base64url");
+export const createClaimCode = act(CreateClaimCodeInput, async ({ db, actor }, { guestId }) => {
+  const code = randomBytes(12).toString("base64url");
   const updated = await db
     .updateTable("accounts")
-    .set({ claim_token: token, updated_at: sql`now()`, updated_by: actor.accountId })
+    .set({ claim_code: code, updated_at: sql`now()`, updated_by: actor.accountId })
     .where("id", "=", guestId)
     .where("account_type", "=", "GUEST")
     .where("created_by", "=", actor.accountId)
@@ -253,13 +229,13 @@ export const createGuestClaim = act(CreateClaimInput, async ({ db, actor }, { gu
     .returning("id")
     .executeTakeFirst();
   if (!updated) stop("NOT_FOUND", ["guestId"], "Not found");
-  return { token };
+  return { code };
 });
 
 /** Works without an account. The guest row becomes the user's account, so its history comes along. */
 export const claimGuest = (input: unknown) =>
   guard(async () => {
-    const { token } = parse(ClaimInput, input);
+    const { code } = parse(ClaimInput, input);
     const userId = await authSource.userId();
     if (!userId) throw new Failure("UNAUTHENTICATED");
 
@@ -267,22 +243,22 @@ export const claimGuest = (input: unknown) =>
       .transaction()
       .execute(async (tx) => {
         const own = await tx.selectFrom("accounts").select("id").where("user_id", "=", userId).executeTakeFirst();
-        if (own) stop("CONFLICT", ["token"], "You already have an account");
+        if (own) stop("CONFLICT", ["code"], "You already have an account");
 
         const claimed = await tx
           .updateTable("accounts")
           .set({
             user_id: userId,
             account_type: "STANDARD",
-            claim_token: null,
+            claim_code: null,
             updated_at: sql`now()`,
             updated_by: sql`id`,
           })
-          .where("claim_token", "=", token)
+          .where("claim_code", "=", code)
           .where("account_type", "=", "GUEST")
           .where("deleted", "=", false)
           .returning("id")
           .executeTakeFirst();
-        if (!claimed) stop("NOT_FOUND", ["token"], "That code is not valid");
+        if (!claimed) stop("NOT_FOUND", ["code"], "That code is not valid");
       });
   });

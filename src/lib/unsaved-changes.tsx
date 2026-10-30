@@ -35,13 +35,13 @@ export function useUnsavedChanges(isDirty: boolean) {
 
 /**
  * Run an action that leaves the page, after confirming when there are unsaved changes.
- * Render `dialog` once next to the caller. `leave(action)` runs the action at once when
+ * Render `dialog` once next to the caller. `discard(action)` runs the action at once when
  * nothing is unsaved, otherwise after the person chooses Discard.
  */
-export function useConfirmLeave(): { leave: (action: () => void) => void; dialog: ReactNode } {
+export function useConfirmDiscard(): { discard: (action: () => void) => void; dialog: ReactNode } {
   const [pending, setPending] = useState<(() => void) | null>(null);
 
-  const leave = (action: () => void) => {
+  const discard = (action: () => void) => {
     if (dirty) setPending(() => action);
     else action();
   };
@@ -69,13 +69,13 @@ export function useConfirmLeave(): { leave: (action: () => void) => void; dialog
     </AlertDialog>
   );
 
-  return { leave, dialog };
+  return { discard, dialog };
 }
 
 /** A link that confirms first when the page has unsaved changes. Behaves like a plain link otherwise. */
 export function LeaveLink({ href, onClick, ...props }: ComponentProps<typeof Link>) {
   const router = useRouter();
-  const { leave, dialog } = useConfirmLeave();
+  const { discard, dialog } = useConfirmDiscard();
 
   return (
     <>
@@ -85,7 +85,7 @@ export function LeaveLink({ href, onClick, ...props }: ComponentProps<typeof Lin
           onClick?.(event);
           if (!dirty || event.defaultPrevented) return;
           event.preventDefault();
-          leave(() => router.push(href.toString()));
+          discard(() => router.push(href.toString()));
         }}
         {...props}
       />

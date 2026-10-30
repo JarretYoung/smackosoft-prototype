@@ -43,7 +43,7 @@ export default async function NewSessionPage() {
           coverUrl: "",
           courtFee: last?.courtFee != null ? String(last.courtFee) : "",
           currency: last?.currency ?? "MYR",
-          participants: [{ account: me.account, role: "OWNER", isPlayer: false, newGuest: false }],
+          members: [{ account: me.account, role: "OWNER", isPlayer: false, newGuest: false }],
         }}
       />
     </main>

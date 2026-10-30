@@ -18,8 +18,8 @@ describe("sync point text", () => {
   });
 });
 
-const link = (videoId: string, matchGameId: string | null, offsetSeconds: number | null) =>
-  ({ videoId, matchGameId, offsetSeconds }) as SessionVideo;
+const link = (videoId: string, matchGameId: string | null, canonicalOffset: number | null) =>
+  ({ videoId, matchGameId, canonicalOffset }) as SessionVideo;
 
 describe("what needs attention", () => {
   const linked = [

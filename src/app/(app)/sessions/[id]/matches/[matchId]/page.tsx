@@ -12,8 +12,7 @@ import { gameWinnerId, scoreOf, summarize } from "@/src/lib/matches";
 import { plural } from "@/src/lib/format";
 import { MATCH_TYPE_LABEL } from "@/src/lib/match-type";
 import { unwrap } from "@/src/lib/result";
-import { can } from "@/src/lib/roles";
-import type { Team } from "@/src/contract";
+import { atLeast, type Team } from "@/src/contract";
 import { backend } from "@/src/server";
 
 const names = (team: Team) =>
@@ -34,7 +33,7 @@ export default async function MatchDetailsPage({ params }: { params: Promise<{ i
         title="Match"
         back={`/sessions/${id}`}
         action={
-          can(session.myRole, "EDITOR") && (
+          atLeast(session.myRole, "EDITOR") && (
             <Button asChild variant="ghost" size="sm" className="text-primary">
               <Link href={`/sessions/${id}/matches/edit?m=${match.id}`}>
                 <Pencil /> Edit

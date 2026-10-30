@@ -22,6 +22,6 @@ export function parseOffset(text: string): number | null {
 }
 
 /** Opens the video at the sync point. A video that is not synced opens from the start. */
-export function openUrl(videoUrl: string, offsetSeconds: number | null): string {
-  return offsetSeconds === null ? videoUrl : `${videoUrl}#t=${Math.max(0, Math.floor(offsetSeconds))}`;
+export function openUrl(videoUrl: string, canonicalOffset: number | null): string {
+  return canonicalOffset === null ? videoUrl : `${videoUrl}#t=${Math.max(0, Math.floor(canonicalOffset))}`;
 }

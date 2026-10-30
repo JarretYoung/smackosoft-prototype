@@ -94,12 +94,12 @@ export default async function HomePage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="section-title">Partners</h2>
+        <h2 className="section-title">Teammates</h2>
         {teammates.length === 0 ? (
           <Empty className="rounded-2xl bg-card p-6 shadow-card">
             <EmptyHeader>
-              <EmptyTitle>No partner stats yet</EmptyTitle>
-              <EmptyDescription>Play a doubles match to see how you do with each partner.</EmptyDescription>
+              <EmptyTitle>No teammate stats yet</EmptyTitle>
+              <EmptyDescription>Play a doubles match to see how you do with each teammate.</EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : (

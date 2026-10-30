@@ -26,7 +26,7 @@ export function Thumb({ url }: { url: string | null }) {
 function Who({ item }: { item: SessionVideo }) {
   return (
     <>
-      {item.changedBy.split(" ")[0]}, <RelativeTime iso={item.changedAt} />
+      {item.changedByName.split(" ")[0]}, <RelativeTime iso={item.changedAt} />
     </>
   );
 }
@@ -41,7 +41,7 @@ function RowMenu({ item, label, children }: { item: SessionVideo; label: string;
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
         <DropdownMenuItem asChild>
-          <a href={openUrl(item.video.videoUrl, item.offsetSeconds)} target="_blank" rel="noreferrer">
+          <a href={openUrl(item.video.videoUrl, item.canonicalOffset)} target="_blank" rel="noreferrer">
             <ExternalLink /> Open video
           </a>
         </DropdownMenuItem>
@@ -69,7 +69,7 @@ export function GameVideoRow({
   onSync: () => void;
   onRemove: () => void;
 }) {
-  const synced = item.offsetSeconds !== null;
+  const synced = item.canonicalOffset !== null;
   const body = (
     <>
       <Thumb url={item.video.thumbnailUrl} />
@@ -77,7 +77,7 @@ export function GameVideoRow({
         <p className="truncate text-body font-semibold tracking-tight">{item.video.label}</p>
         <p className="truncate text-sm text-muted-foreground">
           {synced ? (
-            <span className="tabular-nums">Synced at {formatOffset(item.offsetSeconds!)}</span>
+            <span className="tabular-nums">Synced at {formatOffset(item.canonicalOffset!)}</span>
           ) : (
             <span className="font-medium text-accent-foreground">Not synced</span>
           )}
@@ -148,7 +148,7 @@ export function UnassignedRow({
       <RowMenu item={item} label={item.video.label}>
         {canEdit && (
           <DropdownMenuItem variant="destructive" onSelect={onRemove}>
-            Remove video
+            Remove from session
           </DropdownMenuItem>
         )}
       </RowMenu>

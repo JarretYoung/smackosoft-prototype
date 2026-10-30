@@ -1,9 +1,9 @@
 import type { Role } from "@/src/contract";
 
-const RANK: Record<Role, number> = { VIEWER: 0, EDITOR: 1, MANAGER: 2, OWNER: 3 };
+export const ROLE_LABEL: Record<Role, string> = { OWNER: "Owner", MANAGER: "Manager", EDITOR: "Editor", VIEWER: "Viewer" };
 
-/**
- * For hiding controls only. The backend decides what is allowed.
- * Showing a button the backend would refuse is a UX bug, never a security one.
- */
-export const can = (role: Role, min: Role) => RANK[role] >= RANK[min];
+export const ROLE_CAN: Record<Exclude<Role, "OWNER">, string> = {
+  VIEWER: "Can see the session and its videos",
+  EDITOR: "Can also edit matches, scores and players",
+  MANAGER: "Can also edit the session and manage members",
+};

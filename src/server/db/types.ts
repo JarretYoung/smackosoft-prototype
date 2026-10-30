@@ -22,7 +22,7 @@ export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 export interface Accounts {
   account_type: Generated<AccountType>;
   avatar_url: string | null;
-  claim_token: string | null;
+  claim_code: string | null;
   created_at: Generated<Timestamp>;
   created_by: string;
   deleted: Generated<boolean>;
@@ -109,7 +109,7 @@ export interface SessionAccess {
   created_at: Generated<Timestamp>;
   created_by: string;
   id: Generated<string>;
-  role_type: Generated<RoleType>;
+  role: Generated<RoleType>;
   session_id: string;
   updated_at: Timestamp | null;
   updated_by: string | null;
@@ -129,7 +129,6 @@ export interface Sessions {
   location: string | null;
   location_url: string | null;
   longitude: number | null;
-  organiser_id: string | null;
   start_time: Timestamp | null;
   updated_at: Timestamp | null;
   updated_by: string | null;

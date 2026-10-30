@@ -9,7 +9,7 @@ export function attentionOf(linked: SessionVideo[], gameOrder: string[], focus: 
   const inGame = new Set(linked.filter((l) => l.matchGameId !== null).map((l) => l.videoId));
   const rank = (l: SessionVideo) => gameOrder.indexOf(l.matchGameId ?? "");
   const unsynced = linked
-    .filter((l) => l.matchGameId !== null && l.offsetSeconds === null && (!focus || l.matchGameId === focus))
+    .filter((l) => l.matchGameId !== null && l.canonicalOffset === null && (!focus || l.matchGameId === focus))
     .sort((a, b) => rank(a) - rank(b));
   const unassigned = focus ? [] : linked.filter((l) => l.matchGameId === null && !inGame.has(l.videoId));
   return { unsynced, unassigned };

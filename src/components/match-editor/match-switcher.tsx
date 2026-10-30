@@ -17,7 +17,7 @@ import {
 } from "@/src/components/ui/alert-dialog";
 import { Button } from "@/src/components/ui/button";
 import { errorMessage } from "@/src/lib/errors";
-import { LeaveLink, useConfirmLeave } from "@/src/lib/unsaved-changes";
+import { LeaveLink, useConfirmDiscard } from "@/src/lib/unsaved-changes";
 import { cn } from "@/src/lib/utils";
 
 type Item = { id: string; label: string };
@@ -35,7 +35,7 @@ export function MatchSwitcher({
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [pending, start] = useTransition();
-  const { leave, dialog: leaveDialog } = useConfirmLeave();
+  const { discard, dialog: discardDialog } = useConfirmDiscard();
 
   const base = `/sessions/${sessionId}/matches/edit`;
   const index = matches.findIndex((m) => m.id === currentId);
@@ -93,8 +93,8 @@ export function MatchSwitcher({
         </span>
         {arrow(next, ChevronRight, "Next match")}
       </div>
-      {leaveDialog}
-      <Button type="button" variant="outline" size="icon" onClick={() => leave(add)} disabled={pending} aria-label="Add match">
+      {discardDialog}
+      <Button type="button" variant="outline" size="icon" onClick={() => discard(add)} disabled={pending} aria-label="Add match">
         <Plus />
       </Button>
       <Button

@@ -31,12 +31,12 @@ export type SaveTeamsInput = z.input<typeof SaveTeamsInput>;
 export const RemoveTeamsInput = ids;
 export type RemoveTeamsInput = z.input<typeof RemoveTeamsInput>;
 
-export const MatchPlayerKey = z.object({ teamId: UUID, accountId: UUID });
-export const SaveMatchPlayersInput = batch(MatchPlayerKey, (p) => `${p.teamId}:${p.accountId}`);
+export const MatchPlayerKey = z.object({ matchTeamId: UUID, accountId: UUID });
+export const SaveMatchPlayersInput = batch(MatchPlayerKey, (p) => `${p.matchTeamId}:${p.accountId}`);
 export type SaveMatchPlayersInput = z.input<typeof SaveMatchPlayersInput>;
 
-export const RemoveMatchPlayersInput = SaveMatchPlayersInput;
-export type RemoveMatchPlayersInput = SaveMatchPlayersInput;
+export const RemoveMatchPlayersInput = batch(MatchPlayerKey, (p) => `${p.matchTeamId}:${p.accountId}`);
+export type RemoveMatchPlayersInput = z.input<typeof RemoveMatchPlayersInput>;
 
 export const GameSave = z
   .object({
@@ -57,15 +57,15 @@ export const RemoveGamesInput = ids;
 export type RemoveGamesInput = z.input<typeof RemoveGamesInput>;
 
 export const GameScoreSave = z.object({
-  teamId: UUID,
-  gameId: UUID,
+  matchTeamId: UUID,
+  matchGameId: UUID,
   score: z.number().int().min(0),
 });
-export const SaveGameScoresInput = batch(GameScoreSave, (s) => `${s.teamId}:${s.gameId}`);
+export const SaveGameScoresInput = batch(GameScoreSave, (s) => `${s.matchTeamId}:${s.matchGameId}`);
 export type SaveGameScoresInput = z.input<typeof SaveGameScoresInput>;
 
-export const GameScoreKey = z.object({ teamId: UUID, gameId: UUID });
-export const RemoveGameScoresInput = batch(GameScoreKey, (s) => `${s.teamId}:${s.gameId}`);
+export const GameScoreKey = z.object({ matchTeamId: UUID, matchGameId: UUID });
+export const RemoveGameScoresInput = batch(GameScoreKey, (s) => `${s.matchTeamId}:${s.matchGameId}`);
 export type RemoveGameScoresInput = z.input<typeof RemoveGameScoresInput>;
 
 // ----------------------------------------------------------------- outputs
@@ -76,7 +76,7 @@ export type Game = {
   startTime: string;
   endTime: string;
   /** One entry per team that has a score. Missing means not scored yet. */
-  scores: { teamId: string; score: number }[];
+  scores: { matchTeamId: string; score: number }[];
   videoCount: number;
 };
 
@@ -107,12 +107,12 @@ export interface MatchesApi {
    * That needs MANAGER. An EDITOR can only add accounts that are already members.
    * Fails with CONFLICT if an account would be on both teams of one match.
    */
-  savePlayers(input: SaveMatchPlayersInput): Promise<Ack>;
-  removePlayers(input: RemoveMatchPlayersInput): Promise<Ack>;
+  saveMatchPlayers(input: SaveMatchPlayersInput): Promise<Ack>;
+  removeMatchPlayers(input: RemoveMatchPlayersInput): Promise<Ack>;
   saveGames(input: SaveGamesInput): Promise<Ack>;
   removeGames(input: RemoveGamesInput): Promise<Ack>;
   /** Fails with CONFLICT if a score's team and game belong to different matches. */
-  saveScores(input: SaveGameScoresInput): Promise<Ack>;
+  saveGameScores(input: SaveGameScoresInput): Promise<Ack>;
   /** Clears a score. The game stays and reads as not scored for that team. Missing scores are skipped. */
-  removeScores(input: RemoveGameScoresInput): Promise<Ack>;
+  removeGameScores(input: RemoveGameScoresInput): Promise<Ack>;
 }

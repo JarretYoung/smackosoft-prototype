@@ -49,9 +49,9 @@ export function OnboardingForm({
     event.preventDefault();
     setClaimError(null);
     start(async () => {
-      const result = await claimGuest({ token: code });
+      const result = await claimGuest({ code });
       if (result.ok) router.replace("/home");
-      else setClaimError(fieldErrors(result.error).token ?? "That code did not work. Check it and try again.");
+      else setClaimError(fieldErrors(result.error).code ?? "That code did not work. Check it and try again.");
     });
   }
 

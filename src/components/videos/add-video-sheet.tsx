@@ -94,7 +94,7 @@ function AddVideoForm({
           <FieldError>{show("label")}</FieldError>
         </Field>
         <Field data-invalid={!!show("url")}>
-          <FieldLabel htmlFor="video-url">Link</FieldLabel>
+          <FieldLabel htmlFor="video-url">Video link</FieldLabel>
           <Input
             id="video-url"
             type="url"

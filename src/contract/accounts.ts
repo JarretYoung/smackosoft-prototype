@@ -28,10 +28,10 @@ export type SaveCurrentAccountInput = z.input<typeof SaveCurrentAccountInput>;
 export const RemoveGuestsInput = batch(UUID, (id) => id);
 export type RemoveGuestsInput = z.input<typeof RemoveGuestsInput>;
 
-export const CreateClaimInput = z.object({ guestId: UUID });
-export type CreateClaimInput = z.input<typeof CreateClaimInput>;
+export const CreateClaimCodeInput = z.object({ guestId: UUID });
+export type CreateClaimCodeInput = z.input<typeof CreateClaimCodeInput>;
 
-export const ClaimInput = z.object({ token: z.string().trim().min(8) });
+export const ClaimInput = z.object({ code: z.string().trim().min(8) });
 export type ClaimInput = z.input<typeof ClaimInput>;
 
 export const GuestSave = z.object({
@@ -87,7 +87,7 @@ export interface AccountsApi {
   /** Soft delete. Past matches keep the guest. The handle becomes free. Only the creator can remove a guest. */
   removeGuests(input: RemoveGuestsInput): Promise<Ack>;
   /** Makes a new code for a guest the actor created. The old code stops working. */
-  createClaim(input: CreateClaimInput): Promise<Result<{ token: string }>>;
+  createClaimCode(input: CreateClaimCodeInput): Promise<Result<{ code: string }>>;
   /**
    * Turns a guest into the signed-in user's own account, with all its history.
    * Only for someone with no account yet. Works without an account, like saveCurrent.

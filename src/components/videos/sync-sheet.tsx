@@ -13,7 +13,7 @@ import { OffsetRuler } from "./offset-ruler";
 export type SyncTarget = {
   videoId: string;
   label: string;
-  gameId: string;
+  matchGameId: string;
   gameLabel: string;
   /** The saved sync point, or null when the video is not synced yet. */
   offset: number | null;
@@ -38,7 +38,7 @@ export function SyncSheet({
   return (
     <Sheet open={target !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="bottom" className="overflow-y-auto">
-        {target && <SyncForm key={`${target.videoId}:${target.gameId}`} target={target} pending={pending} onClose={onClose} onSave={onSave} />}
+        {target && <SyncForm key={`${target.videoId}:${target.matchGameId}`} target={target} pending={pending} onClose={onClose} onSave={onSave} />}
       </SheetContent>
     </Sheet>
   );

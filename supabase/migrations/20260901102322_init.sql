@@ -22,7 +22,7 @@ CREATE TABLE smackosoft.accounts (
   handle              text                    NOT NULL,
   handle_change_count integer                 NOT NULL DEFAULT 0,
   avatar_url          text,
-  claim_token         text,                             -- used to claim a guest account
+  claim_code          text,                             -- used to claim a guest account
   deleted             boolean                 NOT NULL DEFAULT false,
   created_at          timestamptz             NOT NULL DEFAULT now(),
   created_by          uuid                    NOT NULL, -- has write access to guest accounts
@@ -30,9 +30,9 @@ CREATE TABLE smackosoft.accounts (
   updated_by          uuid,
   CONSTRAINT accounts_pkey PRIMARY KEY (id),
   CONSTRAINT accounts_user_id_key UNIQUE (user_id),
-  CONSTRAINT accounts_claim_token_key UNIQUE (claim_token),
+  CONSTRAINT accounts_claim_code_key UNIQUE (claim_code),
   CONSTRAINT accounts_guest_has_no_user_check CHECK (account_type = 'STANDARD' OR user_id IS NULL),
-  CONSTRAINT accounts_claim_token_guest_check CHECK (claim_token IS NULL OR account_type = 'GUEST'),
+  CONSTRAINT accounts_claim_code_guest_check CHECK (claim_code IS NULL OR account_type = 'GUEST'),
   CONSTRAINT accounts_handle_format_check CHECK (handle ~ '^[a-z0-9_]{3,30}$'),
   CONSTRAINT accounts_handle_change_count_check CHECK (handle_change_count >= 0),
   CONSTRAINT accounts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL,
@@ -77,7 +77,6 @@ CREATE TABLE smackosoft.sessions (
   id           uuid        NOT NULL DEFAULT gen_random_uuid(),
   label        text        NOT NULL,
   date         date        NOT NULL,
-  organiser_id uuid,
   location     text,
   location_url text,
   latitude     double precision,
@@ -99,7 +98,6 @@ CREATE TABLE smackosoft.sessions (
   CONSTRAINT sessions_court_fee_check CHECK (court_fee IS NULL OR court_fee >= 0),
   CONSTRAINT sessions_currency_format_check CHECK (currency IS NULL OR currency ~ '^[A-Z]{3}$'),
   CONSTRAINT sessions_court_fee_currency_check CHECK ((court_fee IS NULL) = (currency IS NULL)),
-  CONSTRAINT sessions_organiser_id_fkey FOREIGN KEY (organiser_id) REFERENCES smackosoft.accounts(id),
   CONSTRAINT sessions_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT sessions_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
@@ -111,8 +109,6 @@ COMMENT ON COLUMN smackosoft.sessions.latitude IS
 COMMENT ON COLUMN smackosoft.sessions.longitude IS
   'See latitude.';
 
-CREATE INDEX sessions_organiser_id_idx ON smackosoft.sessions (organiser_id);
-
 -- ============================================================
 -- SESSION_ACCESS
 -- ============================================================
@@ -123,7 +119,7 @@ CREATE TABLE smackosoft.session_access (
   id         uuid                 NOT NULL DEFAULT gen_random_uuid(),
   session_id uuid                 NOT NULL,
   account_id uuid                 NOT NULL,
-  role_type  smackosoft.role_type NOT NULL DEFAULT 'VIEWER',
+  role       smackosoft.role_type NOT NULL DEFAULT 'VIEWER',
   created_at timestamptz          NOT NULL DEFAULT now(),
   created_by uuid                 NOT NULL,
   updated_at timestamptz,
@@ -140,7 +136,7 @@ GRANT ALL ON TABLE smackosoft.session_access TO smackosoft_service;
 
 CREATE INDEX session_access_account_id_idx ON smackosoft.session_access (account_id);
 
-CREATE UNIQUE INDEX session_access_one_owner_key ON smackosoft.session_access (session_id) WHERE role_type = 'OWNER';
+CREATE UNIQUE INDEX session_access_one_owner_key ON smackosoft.session_access (session_id) WHERE role = 'OWNER';
 
 -- ============================================================
 -- MATCHES

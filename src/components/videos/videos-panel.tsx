@@ -4,7 +4,7 @@ import { CheckCircle2, Plus, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { removeLinkages, saveLinkages, saveVideos } from "@/src/app/actions";
+import { removeVideoGames, removeVideoSessions, saveVideoGames, saveVideoSessions, saveVideos } from "@/src/app/actions";
 import { AddRow } from "@/src/components/add-row";
 import { PageHeader } from "@/src/components/page-header";
 import { Button } from "@/src/components/ui/button";
@@ -17,13 +17,13 @@ import { PickSheet, type PickItem } from "./pick-sheet";
 import { SyncSheet, type SyncTarget } from "./sync-sheet";
 import { AddVideoRow, GameVideoRow, UnassignedRow } from "./video-rows";
 
-export type MatchGroup = { id: string; label: string; games: { id: string; number: number }[] };
+export type MatchGroup = { id: string; label: string; games: { id: string; gameNumber: number }[] };
 type Target = { value: string; label: string };
 
 type Result = { ok: true } | { ok: false; error: Parameters<typeof errorMessage>[0] };
 type Picking = { kind: "game"; video: SessionVideo["video"] } | { kind: "video"; game: Target };
 
-const rowId = (videoId: string, gameId: string | null) => `video-${videoId}-${gameId ?? "session"}`;
+const rowId = (videoId: string, matchGameId: string | null) => `video-${videoId}-${matchGameId ?? "session"}`;
 
 /**
  * Videos for one session, on one page. Each match is a heading with its games under it,
@@ -50,7 +50,7 @@ export function VideosPanel({
   const [syncing, setSyncing] = useState<SyncTarget | null>(null);
   const [pending, start] = useTransition();
 
-  const targets: Target[] = matches.flatMap((m) => m.games.map((g) => ({ value: g.id, label: `${m.label} · Game ${g.number}` })));
+  const targets: Target[] = matches.flatMap((m) => m.games.map((g) => ({ value: g.id, label: `${m.label} · Game ${g.gameNumber}` })));
   const labelOf = (gameId: string) => targets.find((t) => t.value === gameId)?.label ?? "A game";
 
   // A video in the session has one row with no game. Its other rows say which games it is in.
@@ -85,12 +85,13 @@ export function VideosPanel({
       async () => {
         const saved = await saveVideos([{ id: videoId, ...video }]);
         // A link to a game also puts the video in the session.
-        return saved.ok ? saveLinkages([{ videoId, sessionId, matchGameId: game?.value ?? null }]) : saved;
+        if (!saved.ok) return saved;
+        return game ? saveVideoGames([{ videoId, matchGameId: game.value }]) : saveVideoSessions([{ videoId, sessionId }]);
       },
       "Video added",
       () => {
         setAdding(null);
-        if (game) setSyncing({ videoId, label: video.label, gameId: game.value, gameLabel: game.label, offset: null });
+        if (game) setSyncing({ videoId, label: video.label, matchGameId: game.value, gameLabel: game.label, offset: null });
       },
     );
   }
@@ -98,18 +99,18 @@ export function VideosPanel({
   /** Puts the video in the game with no sync point, then opens the sync sheet. */
   function addToGame(video: SessionVideo["video"], game: Target) {
     run(
-      () => saveLinkages([{ videoId: video.id, sessionId, matchGameId: game.value }]),
+      () => saveVideoGames([{ videoId: video.id, matchGameId: game.value }]),
       "Added to game",
       () => {
         setPicking(null);
-        setSyncing({ videoId: video.id, label: video.label, gameId: game.value, gameLabel: game.label, offset: null });
+        setSyncing({ videoId: video.id, label: video.label, matchGameId: game.value, gameLabel: game.label, offset: null });
       },
     );
   }
 
   function saveSync(target: SyncTarget, offset: number | null) {
     run(
-      () => saveLinkages([{ videoId: target.videoId, sessionId, matchGameId: target.gameId, offsetSeconds: offset }]),
+      () => saveVideoGames([{ videoId: target.videoId, matchGameId: target.matchGameId, canonicalOffset: offset }]),
       offset === null ? "Sync point cleared" : "Sync point saved",
       () => setSyncing(null),
     );
@@ -119,13 +120,19 @@ export function VideosPanel({
     setSyncing({
       videoId: item.videoId,
       label: item.video.label,
-      gameId: item.matchGameId!,
+      matchGameId: item.matchGameId!,
       gameLabel: labelOf(item.matchGameId!),
-      offset: item.offsetSeconds,
+      offset: item.canonicalOffset,
     });
 
   const remove = (item: SessionVideo, done: string) =>
-    run(() => removeLinkages([{ videoId: item.videoId, sessionId, matchGameId: item.matchGameId }]), done);
+    run(
+      () =>
+        item.matchGameId
+          ? removeVideoGames([{ videoId: item.videoId, matchGameId: item.matchGameId }])
+          : removeVideoSessions([{ videoId: item.videoId, sessionId }]),
+      done,
+    );
 
   // What the picker offers depends on which side was chosen first.
   const pickItems: PickItem[] =
@@ -185,11 +192,11 @@ export function VideosPanel({
             <h2 className="px-1 text-2xl font-bold tracking-tight">{match.label}</h2>
             {match.games.length === 0 && <p className="px-1 text-sm text-muted-foreground">No games yet</p>}
             {match.games.map((g) => {
-              const game = { value: g.id, label: `${match.label} · Game ${g.number}` };
+              const game = { value: g.id, label: `${match.label} · Game ${g.gameNumber}` };
               const inGame = videosOf(g.id);
               return (
-                <div key={g.id} role="group" aria-label={`Game ${g.number}`} className="flex flex-col gap-2">
-                  <h3 className="section-label">Game {g.number}</h3>
+                <div key={g.id} role="group" aria-label={`Game ${g.gameNumber}`} className="flex flex-col gap-2">
+                  <h3 className="section-label">Game {g.gameNumber}</h3>
                   <ul className="group-list">
                     {inGame.map((item) => (
                       <GameVideoRow
@@ -221,7 +228,7 @@ export function VideosPanel({
                   canEdit={canEdit}
                   highlightId={idFor(item)}
                   onAssign={() => setPicking({ kind: "game", video: item.video })}
-                  onRemove={() => remove(item, "Video removed")}
+                  onRemove={() => remove(item, "Removed from session")}
                 />
               ))}
             </ul>
