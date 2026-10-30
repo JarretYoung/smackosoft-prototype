@@ -9,23 +9,24 @@ import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/components/ui/empty";
 import { Progress } from "@/src/components/ui/progress";
-import { today } from "@/src/lib/format";
+import { monthWindow, today } from "@/src/lib/format";
 import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";
 
 export default async function HomePage() {
+  const now = today();
   const [meResult, statsResult, teammatesResult, sessionsResult] = await Promise.all([
     backend.accounts.getCurrent(),
     backend.stats.get(),
     backend.stats.getTeammates(),
-    backend.sessions.list(),
+    // The calendar shows last, this and next month around `now`, so ask for exactly those.
+    backend.sessions.list(monthWindow(now)),
   ]);
   const me = unwrap(meResult);
   const stats = unwrap(statsResult);
   const teammates = unwrap(teammatesResult);
   const sessions = unwrap(sessionsResult);
 
-  const now = today();
   const upcoming = sessions.filter((s) => s.date >= now).slice(0, 3);
   const winPercent = stats.winRate === null ? null : Math.round(stats.winRate * 100);
 

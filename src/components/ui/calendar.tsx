@@ -16,6 +16,16 @@ import {
 import { Button, buttonVariants } from "@/src/components/ui/button"
 
 /**
+ * The name of a day button, such as "Thursday, October 1, 2026". The library's default says
+ * "October 1st", which does not contain the "1" printed on the button. Voice control users say
+ * what they see, so the visible number must be part of the name.
+ */
+function dayButtonLabel(date: Date, modifiers: { today?: boolean; selected?: boolean }) {
+  const label = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })
+  return `${modifiers.today ? "Today, " : ""}${label}${modifiers.selected ? ", selected" : ""}`
+}
+
+/**
  * The shadcn Calendar, styled for the app: 44px cells, a red capsule for the picked day, a red ring
  * for today, month and arrows on one line like iOS. Weeks start on Monday. Range and dropdown
  * modes from shadcn still work.
@@ -28,6 +38,7 @@ function Calendar({
   buttonVariant = "text",
   formatters,
   components,
+  labels,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
@@ -45,6 +56,7 @@ function Calendar({
         className
       )}
       captionLayout={captionLayout}
+      labels={{ labelDayButton: dayButtonLabel, ...labels }}
       formatters={{
         formatMonthDropdown: (date) =>
           date.toLocaleString("default", { month: "short" }),

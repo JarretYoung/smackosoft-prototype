@@ -1,4 +1,4 @@
-import { localToIso, minutesToTime, timeToMinutes } from "../../lib/format";
+import { addDays, localToIso, minutesToTime, timeToMinutes } from "../../lib/format";
 
 export const DAY = 24 * 60;
 
@@ -16,7 +16,8 @@ export function sessionTimes(date: string, start: string, end: string) {
   const startIso = start === "" ? "" : localToIso(date, start);
   const endSameDay = end === "" ? "" : localToIso(date, end);
   const nextDay = !!startIso && !!endSameDay && Date.parse(endSameDay) < Date.parse(startIso);
-  const endIso = nextDay ? new Date(Date.parse(endSameDay) + DAY * 60_000).toISOString() : endSameDay;
+  // The next calendar day, not 24 hours later: a clock change makes the two differ by an hour.
+  const endIso = nextDay ? localToIso(addDays(date, 1), end) : endSameDay;
   const runMinutes = start && end ? (timeToMinutes(end) - timeToMinutes(start) + DAY) % DAY : null;
   return { startIso, endIso, nextDay, runMinutes };
 }

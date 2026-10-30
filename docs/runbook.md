@@ -58,25 +58,50 @@ Run `pnpm db:types` after every migration and after every `pnpm supabase db rese
 | `pnpm test` | Unit and backend tests in `tests/`. A disposable Postgres starts in Docker and stops after. | Docker running |
 | `pnpm test:coverage` | Same, with a coverage report | Docker running |
 | `pnpm test:shuffle` | Same, in random order | Docker running |
-| `pnpm test:e2e` | Playwright smoke tests in `e2e/` against the real app | Steps below |
+| `pnpm test:e2e` | Playwright browser tests in `e2e/` against the real app | Steps below |
 
 `pnpm test` tests create their own people and ids, so they never touch the local Supabase database.
 
-### End to end smoke tests
+### End to end tests
 
-Five tests cover log in and out, sign up with the confirmation email, creating a session, scoring a match and syncing a video. They run on demand and are not part of `pnpm test`.
+The Playwright tests in `e2e/` drive the real app in a browser. They run on demand and are not part of `pnpm test`.
+
+What they cover:
+
+- Log in, log out, sign up with the confirmation email, and password reset through the email link.
+- Wrong password, weak password and existing email messages.
+- The session form: validation, the discard prompt, saving an edit and times past midnight.
+- A viewer who cannot edit, the profile form, scoring a match and syncing a video.
+- Accessibility: axe-core on the main screens, failing on serious and critical violations.
+
+Set up once:
 
 1. `pnpm supabase start`
-2. `pnpm supabase db reset`. The tests log in as `ian@smacko.test`.
+2. `pnpm supabase db reset`. The tests log in as `ian@smacko.test` and `nadree@smacko.test`.
 3. `pnpm dev`
-4. `pnpm test:e2e`
+
+Commands:
+
+| Command | What it does |
+|---|---|
+| `pnpm test:e2e` | Runs everything: the setup login, then all four timezone projects |
+| `pnpm exec playwright test --project=mobile` | Runs every spec in Kuala Lumpur time only. This is the quick run |
+| `pnpm exec playwright test --project=tz-london` | Runs only the time specs in one zone. Others: `tz-los-angeles`, `tz-auckland` |
+| `pnpm exec playwright test session-form --project=mobile` | Runs one spec file |
+| `pnpm exec playwright test -g "viewer" --project=mobile` | Runs tests whose title matches |
+| `pnpm exec playwright show-report` | Opens the HTML report from the last run |
 
 Rules:
 
 - The tests never start a server and never reset the database. A global setup checks the app (port 3000), the Supabase API (54321) and Mailpit (54324). It lists what is missing.
-- Each test makes its own data with unique ids. Run them as often as you like without a reset.
-- The sign-up test reads its confirmation link from the Mailpit API.
+- Each test makes its own data with unique names. Run them as often as you like without a reset.
+- A setup project logs in once and saves the cookies in `e2e/.auth` (not committed). Specs that test signed out screens opt out with `storageState`.
+- Every test fails on a browser console error, an uncaught page error or a 5xx response. The exclusions are listed in `e2e/support/test.ts`.
+- The `newUser` fixture signs up a fresh person through the real forms and Mailpit.
+- Only `session-times.spec.ts` runs in the extra timezones. The other specs run in `mobile`.
 - One worker, phone size viewport, address `127.0.0.1` (not `localhost`). Supabase email links use `127.0.0.1`, and `next.config.ts` only hydrates pages opened there.
+- Local Supabase allows 20 emails an hour. A full run sends 4. Wait if you see "Too many emails sent".
+- CI retries a failed test once. Locally nothing retries.
 - The HTML report lands in `playwright-report/`.
 
 ### Unused code check

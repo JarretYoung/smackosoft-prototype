@@ -1,10 +1,9 @@
-import { expect, test } from "@playwright/test";
-import { addMatch, createSession, logIn, scoreFirstGame, SEEDED, unique } from "./support/app";
+import { expect, test } from "./support/test";
+import { addMatch, createSession, scoreFirstGame, SEEDED, unique } from "./support/app";
 
 test("a user scores a match with two teams and a game", async ({ page }) => {
   const id = unique();
   const guest = `Bob${id}`;
-  await logIn(page);
   const sessionId = await createSession(page, { name: `E2e match ${id}`, guest });
 
   await addMatch(page, sessionId);
@@ -20,6 +19,6 @@ test("a user scores a match with two teams and a game", async ({ page }) => {
   await scoreFirstGame(page, { team1: "21", team2: "15" });
 
   // Saving moves on to the match details.
-  await page.waitForURL(/\/matches\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/matches\/[0-9a-f-]{36}$/);
   await expect(page.getByText("21", { exact: true }).first()).toBeVisible();
 });

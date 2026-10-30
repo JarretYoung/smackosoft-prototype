@@ -125,9 +125,15 @@ export interface Sessions {
   end_time: Timestamp | null;
   id: Generated<string>;
   label: string;
+  /**
+   * Where the session is, in degrees (WGS 84). Read from the maps link when it is pasted. NULL when unknown. Set with longitude or not at all.
+   */
   latitude: number | null;
   location: string | null;
   location_url: string | null;
+  /**
+   * See latitude.
+   */
   longitude: number | null;
   start_time: Timestamp | null;
   updated_at: Timestamp | null;

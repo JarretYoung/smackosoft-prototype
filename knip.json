@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["tests/support/server-only.ts"],
+  "entry": ["tests/support/server-only.ts", "e2e/auth.setup.ts"],
   "ignoreDependencies": ["supabase", "testcontainers"],
   "ignoreExportsUsedInFile": true,
   "ignoreIssues": { "src/components/ui/**": ["exports", "types"] }

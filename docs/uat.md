@@ -59,4 +59,4 @@ A new email signs up with no account, so it lands on onboarding.
 | Avatars | A Google sign up stores the Google picture link on the account. Nothing else sets it yet, and it is not copied to our own storage |
 | Stats | Provisional. The win rate counts decided matches only. |
 | Dev badge | Next.js shows an "Insight" badge about instant navigation. It is a dev hint, not an error. |
-| Real sign-in in backend tests | Backend tests fake the signed-in user. The `pnpm test:e2e` smoke tests cover log in, log out and sign up in a browser. Other auth paths (Google, password reset) are checked by hand. |
+| Real sign-in in backend tests | Backend tests fake the signed-in user. The `pnpm test:e2e` tests cover log in, log out, sign up and password reset in a browser. Google sign in is checked by hand. |

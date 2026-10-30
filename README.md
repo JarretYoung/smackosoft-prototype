@@ -135,7 +135,7 @@ src/
   proxy.ts              Next.js proxy (middleware) entry point
 
 tests/                  backend and unit tests (pnpm test)
-e2e/                    Playwright smoke tests (pnpm test:e2e)
+e2e/                    Playwright browser tests (pnpm test:e2e)
 supabase/               local stack config, migrations, seed data
 bruno/                  Bruno OpenAPI documentation
 docs/                   architecture, use cases, runbook, UAT, schema gaps

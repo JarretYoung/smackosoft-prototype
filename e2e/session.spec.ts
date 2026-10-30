@@ -1,9 +1,8 @@
-import { expect, test } from "@playwright/test";
-import { createSession, logIn, unique } from "./support/app";
+import { expect, test } from "./support/test";
+import { createSession, unique } from "./support/app";
 
 test("a user creates a session", async ({ page }) => {
   const name = `E2e session ${unique()}`;
-  await logIn(page);
 
   await createSession(page, { name });
 

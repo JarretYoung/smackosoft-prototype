@@ -1,10 +1,9 @@
-import { expect, test } from "@playwright/test";
-import { addMatch, createSession, go, logIn, scoreFirstGame, unique } from "./support/app";
+import { expect, test } from "./support/test";
+import { addMatch, createSession, go, scoreFirstGame, unique } from "./support/app";
 
 test("a user adds a video to a game and syncs it", async ({ page }) => {
   const id = unique();
   const label = `Court ${id}`;
-  await logIn(page);
   const sessionId = await createSession(page, { name: `E2e video ${id}` });
   await addMatch(page, sessionId);
   await scoreFirstGame(page, { team1: "21", team2: "15" });
@@ -21,8 +20,9 @@ test("a user adds a video to a game and syncs it", async ({ page }) => {
 
   // A new video in a game opens the sync sheet straight away.
   const sync = page.getByRole("dialog").filter({ hasText: "Sync video" });
-  await sync.getByLabel("Sync point").fill("1:30");
-  await sync.getByLabel("Sync point").blur();
+  const offset = sync.getByRole("textbox", { name: "Sync point" });
+  await offset.fill("1:30");
+  await offset.blur();
   await sync.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Sync point saved")).toBeVisible();
 
