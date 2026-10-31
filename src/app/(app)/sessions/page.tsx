@@ -1,16 +1,25 @@
 import { CalendarPlus } from "lucide-react";
 import Link from "next/link";
+import { ShowMore } from "@/src/components/show-more";
 import { Button } from "@/src/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
-import { SessionGroup, SessionRow, TodayCard } from "@/src/features/sessions/session-list";
-import { byViewerDay, dayGroup, leadToday, viewerDay } from "@/src/features/sessions/session-days";
+import { DayList, SessionRows, TodayCard } from "@/src/features/sessions/session-list";
+import {
+  byViewerDay,
+  dayGroup,
+  groupByDay,
+  leadToday,
+  splitDays,
+  viewerDay,
+} from "@/src/features/sessions/session-days";
+import { plural } from "@/src/lib/format";
 import { unwrap } from "@/src/lib/result";
 import { getViewerZone } from "@/src/lib/viewer-zone";
 import { backend } from "@/src/server";
 
 /** The whole calendar. This page lists everything the person can see, not a month around today. */
 const ALL_TIME = { from: "1970-01-01", to: "2999-12-31" };
-/** How many past sessions show before "Show older". */
+/** How many past sessions show before "Show older". A day is never cut in two. */
 const PAST_SHOWN = 20;
 
 export default async function SessionsPage() {
@@ -25,13 +34,15 @@ export default async function SessionsPage() {
   const todays = leadToday(inGroup("today"), now);
   const [hero, ...alsoToday] = todays;
   const thisWeek = inGroup("week");
-  const later = inGroup("later");
-  const past = inGroup("past").reverse();
+  const upcoming = groupByDay([...thisWeek, ...inGroup("later")], viewerZone);
+  // Newest day first, and within a day the earliest start first.
+  const past = splitDays(groupByDay(inGroup("past"), viewerZone).reverse(), PAST_SHOWN);
 
   const summary = [
     todays.length > 0 && `${todays.length} today`,
     thisWeek.length > 0 && `${thisWeek.length} this week`,
   ].filter(Boolean);
+  const older = past.rest.reduce((total, d) => total + d.sessions.length, 0);
 
   return (
     <main className="flex flex-col gap-7 px-4 pt-6 pb-4">
@@ -60,26 +71,37 @@ export default async function SessionsPage() {
       )}
 
       {hero && (
-        <section aria-labelledby="today-heading" className="flex flex-col gap-2">
-          <h2 id="today-heading" className="section-label">
+        <section aria-labelledby="today-heading" className="flex flex-col gap-3">
+          <h2 id="today-heading" className="section-title">
             Today
           </h2>
           <TodayCard session={hero} viewerZone={viewerZone} />
-          {alsoToday.length > 0 && (
-            <ul className="group-list">
-              {alsoToday.map((session) => (
-                <li key={session.id}>
-                  <SessionRow session={session} now={now} viewerZone={viewerZone} showDay={false} />
-                </li>
-              ))}
-            </ul>
-          )}
+          {alsoToday.length > 0 && <SessionRows sessions={alsoToday} viewerZone={viewerZone} />}
         </section>
       )}
 
-      <SessionGroup title="This week" sessions={thisWeek} now={now} viewerZone={viewerZone} />
-      <SessionGroup title="Later" sessions={later} now={now} viewerZone={viewerZone} />
-      <SessionGroup title="Past" sessions={past} now={now} viewerZone={viewerZone} muted limit={PAST_SHOWN} moreLabel="Show older" />
+      {upcoming.length > 0 && (
+        <section aria-labelledby="upcoming-heading" className="flex flex-col gap-3">
+          <h2 id="upcoming-heading" className="section-title">
+            Upcoming
+          </h2>
+          <DayList days={upcoming} now={now} viewerZone={viewerZone} />
+        </section>
+      )}
+
+      {past.shown.length > 0 && (
+        <section aria-labelledby="past-heading" className="flex flex-col gap-3">
+          <h2 id="past-heading" className="section-title">
+            Past
+          </h2>
+          <DayList days={past.shown} now={now} viewerZone={viewerZone} muted />
+          {past.rest.length > 0 && (
+            <ShowMore label={`Show older (${plural(older, "session")})`}>
+              <DayList days={past.rest} now={now} viewerZone={viewerZone} muted />
+            </ShowMore>
+          )}
+        </section>
+      )}
     </main>
   );
 }

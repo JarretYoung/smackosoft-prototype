@@ -74,13 +74,6 @@ export function dayShort(iso: string): string {
   return `${weekday} ${day} ${monthName}`;
 }
 
-/** "2026-10-31" as "31 Oct 2026". */
-export function longDate(iso: string): string {
-  const { year, month, day } = parts(iso);
-  const monthName = new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
-  return `${day} ${monthName} ${year}`;
-}
-
 /** Whole months from one date to another, ignoring the day. Negative when `to` is earlier. */
 export function monthsBetween(from: string, to: string): number {
   const a = parts(from);

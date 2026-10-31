@@ -10,11 +10,12 @@ import { MatchCard } from "@/src/features/matches/match-card";
 import { FactRow, RowIcon } from "@/src/features/sessions/fact-row";
 import { MembersSheetRow } from "@/src/features/sessions/members-sheet";
 import { SessionMenu } from "@/src/features/sessions/session-menu";
-import { SessionWhen } from "@/src/features/sessions/session-when";
+import { WhenRow } from "@/src/features/sessions/when-row";
 import { attentionOf } from "@/src/features/videos/videos";
 import { money, plural } from "@/src/lib/format";
 import { unwrap } from "@/src/lib/result";
 import { getViewerZone } from "@/src/lib/viewer-zone";
+import { todayIn } from "@/src/lib/zoned";
 import { backend } from "@/src/server";
 
 export default async function SessionDetailsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -75,20 +76,20 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
             canLeave={session.myRole !== "OWNER"}
           />
         </div>
-        <SessionWhen
-          date={session.date}
-          start={session.startTime}
-          end={session.endTime}
-          zone={session.timezone}
-          viewerZone={viewerZone}
-          className="px-1 text-subhead font-medium text-primary-foreground/90"
-        />
-        <h1 className="mt-1 px-1 text-[2.125rem] leading-[1.1] font-bold tracking-tight">{session.label}</h1>
+        <h1 className="px-1 text-[2.125rem] leading-[1.1] font-bold tracking-tight">{session.label}</h1>
         {session.coverUrl && <SessionCover url={session.coverUrl} className="mt-5 h-44 rounded-xl shadow-float" />}
       </section>
 
       <div className="flex flex-col gap-7 px-4">
         <section aria-label="Details" className="group-list">
+          <WhenRow
+            date={session.date}
+            start={session.startTime}
+            end={session.endTime}
+            zone={session.timezone}
+            viewerZone={viewerZone}
+            today={todayIn(viewerZone)}
+          />
           <FactRow icon={<MapPin />} label="Location">
             {session.location ? (
               session.locationUrl ? (

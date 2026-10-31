@@ -2,7 +2,7 @@ import { go, unique } from "./support/app";
 import { createSession } from "./support/db";
 import { setDate, setTime } from "./support/session-form";
 import { expect, test } from "./support/test";
-import { addDays, cityOf, clock12, clockIn, dateIn, dayShort, longDate, timeRange, todayIso, zonedIso } from "./support/time";
+import { addDays, cityOf, clock12, clockIn, dateIn, dayShort, timeRange, todayIso, zonedIso } from "./support/time";
 
 /**
  * A new session takes the browser's timezone and day, and a session shows its times on its own clock,
@@ -82,10 +82,11 @@ test("the sessions list shows a session on your own clock, wherever it happens",
   const end = new Date(Date.now() + 5 * 3_600_000).toISOString();
   await createSession({ label: name, date: dateIn(start, away.zone), timezone: away.zone, startTime: start, endTime: end });
 
+  // A row leads with the start on the viewer's clock, and the length under it.
   await go(page, "/sessions");
-  await expect(page.getByRole("link", { name: new RegExp(name) })).toContainText(
-    timeRange(clockIn(start, timezoneId!), clockIn(end, timezoneId!)),
-  );
+  const row = page.getByRole("link", { name: new RegExp(name) });
+  await expect(row).toContainText(clock12(clockIn(start, timezoneId!)));
+  await expect(row).toContainText("2 h");
 });
 
 test("changing the zone keeps the times that were typed", async ({ page, timezoneId }) => {
@@ -154,15 +155,18 @@ test("a session on the night the clocks change keeps its clock times", async ({ 
   await go(page, "/sessions/new");
   await page.getByLabel("Name", { exact: true }).fill(name);
   await setDate(page, { from: todayIso(timezoneId), to: day });
-  await expect(page.getByRole("button", { name: /^Date/ })).toContainText(longDate(day));
+  await expect(page.getByRole("button", { name: /^Date/ })).toContainText(dayShort(day));
   await setTime(page, "Starts", START);
   await setTime(page, "Ends", end);
   await expect(page.getByRole("button", { name: /^Ends/ })).toContainText(`${clock12(end)}, ${dayShort(addDays(day, 1))}`);
 
   await page.getByRole("button", { name: "Create session" }).click();
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
-  await expect(page.getByText(`${longDate(day)} · ${timeRange(START, end)}`)).toBeVisible();
+  const when = page.getByRole("region", { name: "Details" });
+  await expect(when).toContainText(dayShort(day));
+  await expect(when).toContainText(timeRange(START, end));
 
   await page.reload();
-  await expect(page.getByText(`${longDate(day)} · ${timeRange(START, end)}`)).toBeVisible();
+  await expect(when).toContainText(dayShort(day));
+  await expect(when).toContainText(timeRange(START, end));
 });

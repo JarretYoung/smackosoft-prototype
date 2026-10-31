@@ -2,14 +2,13 @@ import { MapPin } from "lucide-react";
 import Link from "next/link";
 import { AvatarStack } from "@/src/components/avatar-stack";
 import { SessionCover } from "@/src/components/court-art";
-import { DateTile } from "@/src/components/date-tile";
 import { RowChevron } from "@/src/components/row-chevron";
-import { ShowMore } from "@/src/components/show-more";
 import { TimeRange } from "@/src/components/time-range";
 import type { SessionListItem } from "@/src/contract";
-import { plural } from "@/src/lib/format";
-import { LiveBadge } from "./live-badge";
-import { dayLabel, viewerDay } from "./session-days";
+import { durationLabel, plural } from "@/src/lib/format";
+import { cn } from "@/src/lib/utils";
+import { LiveBadge, NowOr } from "./live-badge";
+import { dayHeading } from "./session-days";
 
 /** The big card for today's lead session. Its time is on the viewer's clock, in `viewerZone`. */
 export function TodayCard({ session, viewerZone }: { session: SessionListItem; viewerZone: string }) {
@@ -45,85 +44,103 @@ export function TodayCard({ session, viewerZone }: { session: SessionListItem; v
 }
 
 /**
- * A titled list of sessions. With `limit`, a long group shows that many and a button for the rest,
- * which keeps a long history from burying what is coming up.
+ * Sessions as an agenda: a small heading for each day, and under it one white list with a row per
+ * session. The day is said once, in the heading, so a row has room for what differs: the time.
+ * Days and times are the viewer's own, in `viewerZone`. `muted` greys the times of days gone by.
  */
-export function SessionGroup({
-  title,
-  sessions,
+export function DayList({
+  days,
   now,
   viewerZone,
   muted,
-  limit,
-  moreLabel,
 }: {
-  title: string;
-  sessions: SessionListItem[];
+  days: { day: string; sessions: SessionListItem[] }[];
   now: Date;
   viewerZone: string;
   muted?: boolean;
-  limit?: number;
-  moreLabel?: string;
 }) {
-  if (sessions.length === 0) return null;
-  const headingId = `${title.toLowerCase().replace(/\s+/g, "-")}-heading`;
-  const rows = sessions.map((session) => (
-    <li key={session.id}>
-      <SessionRow session={session} now={now} viewerZone={viewerZone} past={muted} />
-    </li>
-  ));
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-2">
-      <h2 id={headingId} className="section-label">
-        {title}
-      </h2>
-      <ul className="group-list">
-        {limit ? (
-          <ShowMore initial={limit} label={moreLabel ?? "Show more"}>
-            {rows}
-          </ShowMore>
-        ) : (
-          rows
-        )}
-      </ul>
-    </section>
+    <div className="flex flex-col gap-5">
+      {days.map(({ day, sessions }) => {
+        const heading = dayHeading(day, viewerZone, now);
+        return (
+          <section key={day} aria-label={heading} className="flex flex-col gap-2">
+            <h3 className="section-label">{heading}</h3>
+            <SessionRows sessions={sessions} viewerZone={viewerZone} muted={muted} />
+          </section>
+        );
+      })}
+    </div>
   );
 }
 
+/** One white list of session rows, with no heading of its own. */
+export function SessionRows({
+  sessions,
+  viewerZone,
+  muted,
+}: {
+  sessions: SessionListItem[];
+  viewerZone: string;
+  muted?: boolean;
+}) {
+  return (
+    <ul className="group-list">
+      {sessions.map((session) => (
+        <li key={session.id}>
+          <SessionRow session={session} viewerZone={viewerZone} muted={muted} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** How long a session runs, "3 h", or nothing when it has no start and end. */
+function lengthOf(session: SessionListItem): string | null {
+  if (!session.startTime || !session.endTime) return null;
+  const minutes = Math.round((Date.parse(session.endTime) - Date.parse(session.startTime)) / 60_000);
+  return minutes > 0 ? durationLabel(minutes) : null;
+}
+
 /**
- * One session as a row: the weekday (or Tomorrow) and the time range, then where and who. The day
- * and the times are the viewer's own, in `viewerZone`, so every row reads on one clock.
- * Rows already under a Today heading leave the day out with `showDay={false}`.
+ * One session as a row. The time leads, because it is what tells the sessions of a day apart: the
+ * start in bold with the length under it (or a red "Now" while it runs). Then the name and where,
+ * and who is in. The times are the viewer's own, in `viewerZone`.
  */
 export function SessionRow({
   session,
-  now,
   viewerZone,
-  past = false,
-  showDay = true,
+  muted = false,
 }: {
   session: SessionListItem;
-  now: Date;
   viewerZone: string;
-  past?: boolean;
-  showDay?: boolean;
+  muted?: boolean;
 }) {
-  const day = viewerDay(session, viewerZone);
-  const players = session.members.filter((m) => m.isPlayer).length;
-  const subtitle = [session.location, plural(players || session.members.length, players ? "Player" : "Member")]
-    .filter(Boolean)
-    .join(" · ");
+  const length = lengthOf(session);
+  const people = session.members.filter((m) => m.isPlayer || m.role === "OWNER");
   return (
     <Link href={`/sessions/${session.id}`} className="pressable-row list-row">
-      <DateTile date={day} past={past} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-body font-semibold tracking-tight">{session.label}</p>
-        <p className="truncate text-sm text-muted-foreground">
-          {showDay && `${dayLabel(day, viewerZone, now)} · `}
-          <TimeRange start={session.startTime} end={session.endTime} zone={viewerZone} suffix=" · " />
-          {subtitle}
-        </p>
+      <div className="w-[4.5rem] shrink-0">
+        {session.startTime ? (
+          <>
+            <p className={cn("text-subhead font-semibold whitespace-nowrap tabular-nums", muted && "text-muted-foreground")}>
+              <TimeRange start={session.startTime} zone={viewerZone} startOnly />
+            </p>
+            <p className="text-footnote whitespace-nowrap text-muted-foreground tabular-nums">
+              <NowOr start={session.startTime} end={session.endTime}>
+                {length}
+              </NowOr>
+            </p>
+          </>
+        ) : (
+          <p className="text-footnote text-muted-foreground">No time</p>
+        )}
       </div>
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-2 text-body font-semibold tracking-tight">{session.label}</p>
+        {session.location && <p className="truncate text-sm text-muted-foreground">{session.location}</p>}
+      </div>
+      <AvatarStack people={people.length ? people : session.members} max={2} />
       <RowChevron />
     </Link>
   );

@@ -1,4 +1,4 @@
-import { addDays, weekdayShort } from "../../lib/format";
+import { addDays, dayFor } from "../../lib/format";
 import { isoToDate, todayIn } from "../../lib/zoned";
 
 export type DayGroup = "past" | "today" | "week" | "later";
@@ -25,9 +25,39 @@ export function dayGroup(day: string, viewerZone: string, now: Date): DayGroup {
   return day <= addDays(today, 7) ? "week" : "later";
 }
 
-/** "Tomorrow" or the weekday of a day on the viewer's calendar. */
-export function dayLabel(day: string, viewerZone: string, now: Date): string {
-  return day === addDays(todayIn(viewerZone, now), 1) ? "Tomorrow" : weekdayShort(day);
+/**
+ * The heading over a day in a list: "Sat 31 Oct", with the year when it is not this year, and a word
+ * in front for the days either side of today ("Tomorrow · Sun 1 Nov").
+ */
+export function dayHeading(day: string, viewerZone: string, now: Date): string {
+  const today = todayIn(viewerZone, now);
+  const text = dayFor(day, today);
+  if (day === addDays(today, -1)) return `Yesterday · ${text}`;
+  if (day === today) return `Today · ${text}`;
+  if (day === addDays(today, 1)) return `Tomorrow · ${text}`;
+  return text;
+}
+
+/** Sessions that fall on the same day for the viewer, in order. Give it sessions already in day order. */
+export function groupByDay<T extends Dated>(sessions: T[], viewerZone: string): { day: string; sessions: T[] }[] {
+  const days: { day: string; sessions: T[] }[] = [];
+  for (const session of sessions) {
+    const day = viewerDay(session, viewerZone);
+    const last = days[days.length - 1];
+    if (last?.day === day) last.sessions.push(session);
+    else days.push({ day, sessions: [session] });
+  }
+  return days;
+}
+
+/**
+ * Cuts a list of days after the day that reaches `limit` sessions, so a day is never split in two.
+ * What follows the cut is for a "Show more" button.
+ */
+export function splitDays<T>(days: { day: string; sessions: T[] }[], limit: number) {
+  let count = 0;
+  const cut = days.findIndex((d) => (count += d.sessions.length) >= limit);
+  return cut < 0 ? { shown: days, rest: [] } : { shown: days.slice(0, cut + 1), rest: days.slice(cut + 1) };
 }
 
 type Timed = { startTime: string | null; endTime: string | null };
