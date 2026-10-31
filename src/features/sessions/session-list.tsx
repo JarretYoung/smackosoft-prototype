@@ -32,7 +32,7 @@ export function TodayCard({ session, viewerZone }: { session: SessionListItem; v
         <AvatarStack people={session.members.filter((m) => m.isPlayer || m.role === "OWNER")} max={3} />
         {session.location && (
           <span className="flex min-w-0 items-center gap-1 text-sm text-muted-foreground">
-            <MapPin className="size-3.5 shrink-0" />
+            <MapPin className="size-4 shrink-0" />
             <span className="truncate">{session.location}</span>
           </span>
         )}
@@ -138,7 +138,7 @@ function SessionRow({ session, viewerZone, past }: { session: SessionListItem; v
       <div className="min-w-0 flex-1 space-y-1">
         <p className="truncate text-body leading-6 font-semibold tracking-tight">{session.label}</p>
         <p className={cn("flex items-center gap-1.5 text-sm leading-5 tabular-nums", past && "text-muted-foreground")}>
-          <Clock className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+          <Clock className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           {session.startTime ? (
             <span className="truncate">
               <NowMark start={session.startTime} end={session.endTime} />
@@ -150,7 +150,7 @@ function SessionRow({ session, viewerZone, past }: { session: SessionListItem; v
         </p>
         {session.location && (
           <p className="flex items-center gap-1.5 text-sm leading-5 text-muted-foreground">
-            <MapPin className="size-3.5 shrink-0" aria-hidden />
+            <MapPin className="size-4 shrink-0" aria-hidden />
             <span className="truncate">{session.location}</span>
           </p>
         )}

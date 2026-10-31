@@ -48,7 +48,7 @@ export function MembersSection({ session, people }: { session: SessionFormState;
             {p.role !== "OWNER" && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="ghost" size="icon" aria-label={`Options for ${p.account.displayName}`}>
+                  <Button type="button" variant="bare" size="icon" className="text-muted-foreground" aria-label={`Options for ${p.account.displayName}`}>
                     <MoreHorizontal />
                   </Button>
                 </DropdownMenuTrigger>

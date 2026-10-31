@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/src/components/ui/alert-dialog";
-import { Button } from "@/src/components/ui/button";
+import { Button, buttonVariants } from "@/src/components/ui/button";
 import { errorMessage } from "@/src/lib/errors";
 import { LeaveLink, useConfirmDiscard } from "@/src/hooks/unsaved-changes";
 import { cn } from "@/src/lib/utils";
@@ -74,13 +74,13 @@ export function MatchSwitcher({
       <LeaveLink
         href={`${base}?m=${target.id}`}
         aria-label={label}
-        className="pressable flex size-11 items-center justify-center rounded-full text-primary hover:bg-muted"
+        className={buttonVariants({ variant: "bare", size: "icon" })}
       >
-        <Icon className="size-5" strokeWidth={2.5} />
+        <Icon className="size-6" strokeWidth={2.5} />
       </LeaveLink>
     ) : (
       <span aria-hidden className="flex size-11 items-center justify-center rounded-full text-muted-foreground opacity-40">
-        <Icon className="size-5" strokeWidth={2.5} />
+        <Icon className="size-6" strokeWidth={2.5} />
       </span>
     );
 

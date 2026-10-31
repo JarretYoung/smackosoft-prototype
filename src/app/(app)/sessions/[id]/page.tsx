@@ -151,7 +151,7 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
               Matches
             </h2>
             {canScore && session.matches.length > 0 && (
-              <Button asChild variant="text" size="sm" className="-mr-3">
+              <Button asChild variant="text" size="sm">
                 <Link href={`/sessions/${session.id}/matches/edit`}>Edit</Link>
               </Button>
             )}

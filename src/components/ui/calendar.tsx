@@ -35,7 +35,7 @@ function Calendar({
   classNames,
   showOutsideDays = false,
   captionLayout = "label",
-  buttonVariant = "text",
+  buttonVariant = "bare",
   formatters,
   components,
   labels,
@@ -158,7 +158,7 @@ function Calendar({
           if (orientation === "left") {
             return (
               <ChevronLeftIcon
-                className={cn("size-5", className)}
+                className={cn("size-6", className)}
                 strokeWidth={2.5}
                 {...props}
               />
@@ -168,7 +168,7 @@ function Calendar({
           if (orientation === "right") {
             return (
               <ChevronRightIcon
-                className={cn("size-5", className)}
+                className={cn("size-6", className)}
                 strokeWidth={2.5}
                 {...props}
               />

@@ -45,7 +45,7 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
         <h2 id="guests-heading" className="section-label">
           Guests you created
         </h2>
-        <Button size="sm" variant="text" className="-mr-3" onClick={() => openForm()}>
+        <Button size="sm" variant="text" onClick={() => openForm()}>
           <Plus /> Add guest
         </Button>
       </div>
@@ -74,7 +74,7 @@ export function GuestsPanel({ guests }: { guests: Guest[] }) {
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label={`Options for ${guest.displayName}`}>
+                  <Button variant="bare" size="icon" className="text-muted-foreground" aria-label={`Options for ${guest.displayName}`}>
                     <MoreHorizontal />
                   </Button>
                 </DropdownMenuTrigger>

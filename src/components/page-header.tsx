@@ -1,5 +1,6 @@
 import { ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
+import { buttonVariants } from "@/src/components/ui/button";
 import { LeaveLink } from "@/src/hooks/unsaved-changes";
 
 /** Navigation bar for sub pages: a back button, a centered title and an optional action. */
@@ -17,7 +18,7 @@ export function PageHeader({
       <LeaveLink
         href={back}
         aria-label="Back"
-        className="pressable inline-flex size-11 items-center justify-center rounded-full text-primary hover:bg-muted"
+        className={buttonVariants({ variant: "bare", size: "icon" })}
       >
         <ChevronLeft className="size-6" strokeWidth={2.5} />
       </LeaveLink>

@@ -88,7 +88,7 @@ export function MatchEditor({
             >
               <span className="flex w-full items-center justify-between text-footnote font-semibold tracking-wide text-muted-foreground uppercase">
                 {team.label}
-                <Pencil className="size-3.5" />
+                <Pencil className="size-4" />
               </span>
               {team.playerIds.length > 0 ? (
                 <AvatarStack people={playersOf(team.playerIds)} max={3} />

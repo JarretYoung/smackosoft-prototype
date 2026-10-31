@@ -31,7 +31,7 @@ export default async function MatchDetailsPage({ params }: { params: Promise<{ i
         back={`/sessions/${id}`}
         action={
           atLeast(session.myRole, "EDITOR") && (
-            <Button asChild variant="ghost" size="sm" className="text-primary">
+            <Button asChild variant="text" size="sm">
               <Link href={`/sessions/${id}/matches/edit?m=${match.id}`}>
                 <Pencil /> Edit
               </Link>

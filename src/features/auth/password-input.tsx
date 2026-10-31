@@ -22,7 +22,7 @@ export function PasswordInput({ className, ...props }: Omit<React.ComponentProps
         onClick={() => setShown((s) => !s)}
         aria-label={shown ? "Hide password" : "Show password"}
         aria-pressed={shown}
-        className="pressable absolute top-0 right-0 flex size-11 items-center justify-center rounded-xl text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none"
+        className="pressable absolute top-0 right-0 flex size-11 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/6 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none"
       >
         {shown ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
       </button>

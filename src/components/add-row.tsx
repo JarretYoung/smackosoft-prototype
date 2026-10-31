@@ -21,7 +21,7 @@ export function AddRow({
       className={cn("pressable-row flex min-h-14 w-full items-center gap-3 px-4 text-left font-semibold text-primary", className)}
     >
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent">
-        <Plus className="size-4" strokeWidth={2.5} />
+        <Plus className="size-5" strokeWidth={2.5} />
       </span>
       {children}
     </button>

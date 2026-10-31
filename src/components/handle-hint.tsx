@@ -15,7 +15,7 @@ export function HandleHint({ check, handle }: { check: HandleCheck; handle: stri
   if (check.status === "checking") {
     return (
       <p className="flex items-center gap-1.5 text-sm text-muted-foreground" aria-live="polite">
-        <Spinner className="size-3.5" /> Checking @{handle}
+        <Spinner className="size-4" /> Checking @{handle}
       </p>
     );
   }

@@ -164,8 +164,8 @@ export function VideosPanel({
         back={`/sessions/${sessionId}`}
         action={
           canEdit && (
-            <Button variant="ghost" size="icon" className="text-primary" aria-label="Add video" onClick={() => setAdding({ game: null })}>
-              <Plus className="size-6" strokeWidth={2.25} />
+            <Button variant="bare" size="icon" aria-label="Add video" onClick={() => setAdding({ game: null })}>
+              <Plus />
             </Button>
           )
         }

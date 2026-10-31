@@ -35,7 +35,7 @@ function RowMenu({ item, label, children }: { item: SessionVideo; label: string;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label={`More for ${label}`}>
+        <Button variant="bare" size="icon" className="text-muted-foreground" aria-label={`More for ${label}`}>
           <MoreHorizontal />
         </Button>
       </DropdownMenuTrigger>
