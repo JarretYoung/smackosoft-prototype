@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { MatchEditor } from "@/src/features/matches/match-editor";
 import { MatchSwitcher } from "@/src/features/matches/match-switcher";
 import { PageHeader } from "@/src/components/page-header";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/components/ui/empty";
 import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";
 import { atLeast } from "@/src/contract";
@@ -32,7 +33,14 @@ export default async function EditMatchPage({
         // Keyed by match so switching matches starts from that match's saved state.
         <MatchEditor key={match.id} sessionId={id} timezone={session.timezone} match={match} members={session.members} />
       ) : (
-        <p className="px-5 text-sm text-muted-foreground">No matches yet. Use the plus button to add one.</p>
+        <div className="px-4">
+          <Empty className="bg-card shadow-card">
+            <EmptyHeader>
+              <EmptyTitle>No matches yet</EmptyTitle>
+              <EmptyDescription>Use the plus button above to add one.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </div>
       )}
     </main>
   );

@@ -83,6 +83,26 @@ export default async function SessionsPage() {
         </section>
       )}
 
+      {sessions.length > 0 && todays.length === 0 && upcoming.length === 0 && (
+        <section aria-labelledby="upcoming-heading" className="flex flex-col gap-3">
+          <h2 id="upcoming-heading" className="section-title">
+            Upcoming
+          </h2>
+          <Empty className="bg-card shadow-card">
+            <EmptyHeader>
+              <EmptyMedia variant="icon" className="bg-accent text-primary">
+                <CalendarPlus />
+              </EmptyMedia>
+              <EmptyTitle>Nothing coming up</EmptyTitle>
+              <EmptyDescription>Create a session to get the next game on the calendar.</EmptyDescription>
+            </EmptyHeader>
+            <Button asChild>
+              <Link href="/sessions/new">New session</Link>
+            </Button>
+          </Empty>
+        </section>
+      )}
+
       {upcoming.length > 0 && (
         <section aria-labelledby="upcoming-heading" className="flex flex-col gap-3">
           <h2 id="upcoming-heading" className="section-title">

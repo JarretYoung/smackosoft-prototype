@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Plus, TriangleAlert } from "lucide-react";
+import { CheckCircle2, Plus, TriangleAlert, Video } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { removeVideoGames, removeVideoSessions, saveVideoGames, saveVideoSession
 import { AddRow } from "@/src/components/add-row";
 import { PageHeader } from "@/src/components/page-header";
 import { Button } from "@/src/components/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
 import type { SessionVideo } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
 import { plural } from "@/src/lib/format";
@@ -64,6 +65,10 @@ export function VideosPanel({
   const shown = matches
     .map((m) => ({ ...m, games: focus ? m.games.filter((g) => g.id === focus) : m.games }))
     .filter((m) => m.games.length > 0 || !focus);
+
+  // No video anywhere in the session. An editor with matches still gets the add rows under each game, so
+  // the empty state is only for an editor with nothing to attach to, and for a viewer.
+  const nothingYet = linked.length === 0 && (shown.length === 0 || !canEdit);
 
   const attention = unsynced.length + unassigned.length;
   const first = unsynced[0] ?? unassigned[0];
@@ -188,10 +193,36 @@ export function VideosPanel({
           )
         )}
 
-        {shown.map((match) => (
+        {nothingYet && (
+          <Empty className="bg-card shadow-card">
+            <EmptyHeader>
+              <EmptyMedia variant="icon" className="bg-accent text-primary">
+                <Video />
+              </EmptyMedia>
+              <EmptyTitle>No videos yet</EmptyTitle>
+              <EmptyDescription>
+                {canEdit ? "Add a recording of the session, then sync it to each game." : "Videos appear here once someone adds them."}
+              </EmptyDescription>
+            </EmptyHeader>
+            {canEdit && (
+              <Button onClick={() => setAdding({ game: null })}>
+                <Plus /> Add video
+              </Button>
+            )}
+          </Empty>
+        )}
+
+        {!nothingYet && shown.map((match) => (
           <section key={match.id} aria-label={match.label} className="flex flex-col gap-4">
             <h2 className="px-1 text-2xl font-bold tracking-tight">{match.label}</h2>
-            {match.games.length === 0 && <p className="px-1 text-sm text-muted-foreground">No games yet</p>}
+            {match.games.length === 0 && (
+              <Empty className="bg-card p-6 shadow-card">
+                <EmptyHeader>
+                  <EmptyTitle>No games yet</EmptyTitle>
+                  <EmptyDescription>Add a game to this match to attach videos to it.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            )}
             {match.games.map((g) => {
               const game = { value: g.id, label: `${match.label} · Game ${g.gameNumber}` };
               const inGame = videosOf(g.id);
