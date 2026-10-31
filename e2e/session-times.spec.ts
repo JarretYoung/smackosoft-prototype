@@ -82,11 +82,11 @@ test("the sessions list shows a session on your own clock, wherever it happens",
   const end = new Date(Date.now() + 5 * 3_600_000).toISOString();
   await createSession({ label: name, date: dateIn(start, away.zone), timezone: away.zone, startTime: start, endTime: end });
 
-  // A row leads with the short range on the viewer's clock: "9 to 11 am", no length.
+  // A row leads with the short range on the viewer's clock: "9:00 to 11:00 am", no length.
   await go(page, "/sessions");
   const row = page.getByRole("link", { name: new RegExp(name) });
   const hour = Number(clockIn(start, timezoneId!).split(":")[0]) % 12 || 12;
-  await expect(row).toContainText(new RegExp(`\\b${hour}(:\\d\\d)?( [ap]m)? to \\d`));
+  await expect(row.getByText(new RegExp(`^${hour}:\\d\\d( [ap]m)? to \\d`))).toBeVisible();
 });
 
 test("changing the zone keeps the times that were typed", async ({ page, timezoneId }) => {

@@ -126,15 +126,17 @@ export function AgendaRows({
 /**
  * One session: the name, the short time (a red "Now" in front while it runs) and the place, each on
  * its own line with its icon. Up to two people sit on the right at the standard 32px, then a
- * chevron. Times are the viewer's own. Every line truncates, so a row is always 100px tall.
+ * chevron. Times are the viewer's own. A missing time or place still gets its line ("No time set",
+ * "No location set"), so every row has three lines. Every line truncates and the row is a fixed 100px,
+ * because the date column is placed for that height.
  *
  * Spacing is on a 4px grid. The name is 16 on 24 and the detail lines 14 on 20, each 4px from the
- * next, with 14px above and below.
+ * next, centered in the row.
  */
 function SessionRow({ session, viewerZone, past }: { session: SessionListItem; viewerZone: string; past: boolean }) {
   const people = session.members.filter((m) => m.isPlayer || m.role === "OWNER");
   return (
-    <Link href={`/sessions/${session.id}`} className="pressable-row flex items-center gap-3 py-3.5 pr-4 pl-4">
+    <Link href={`/sessions/${session.id}`} className="pressable-row flex h-25 items-center gap-3 pr-4 pl-4">
       <div className="min-w-0 flex-1 space-y-1">
         <p className="truncate text-body leading-6 font-semibold tracking-tight">{session.label}</p>
         <p className={cn("flex items-center gap-1.5 text-sm leading-5 tabular-nums", past && "text-muted-foreground")}>
@@ -148,12 +150,10 @@ function SessionRow({ session, viewerZone, past }: { session: SessionListItem; v
             <span className="text-muted-foreground">No time set</span>
           )}
         </p>
-        {session.location && (
-          <p className="flex items-center gap-1.5 text-sm leading-5 text-muted-foreground">
-            <MapPin className="size-4 shrink-0" aria-hidden />
-            <span className="truncate">{session.location}</span>
-          </p>
-        )}
+        <p className="flex items-center gap-1.5 text-sm leading-5 text-muted-foreground">
+          <MapPin className="size-4 shrink-0" aria-hidden />
+          <span className="truncate">{session.location ?? "No location set"}</span>
+        </p>
       </div>
       <AvatarStack people={people.length ? people : session.members} max={2} />
       <RowChevron />

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clock12, dayFor, dayLong, dayShort, durationLabel, monthFor, timeRange, timeRangeShort, weekdayShort } from "../src/lib/format";
+import { clock12, dayFor, dayLong, dayShort, durationLabel, monthFor, parseTime, timeRange, timeRangeShort, weekdayShort } from "../src/lib/format";
 
 // The one set of forms every screen uses. If one of these changes, every screen changes with it.
 describe("how dates and times read", () => {
@@ -29,14 +29,31 @@ describe("how dates and times read", () => {
     expect(timeRange(null, "09:00")).toBeNull();
   });
 
+  it("reads typed times and settles them to HH:mm", () => {
+    expect(parseTime("10")).toBe("10:00");
+    expect(parseTime("10am")).toBe("10:00");
+    expect(parseTime(" 10 PM ")).toBe("22:00");
+    expect(parseTime("10.30")).toBe("10:30");
+    expect(parseTime("930pm")).toBe("21:30");
+    expect(parseTime("22:00")).toBe("22:00");
+    expect(parseTime("12am")).toBe("00:00");
+    expect(parseTime("12:15 p.m.")).toBe("12:15");
+    expect(parseTime("noon")).toBe("12:00");
+    expect(parseTime("10:00 am")).toBe("10:00");
+  });
+
+  it("rejects text that is not a time", () => {
+    for (const text of ["", "abc", "25", "13pm", "0am", "10:75", "1:5", "24:00"]) expect(parseTime(text)).toBeNull();
+  });
+
   it("writes a short range for list rows", () => {
-    expect(timeRangeShort("09:00", "11:00")).toBe("9 to 11 am");
-    expect(timeRangeShort("20:00", "22:00")).toBe("8 to 10 pm");
-    expect(timeRangeShort("09:30", "11:00")).toBe("9:30 to 11 am");
-    expect(timeRangeShort("09:00", "13:00")).toBe("9 am to 1 pm");
+    expect(timeRangeShort("09:00", "11:00")).toBe("9:00 to 11:00 am");
+    expect(timeRangeShort("20:00", "22:00")).toBe("8:00 to 10:00 pm");
+    expect(timeRangeShort("13:00", "16:30")).toBe("1:00 to 4:30 pm");
+    expect(timeRangeShort("09:00", "13:00")).toBe("9:00 am to 1:00 pm");
     // Past midnight the two times are not the same half of one day, so both keep their am or pm.
-    expect(timeRangeShort("10:00", "09:00")).toBe("10 am to 9 am");
-    expect(timeRangeShort("19:00", null)).toBe("From 7 pm");
+    expect(timeRangeShort("10:00", "09:00")).toBe("10:00 am to 9:00 am");
+    expect(timeRangeShort("19:00", null)).toBe("From 7:00 pm");
     expect(timeRangeShort(null, "09:00")).toBeNull();
   });
 

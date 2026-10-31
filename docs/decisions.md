@@ -3,7 +3,10 @@
 Standing decisions about how the app is built. Read them before you change the schema, the backend or the look.
 
 ## Product
-- Design: light mode, white background, red accent, shadcn, mobile first. See [design.md](design.md).
+- Design: light mode only, white background, red accent, shadcn, mobile first. No dark mode. See [design.md](design.md).
+- Past session days on the Home calendar use the same red as upcoming ones.
+- The session form is independent of the viewer's clock. You pick the time zone in the same form, and the times you type are in that zone.
+- Hosting: staging runs on Supabase and Vercel. Production is not set up yet.
 
 ## Backend
 - Backend rules live in [use-cases.md](use-cases.md). The contract in `src/contract` is the source of truth.

@@ -12,7 +12,7 @@ Apple Human Interface Guidelines, applied to a web app. System components carry 
 - Apple grouped layout: a warm gray page, white content surfaces, one smash red accent (`#b01e28`, `--primary`).
 - Glass appears only on the floating tab bar and the sticky header. Content never uses glass.
 - Each screen has one bold `.hero` surface: Home (win rate), Session (title and cover), Match (score), auth screens (brand).
-- Light mode only today. Do not make dark mode or large text harder than they are now.
+- Light mode only. We decided not to ship dark mode. Do not make large text harder than it is now.
 
 ### Radius roles
 
@@ -76,7 +76,7 @@ Inner shapes use the next step down. There is no 3xl.
 
 ### Accessibility
 - Small text meets 4.5:1. The tab label uses `accent-foreground`, not `primary`.
-- Not checked yet: dark mode, increased contrast, large text sizes.
+- Not checked yet: increased contrast, large text sizes.
 
 ## Principles for forms and input
 
@@ -163,8 +163,8 @@ Add a line when you make a decision, so later screens stay consistent.
 ### Lists and dates
 - **Agenda:** Home and Sessions share `AgendaRows` (`session-list.tsx`). A day is one list item. A single date column on the left spans all that day's sessions. A hairline separates it from the sessions, which stack to its right with a short rule between them.
 - **Date column:** a slim spine (`w-16`, 64px). `DateBlock` sits at its top, with its middle level with the middle of the first row. It shows the weekday, the day number (`.score text-xl`, 20) and the month. The weekday and month are caption size, bold and tracked, 2px apart.
-- **Session row:** the name on one line, the short time ("9 to 11 am", `timeRangeShort`, no length, a red "Now" in front while it runs), and the place, each on its own line with its icon. Up to two avatars at 32px with a "+N" chip sit on the right, then a chevron. Every line truncates, so every row is 100px tall.
-- **Row spacing:** name 16 on 24, detail lines 14 on 20, 4px between lines, 14px above and below.
+- **Session row:** the name on one line, the short time ("9:00 to 11:00 am", `timeRangeShort`: the full range with the first am or pm dropped when it is shared, no length, a red "Now" in front while it runs), and the place, each on its own line with its icon. A missing time or place keeps its line in muted text ("No time set", "No location set"). Up to two avatars at 32px with a "+N" chip sit on the right, then a chevron. Every line truncates, and every row is a fixed 100px (`h-25`). The date column is placed for that height, so a shorter row would push the date block off the row's middle.
+- **Row spacing:** name 16 on 24, detail lines 14 on 20, 4px between lines, centered in the row.
 - **Headings:** the Sessions page has a `section-title` for each part (Today, Upcoming, Past) and a `section-label` for each month, over one white `group-list` each. The block names the month too, so a row reads on its own and Home matches.
 - **Red in the date column:** today fills the whole column, top to bottom, in solid red with white text. Never a red tile inside a white cell, and never a fill that stops partway. An upcoming day has a red weekday over a dark number. A past day is all gray. Do not fill a date cell red for any other reason, and do not use a tile per row.
 - **Why the rows feel right:** a typographic anchor with strong scale contrast, a hairline between the anchor and the content, the same structure on every row, icons in place of labels, and room to breathe.
@@ -175,6 +175,7 @@ Add a line when you make a decision, so later screens stay consistent.
 ### Calendar and pickers
 - The calendar month title, weekday labels and day numbers are all `sm` (14), told apart by weight and tone. Week numbers are footnote (13). A day's sub text is caption (11).
 - Today always has a red ring. On a plain day the ring is the whole marker. On a filled day (a session, or the picked day) the ring sits outside the fill with a thin white gap.
+- **Time of day** (`TimeSheet`): the big readout is the text field. Type "10", "10pm", "22:00" or "noon" (`parseTime`). On blur or Enter it settles to "10:00 am", and you edit that to correct it. A bare 1 to 11 reads as am. Text that is not a time stays, marked invalid, with a hint. It focuses on open only with a mouse and keyboard, never on a phone, where the keyboard would cover the chips and the tape.
 - Known exception: the role menu descriptions in the session form use `text-xs`.
 
 ### Interaction

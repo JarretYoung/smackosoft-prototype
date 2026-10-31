@@ -4,7 +4,7 @@
  *
  *   Time          6:00 am               clock12
  *   Time range    6:00 am to 9:00 am    timeRange (open ended: "From 6:00 am")
- *   Short range   9 to 11 am            timeRangeShort, for list rows
+ *   Short range   9:00 to 11:00 am      timeRangeShort, for list rows
  *   Length        1 h 30 min            durationLabel
  *   Day           Sat 31 Oct            dayShort, the default
  *   Day, year     Sat 31 Oct 2026       dayLong, or dayFor to add the year only when it is not this year
@@ -124,6 +124,27 @@ export function clock12(time: string): string {
   return `${hour}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
 }
 
+/**
+ * Typed text to "HH:mm", or null when it is not a time. Reads "10", "10am", "10 pm", "10.30", "1030", "22:00", "noon" and "midnight".
+ * With no am or pm, 1 to 11 reads as am and 12 to 23 as the 24 hour clock, so "10" is 10:00 am and "13" is 1:00 pm.
+ */
+export function parseTime(text: string): string | null {
+  const t = text.trim().toLowerCase().replace(/([ap])\.?m\.?/g, "$1m");
+  if (t === "noon") return "12:00";
+  if (t === "midnight") return "00:00";
+  const match = /^(\d{1,2})(?:[:.h]?(\d{2}))?\s*(am|pm|a|p)?$/.exec(t);
+  if (!match) return null;
+  let hour = Number(match[1]);
+  const minute = match[2] ? Number(match[2]) : 0;
+  const meridiem = match[3]?.[0];
+  if (minute > 59) return null;
+  if (meridiem) {
+    if (hour < 1 || hour > 12) return null;
+    hour = (hour % 12) + (meridiem === "p" ? 12 : 0);
+  } else if (hour > 23) return null;
+  return minutesToTime(hour * 60 + minute);
+}
+
 /** "9:00 am to 11:00 am", "From 9:00 am", or null when there is no start. */
 export function timeRange(start: string | null, end: string | null): string | null {
   if (!start) return null;
@@ -131,21 +152,15 @@ export function timeRange(start: string | null, end: string | null): string | nu
 }
 
 /**
- * The short range for tight rows: "9 to 11 am", "8 to 10 pm", "9 am to 1 pm", "9:30 to 11 am", "From 9 am".
- * The hour drops ":00", and the first time drops its am or pm when the end shares it on the same day.
+ * The short range for tight rows: "9:00 to 11:00 am", "9:30 to 11:00 am", "9:00 am to 1:00 pm", "From 9:00 am".
+ * It is `timeRange` with one cut: the first time drops its am or pm when the end shares it on the same day.
  */
 export function timeRangeShort(start: string | null, end: string | null): string | null {
-  if (!start) return null;
-  const clock = (time: string) => {
-    const [h, m] = time.split(":").map(Number);
-    const hour = h % 12 === 0 ? 12 : h % 12;
-    return { text: m === 0 ? String(hour) : `${hour}:${String(m).padStart(2, "0")}`, meridiem: h < 12 ? "am" : "pm" };
-  };
-  const from = clock(start);
-  if (!end) return `From ${from.text} ${from.meridiem}`;
-  const to = clock(end);
-  const sameHalf = from.meridiem === to.meridiem && timeToMinutes(end) > timeToMinutes(start);
-  return `${sameHalf ? from.text : `${from.text} ${from.meridiem}`} to ${to.text} ${to.meridiem}`;
+  if (!start || !end) return timeRange(start, end);
+  const from = clock12(start);
+  const to = clock12(end);
+  const sameHalf = from.slice(-2) === to.slice(-2) && timeToMinutes(end) > timeToMinutes(start);
+  return `${sameHalf ? from.slice(0, -3) : from} to ${to}`;
 }
 
 /** 90 to "1 h 30 min", 120 to "2 h", 45 to "45 min". */

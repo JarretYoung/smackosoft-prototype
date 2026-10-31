@@ -6,7 +6,7 @@ import { isoToTime } from "@/src/lib/zoned";
  * viewer's zone to show times on their own clock. The server knows it from the timezone cookie, so
  * the server renders the same text as the browser and nobody waits for a mount.
  * `prefix` and `suffix` are added only when there is a time to show.
- * `startOnly` shows just "9:00 am". `short` shows "9 to 11 am" for tight rows.
+ * `startOnly` shows just "9:00 am". `short` shows "9:00 to 11:00 am" for tight rows.
  */
 export function TimeRange({
   start,
