@@ -38,6 +38,9 @@ export function BottomNav() {
             <LeaveLink
               key={href}
               href={href}
+              // A full prefetch, so the tab opens with its data from the browser's cache. How long
+              // that copy is reused is `staleTimes.static` in next.config.ts.
+              prefetch
               aria-current={active ? "page" : undefined}
               className={cn(
                 "pressable flex flex-1 flex-col items-center gap-0.5 rounded-full py-1.5 text-sm font-semibold",

@@ -19,6 +19,16 @@ Standing decisions about how the app is built. Read them before you change the s
 - Session times are `timestamptz`. The app shows them on the viewer's clock. See [architecture.md](architecture.md#time-and-timezones).
 - Game times stay `NOT NULL`. Session planned times are kept.
 
+## Speed and freshness
+- Users are in Kuala Lumpur. The target is Supabase and the app in Singapore. Staging sits in Seoul by accident, so a round trip there is slow. Cut round trips first, because that holds in any region.
+- The tabs (Home, Sessions, Profile) open from the browser's cache and redraw in place. Details are in [architecture.md](architecture.md#navigation-caching-and-freshness).
+- The calendar must show the truth soon. A tab older than 10 seconds redraws when it appears. A cached tab is never older than 30 seconds.
+- Nothing is cached on the server between requests. Access follows the database on every request. A removed member or deleted account loses access on the next request, as before.
+- Forms and detail pages are never served from the cache.
+- No optimistic concurrency and no offline mode for now. Last write wins.
+- The database pool keeps idle connections for five minutes, and a query that runs over 15 seconds fails the request. The database does not stop it. The connection stays busy until the query ends, so the next query on it waits. A `statement_timeout` on the `smackosoft_service` role would stop it for real. That needs a migration, so it is open. Do not set `statement_timeout` as a connection option. A connection pooler rejects it.
+- Risk: the tab prefetch is Next's legacy full prefetch. Next says Partial Prefetching becomes the only mode in the next major version. Re-check this when upgrading.
+
 ## Accepted, not changed
 - A stale role window in `saveMembers` and `removeMembers`.
 - A pre-check in `assertHandlesFree`.

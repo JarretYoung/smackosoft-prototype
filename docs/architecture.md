@@ -36,6 +36,30 @@ A feature file never imports another feature file for server logic. Shared serve
 - Start independent reads together with `Promise.all`.
 - Pass down only what a component needs. Compose feature components.
 - The `(app)` layout sets `export const instant = false`, because pages read the session.
+- Read the same thing twice in one request through a `cache`-wrapped function, as `accounts.getCurrent` does.
+- A new screen gets a `loading.tsx` in its own folder or route group. See [Navigation, caching and freshness](#navigation-caching-and-freshness).
+
+## Navigation, caching and freshness
+
+The database can be far away, so a page must not make people wait on it twice.
+
+| Part | How it works |
+|---|---|
+| Tab links | The tab bar links use `prefetch`. The browser fetches each tab with its data and reuses it for 30 seconds (`staleTimes.static` in `next.config.ts`). A tab opens in tens of milliseconds, including the first visit. |
+| Everything else | `staleTimes.dynamic` is 0. Forms, detail pages and links without `prefetch` always load fresh. Do not add `prefetch` to a link to a form. |
+| Redraw in place | `RefreshWhenStale` sits on Home and Sessions. If the cached copy is over 10 seconds old when it appears, it calls `router.refresh()` and the new data swaps in with no skeleton. Put it on read-only pages only. |
+| Tab pages say it | Each tab page exports `instant = false`, because a `prefetch` link is Next's legacy full prefetch. The login page does too, since signing out navigates there from a tab page. A new tab page needs the same line. |
+| Skeletons | Each route has a `loading.tsx` that keeps the words that never change and sizes its blocks like the real content. Pages with sibling forms sit in a route group, `(list)` and `(detail)`, so the skeleton does not apply to the forms. |
+| Errors | `error.tsx` at `(app)` keeps the tab bar. `app/error.tsx` catches the rest. Both show `ErrorScreen`. |
+| Per request | `React.cache` shares the actor and `accounts.getCurrent` inside one request. Nothing is kept between requests. |
+| The pool | `src/server/db/client.ts` keeps idle connections for five minutes and fails a query after 15 seconds. |
+
+Known limits:
+
+- `router.refresh()` clears every cached tab, and they fetch again. Switching tabs within about a second of a redraw falls back to a skeleton.
+- A write ends in `revalidatePath("/", "layout")`, which also clears the cache. The next tab then loads fresh.
+- Next calls the full prefetch legacy. See [decisions.md](decisions.md#speed-and-freshness).
+- Browser back restores a page from memory at once. That is Next's behavior, not ours.
 
 ## The form pattern
 

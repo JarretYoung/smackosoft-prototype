@@ -172,6 +172,11 @@ Add a line when you make a decision, so later screens stay consistent.
 - **Placeholder art** is always brand red, never green. With no cover photo the session hero is plain red with no pattern. A real photo shows as an inset image.
 - **Bottom nav:** the selected tab is a faint neutral capsule (`bg-foreground/6`) with a red icon and label.
 
+### Loading and errors
+- **Skeletons:** one `loading.tsx` per screen. Words that never change stay real ("Welcome back", "Upcoming", "Sessions"). Blocks are `Skeleton`, with the radius and height of what replaces them, and the hero stays red with white-tinted blocks. The agenda uses `AgendaRowsSkeleton` (same date column, same 100px rows). Check it against the real page at 390px: the next heading should sit at the same height.
+- **A tab opens at once.** The browser shows its cached copy and the new data swaps in with no skeleton. Do not add a spinner or a "refreshing" label for it.
+- **Failure:** `ErrorScreen` says "Could not load this" with one "Try again" button. It never shows the cause.
+
 ### Calendar and pickers
 - The calendar month title, weekday labels and day numbers are all `sm` (14), told apart by weight and tone. Week numbers are footnote (13). A day's sub text is caption (11).
 - Today always has a red ring. On a plain day the ring is the whole marker. On a filled day (a session, or the picked day) the ring sits outside the fill with a thin white gap.

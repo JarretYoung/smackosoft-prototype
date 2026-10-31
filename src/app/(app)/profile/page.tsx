@@ -7,6 +7,10 @@ import { unwrap } from "@/src/lib/result";
 import { getClaims } from "@/src/lib/supabase/server";
 import { backend } from "@/src/server";
 
+// The tab bar links here with `prefetch`, a full prefetch that brings the data along. Next calls
+// that the legacy mode and asks the target route to say it is meant (see docs/architecture.md).
+export const instant = false;
+
 export default async function ProfilePage() {
   // The sign in methods come from the verified token, so this costs no extra request.
   const [meResult, guestsResult, claims] = await Promise.all([

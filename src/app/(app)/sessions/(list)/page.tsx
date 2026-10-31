@@ -1,5 +1,6 @@
 import { CalendarPlus } from "lucide-react";
 import Link from "next/link";
+import { RefreshWhenStale } from "@/src/components/refresh-when-stale";
 import { ShowMore } from "@/src/components/show-more";
 import { Button } from "@/src/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
@@ -18,6 +19,10 @@ import { unwrap } from "@/src/lib/result";
 import { getViewerZone } from "@/src/lib/viewer-zone";
 import { todayIn } from "@/src/lib/zoned";
 import { backend } from "@/src/server";
+
+// The tab bar links here with `prefetch`, a full prefetch that brings the data along. Next calls
+// that the legacy mode and asks the target route to say it is meant (see docs/architecture.md).
+export const instant = false;
 
 /** The whole calendar. This page lists everything the person can see, not a month around today. */
 const ALL_TIME = { from: "1970-01-01", to: "2999-12-31" };
@@ -49,6 +54,7 @@ export default async function SessionsPage() {
 
   return (
     <main className="flex flex-col gap-7 px-4 pt-6 pb-4">
+      <RefreshWhenStale renderedAt={now.getTime()} />
       <header className="px-1">
         <h1 className="large-title">Sessions</h1>
         {sessions.length > 0 && (

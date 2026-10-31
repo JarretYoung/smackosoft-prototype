@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
   // Pages here read the session, so they block by design. Only validate segments that opt in.
   experimental: {
     instantInsights: { validationLevel: "manual-warning" },
+    // How long the browser reuses a page it already fetched. `static` covers links with
+    // `prefetch`, which are the three tabs. Everything else is `dynamic`, so forms and detail
+    // pages always load fresh. A tab older than 10 s is redrawn in place (RefreshWhenStale).
+    staleTimes: { dynamic: 0, static: 30 },
   },
 };
 

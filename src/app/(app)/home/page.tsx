@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PersonAvatar } from "@/src/components/avatar-stack";
+import { RefreshWhenStale } from "@/src/components/refresh-when-stale";
 import { RowChevron } from "@/src/components/row-chevron";
 import { HeroStat } from "@/src/features/home/hero-stat";
 import { HomeCalendar } from "@/src/features/sessions/home-calendar";
@@ -14,6 +15,10 @@ import { todayIn } from "@/src/lib/zoned";
 import { unwrap } from "@/src/lib/result";
 import { getViewerZone } from "@/src/lib/viewer-zone";
 import { backend } from "@/src/server";
+
+// The tab bar links here with `prefetch`, a full prefetch that brings the data along. Next calls
+// that the legacy mode and asks the target route to say it is meant (see docs/architecture.md).
+export const instant = false;
 
 export default async function HomePage() {
   // The zone comes from the request, so the clock is read after it, which a Server Component may do.
@@ -42,6 +47,7 @@ export default async function HomePage() {
 
   return (
     <main className="flex flex-col gap-7 px-4 pt-6 pb-4">
+      <RefreshWhenStale renderedAt={now.getTime()} />
       <header>
         <Link href="/profile" className="pressable flex items-center gap-3">
           <PersonAvatar person={me.account} size="lg" />
