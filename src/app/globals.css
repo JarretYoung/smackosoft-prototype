@@ -198,9 +198,13 @@ html body[data-scroll-locked] {
     @apply transition-colors duration-150 active:bg-muted;
   }
 
-  /* Functional layer: floating bars. Content never uses this. */
+  /*
+   * Functional layer: floating bars. Content never uses this.
+   * Opaque enough that the red label of the active tab keeps 4.5:1 over anything that scrolls under
+   * it, including today's solid red date column. At 72% it blended to a pink that failed.
+   */
   .glass {
-    background: oklch(1 0 0 / 0.72);
+    background: oklch(1 0 0 / 0.88);
     -webkit-backdrop-filter: blur(24px) saturate(1.5);
     backdrop-filter: blur(24px) saturate(1.5);
     box-shadow:

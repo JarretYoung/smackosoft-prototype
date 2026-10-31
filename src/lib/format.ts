@@ -4,17 +4,33 @@
  *
  *   Time          6:00 am               clock12
  *   Time range    6:00 am to 9:00 am    timeRange (open ended: "From 6:00 am")
+ *   Short range   9 to 11 am            timeRangeShort, for list rows
  *   Length        1 h 30 min            durationLabel
  *   Day           Sat 31 Oct            dayShort, the default
  *   Day, year     Sat 31 Oct 2026       dayLong, or dayFor to add the year only when it is not this year
  *   Weekday       Sat                   weekdayShort
- *   Tile          31 over OCT           dayOf and monthShort
+ *   Month         November              monthFor, with the year when it is not this year
+ *   Date block    SAT over 31 over OCT  weekdayShort, dayOf and monthShort
  *
  * A word where it helps ("Today", "Tomorrow") comes from `dayLabel` in the sessions feature.
  * Times that depend on a timezone come from `src/lib/zoned.ts`.
  */
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS_LONG = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 function parts(date: string) {
   const [year, month, day] = date.split("-").map(Number);
@@ -46,6 +62,13 @@ export function dayLong(date: string): string {
 /** `dayShort`, with the year added when `date` is not in the same year as `today`. */
 export function dayFor(date: string, today: string): string {
   return parts(date).year === parts(today).year ? dayShort(date) : dayLong(date);
+}
+
+/** "November", or "November 2027" when `date` is not in the same year as `today`. */
+export function monthFor(date: string, today: string): string {
+  const { year, month } = parts(date);
+  const name = MONTHS_LONG[month - 1];
+  return year === parts(today).year ? name : `${name} ${year}`;
 }
 
 /** The first day of the month before `date` through the last day of the month after it. */
@@ -105,6 +128,24 @@ export function clock12(time: string): string {
 export function timeRange(start: string | null, end: string | null): string | null {
   if (!start) return null;
   return end ? `${clock12(start)} to ${clock12(end)}` : `From ${clock12(start)}`;
+}
+
+/**
+ * The short range for tight rows: "9 to 11 am", "8 to 10 pm", "9 am to 1 pm", "9:30 to 11 am", "From 9 am".
+ * The hour drops ":00", and the first time drops its am or pm when the end shares it on the same day.
+ */
+export function timeRangeShort(start: string | null, end: string | null): string | null {
+  if (!start) return null;
+  const clock = (time: string) => {
+    const [h, m] = time.split(":").map(Number);
+    const hour = h % 12 === 0 ? 12 : h % 12;
+    return { text: m === 0 ? String(hour) : `${hour}:${String(m).padStart(2, "0")}`, meridiem: h < 12 ? "am" : "pm" };
+  };
+  const from = clock(start);
+  if (!end) return `From ${from.text} ${from.meridiem}`;
+  const to = clock(end);
+  const sameHalf = from.meridiem === to.meridiem && timeToMinutes(end) > timeToMinutes(start);
+  return `${sameHalf ? from.text : `${from.text} ${from.meridiem}`} to ${to.text} ${to.meridiem}`;
 }
 
 /** 90 to "1 h 30 min", 120 to "2 h", 45 to "45 min". */

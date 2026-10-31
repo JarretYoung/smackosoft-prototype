@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { AvatarStack, PersonAvatar } from "@/src/components/avatar-stack";
-import { DateTile } from "@/src/components/date-tile";
+import { PersonAvatar } from "@/src/components/avatar-stack";
+import { RowChevron } from "@/src/components/row-chevron";
 import { HeroStat } from "@/src/features/home/hero-stat";
 import { HomeCalendar } from "@/src/features/sessions/home-calendar";
-import { RowChevron } from "@/src/components/row-chevron";
-import { TimeRange } from "@/src/components/time-range";
+import { AgendaRows } from "@/src/features/sessions/session-list";
 import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/components/ui/empty";
@@ -91,24 +90,7 @@ export default async function HomePage() {
             </EmptyHeader>
           </Empty>
         ) : (
-          <ul className="group-list">
-            {upcoming.map((s) => (
-              <li key={s.id}>
-                <Link href={`/sessions/${s.id}`} className="pressable-row list-row">
-                  <DateTile date={viewerDay(s, viewerZone)} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-body font-semibold tracking-tight">{s.label}</p>
-                    <p className="truncate text-sm text-muted-foreground">
-                      <TimeRange start={s.startTime} end={s.endTime} zone={viewerZone} suffix={s.location ? " · " : ""} />
-                      {s.location ?? (s.startTime ? "" : "No details")}
-                    </p>
-                  </div>
-                  <AvatarStack people={s.members} max={2} size="sm" />
-                  <RowChevron />
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <AgendaRows sessions={upcoming} now={now} viewerZone={viewerZone} />
         )}
       </section>
 

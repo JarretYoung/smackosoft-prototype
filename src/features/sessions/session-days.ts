@@ -50,6 +50,18 @@ export function groupByDay<T extends Dated>(sessions: T[], viewerZone: string): 
   return days;
 }
 
+/** Days that share a month, in order. `month` is "YYYY-MM". Give it days already in order. */
+export function groupByMonth<T extends { day: string }>(days: T[]): { month: string; days: T[] }[] {
+  const months: { month: string; days: T[] }[] = [];
+  for (const d of days) {
+    const month = d.day.slice(0, 7);
+    const last = months[months.length - 1];
+    if (last?.month === month) last.days.push(d);
+    else months.push({ month, days: [d] });
+  }
+  return months;
+}
+
 /**
  * Cuts a list of days after the day that reaches `limit` sessions, so a day is never split in two.
  * What follows the cut is for a "Show more" button.

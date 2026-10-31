@@ -3,11 +3,12 @@ import Link from "next/link";
 import { ShowMore } from "@/src/components/show-more";
 import { Button } from "@/src/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
-import { DayList, SessionRows, TodayCard } from "@/src/features/sessions/session-list";
+import { AgendaRows, MonthLists, TodayCard } from "@/src/features/sessions/session-list";
 import {
   byViewerDay,
   dayGroup,
   groupByDay,
+  groupByMonth,
   leadToday,
   splitDays,
   viewerDay,
@@ -15,6 +16,7 @@ import {
 import { plural } from "@/src/lib/format";
 import { unwrap } from "@/src/lib/result";
 import { getViewerZone } from "@/src/lib/viewer-zone";
+import { todayIn } from "@/src/lib/zoned";
 import { backend } from "@/src/server";
 
 /** The whole calendar. This page lists everything the person can see, not a month around today. */
@@ -28,13 +30,14 @@ export default async function SessionsPage() {
   const sessions = unwrap(listed).sort(byViewerDay(viewerZone));
   // Read after the request, so the clock is not read while prerendering.
   const now = new Date();
+  const today = todayIn(viewerZone, now);
   const inGroup = (group: ReturnType<typeof dayGroup>) =>
     sessions.filter((s) => dayGroup(viewerDay(s, viewerZone), viewerZone, now) === group);
   // Every session of today stays here, the running or next one first and big.
   const todays = leadToday(inGroup("today"), now);
   const [hero, ...alsoToday] = todays;
   const thisWeek = inGroup("week");
-  const upcoming = groupByDay([...thisWeek, ...inGroup("later")], viewerZone);
+  const upcoming = groupByMonth(groupByDay([...thisWeek, ...inGroup("later")], viewerZone));
   // Newest day first, and within a day the earliest start first.
   const past = splitDays(groupByDay(inGroup("past"), viewerZone).reverse(), PAST_SHOWN);
 
@@ -76,7 +79,7 @@ export default async function SessionsPage() {
             Today
           </h2>
           <TodayCard session={hero} viewerZone={viewerZone} />
-          {alsoToday.length > 0 && <SessionRows sessions={alsoToday} viewerZone={viewerZone} />}
+          {alsoToday.length > 0 && <AgendaRows sessions={alsoToday} now={now} viewerZone={viewerZone} />}
         </section>
       )}
 
@@ -85,7 +88,7 @@ export default async function SessionsPage() {
           <h2 id="upcoming-heading" className="section-title">
             Upcoming
           </h2>
-          <DayList days={upcoming} now={now} viewerZone={viewerZone} />
+          <MonthLists months={upcoming} now={now} viewerZone={viewerZone} today={today} />
         </section>
       )}
 
@@ -94,10 +97,10 @@ export default async function SessionsPage() {
           <h2 id="past-heading" className="section-title">
             Past
           </h2>
-          <DayList days={past.shown} now={now} viewerZone={viewerZone} muted />
+          <MonthLists months={groupByMonth(past.shown)} now={now} viewerZone={viewerZone} today={today} />
           {past.rest.length > 0 && (
             <ShowMore label={`Show older (${plural(older, "session")})`}>
-              <DayList days={past.rest} now={now} viewerZone={viewerZone} muted />
+              <MonthLists months={groupByMonth(past.rest)} now={now} viewerZone={viewerZone} today={today} />
             </ShowMore>
           )}
         </section>

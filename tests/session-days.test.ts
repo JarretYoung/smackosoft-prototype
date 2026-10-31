@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayHeading, groupByDay, leadToday, splitDays } from "../src/features/sessions/session-days";
+import { dayHeading, groupByDay, groupByMonth, leadToday, splitDays } from "../src/features/sessions/session-days";
 
 const at = (hour: number) => `2026-10-31T${String(hour).padStart(2, "0")}:00:00.000Z`;
 const session = (name: string, start: number | null, end: number | null) => ({
@@ -72,6 +72,15 @@ describe("a list grouped by day", () => {
     const list = [session("a", "2026-10-30"), small];
     expect(groupByDay(list, "Asia/Kuala_Lumpur")).toHaveLength(2);
     expect(groupByDay(list, "Europe/London")).toHaveLength(1);
+  });
+
+  it("puts days of the same month together, in order", () => {
+    const list = ["2026-10-30", "2026-10-31", "2026-11-01", "2026-11-03", "2027-01-02"].map((day) => ({ day }));
+    expect(groupByMonth(list).map((m) => [m.month, m.days.length])).toEqual([
+      ["2026-10", 2],
+      ["2026-11", 2],
+      ["2027-01", 1],
+    ]);
   });
 
   it("cuts after the day that reaches the limit, and never splits a day", () => {

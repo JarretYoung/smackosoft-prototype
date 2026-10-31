@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 
 /** True while the session's planned window is running. It checks again every minute. */
 function useRunning(start: string | null, end: string | null): boolean {
@@ -30,8 +30,13 @@ export function LiveBadge({ start, end, className }: { start: string | null; end
   );
 }
 
-/** A red "Now" in a list row while the session is running, and `children` (its length) the rest of the time. */
-export function NowOr({ start, end, children }: { start: string | null; end: string | null; children: ReactNode }) {
-  if (!useRunning(start, end)) return children;
-  return <span className="font-semibold text-primary">Now</span>;
+/** A red "Now" and a dot in front of a list row's time while the session is running. Nothing otherwise. */
+export function NowMark({ start, end }: { start: string | null; end: string | null }) {
+  if (!useRunning(start, end)) return null;
+  return (
+    <>
+      <span className="font-semibold text-primary">Now</span>
+      <span className="text-muted-foreground">{" · "}</span>
+    </>
+  );
 }
