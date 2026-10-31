@@ -5,11 +5,10 @@ import { cn } from "@/src/lib/utils";
 export type DateState = "past" | "today" | "upcoming";
 
 /**
- * A day as a small typographic block: the weekday, the day number, the month. The sizes are the ones
- * the date tile kept from c5a788a until the agenda rows: the number a step up at 20 (`text-xl`) and the labels at
- * caption size (11), bold and tracked, 2px apart. The block has no background. For today the column around it is filled
- * red (see `AgendaRows`) and the text turns white. Red is spent by meaning: an upcoming day has a red
- * weekday, a day gone by is gray.
+ * A day as a small typographic block: the weekday, the day number, the month. The number is 20
+ * (`text-xl`) and the labels are caption size (11), bold and tracked, 2px apart. The block has no
+ * background. For today the column around it is filled red (see `AgendaRows`) and the text turns
+ * white. Red is spent by meaning: an upcoming day has a red weekday, a day gone by is gray.
  */
 export function DateBlock({ date, state }: { date: string; state: DateState }) {
   const today = state === "today";

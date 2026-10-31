@@ -107,5 +107,7 @@ Every write refreshes the whole app with `revalidatePath("/", "layout")` (see `s
 ## Where to read more
 
 - [use-cases.md](use-cases.md): rules, permissions and the use case list
+- [decisions.md](decisions.md): standing decisions about the schema, the backend and the data
+- [design.md](design.md): the visual system, form principles and the pattern log
 - [runbook.md](runbook.md): running it locally, sample logins, tests
 - [uat.md](uat.md): what to try on each screen
