@@ -5,6 +5,7 @@
  * - `write` runs the handler in one transaction. An error rolls everything back.
  * - Handlers throw `Failure` for expected errors. Anything else is a bug and propagates.
  */
+import { cache } from "react";
 import { z } from "zod";
 import { fail, ok, type ErrorCode, type Issue, type Result } from "../contract";
 import { getDb, type Db } from "./db/client";
@@ -40,16 +41,24 @@ export const authSource = {
   },
 };
 
-async function resolveActor(db: Db): Promise<Actor | null> {
-  const userId = await authSource.userId();
-  if (!userId) return null;
-  const account = await db
+/**
+ * The account behind a signed-in user. React's `cache` shares the answer inside one request, so a
+ * page that starts four reads looks the account up once. Nothing is kept between requests, so a
+ * deleted account loses access on the next one. Outside a request (tests, scripts) it does not cache.
+ */
+const accountOf = cache(async (userId: string): Promise<Actor | null> => {
+  const account = await getDb()
     .selectFrom("accounts")
     .select("id")
     .where("user_id", "=", userId)
     .where("deleted", "=", false)
     .executeTakeFirst();
   return account ? { accountId: account.id } : null;
+});
+
+async function resolveActor(): Promise<Actor | null> {
+  const userId = await authSource.userId();
+  return userId ? accountOf(userId) : null;
 }
 
 // ----------------------------------------------------------------- wrapping
@@ -88,8 +97,8 @@ export async function guard<T>(run: () => Promise<T>): Promise<Result<T>> {
   }
 }
 
-async function actorOrStop(db: Db): Promise<Actor> {
-  const actor = await resolveActor(db);
+async function actorOrStop(): Promise<Actor> {
+  const actor = await resolveActor();
   if (!actor) throw new Failure("UNAUTHENTICATED");
   return actor;
 }
@@ -108,7 +117,7 @@ export function read<S extends z.ZodType, T>(
     guard(async () => {
       const parsed = parse(schema, input);
       const db = getDb();
-      return handler({ db, actor: await actorOrStop(db) }, parsed);
+      return handler({ db, actor: await actorOrStop() }, parsed);
     });
 }
 
@@ -122,7 +131,7 @@ export function write<S extends z.ZodType>(
       const parsed = parse(schema, input);
       if (Array.isArray(parsed) && parsed.length === 0) return;
       const db = getDb();
-      const actor = await actorOrStop(db);
+      const actor = await actorOrStop();
       await db.transaction().execute((tx) => handler({ db: tx, actor }, parsed));
     });
 }
@@ -136,7 +145,7 @@ export function act<S extends z.ZodType, T>(
     guard(async () => {
       const parsed = parse(schema, input);
       const db = getDb();
-      const actor = await actorOrStop(db);
+      const actor = await actorOrStop();
       return db.transaction().execute((tx) => handler({ db: tx, actor }, parsed));
     });
 }

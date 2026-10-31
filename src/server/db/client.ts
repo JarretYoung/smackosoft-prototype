@@ -25,7 +25,21 @@ export function getDb(): Db {
   if (!globalForDb.smackosoftDb) {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) throw new Error("DATABASE_URL is not set");
-    const pool = new pg.Pool({ connectionString, types });
+    const pool = new pg.Pool({
+      connectionString,
+      types,
+      // A new connection costs several round trips, which is long when the database is far away.
+      // Keep idle ones for minutes instead of pg's default 10 seconds, and probe them so a silent
+      // drop shows up as an error on the idle client, not as a hung query.
+      idleTimeoutMillis: 5 * 60_000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10_000,
+      // A stuck database ends in an error page with a retry, not in a page that never loads.
+      // These are client side so they also work through a connection pooler, which rejects the
+      // server side `statement_timeout` startup parameter.
+      connectionTimeoutMillis: 10_000,
+      query_timeout: 15_000,
+    });
     // Without a listener, a dropped idle connection crashes the process.
     pool.on("error", (error) => console.error("Idle database client error", error));
     globalForDb.smackosoftDb = new Kysely<DB>({

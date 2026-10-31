@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { sql } from "kysely";
+import { cache } from "react";
 import {
   ClaimInput,
   CreateClaimCodeInput,
@@ -42,17 +43,20 @@ async function assertHandlesFree(
   }
 }
 
-export const getCurrentAccount = read(NoInput, async ({ db, actor }): Promise<CurrentAccount> => {
-  const row = await db
-    .selectFrom("accounts")
-    .select([...accountColumns, "accounts.handle_change_count"])
-    .where("accounts.id", "=", actor.accountId)
-    .executeTakeFirstOrThrow();
-  return {
-    account: toAccount(row),
-    handleChangesLeft: HANDLE_CHANGES_ALLOWED - row.handle_change_count,
-  };
-});
+/** Shared inside one request, so the layout and the page that both ask for it read it once. */
+export const getCurrentAccount = cache(
+  read(NoInput, async ({ db, actor }): Promise<CurrentAccount> => {
+    const row = await db
+      .selectFrom("accounts")
+      .select([...accountColumns, "accounts.handle_change_count"])
+      .where("accounts.id", "=", actor.accountId)
+      .executeTakeFirstOrThrow();
+    return {
+      account: toAccount(row),
+      handleChangesLeft: HANDLE_CHANGES_ALLOWED - row.handle_change_count,
+    };
+  }),
+);
 
 export const findByHandle = read(FindAccountByHandleInput, async ({ db }, { handle }) => {
   const row = await db
