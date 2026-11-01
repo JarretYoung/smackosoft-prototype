@@ -11,7 +11,7 @@ test("a user adds a video to a game and syncs it", async ({ page }) => {
   await createMatch({ sessionId, createdBy: ownerId, games: [[21, 15]] });
 
   await go(page, `/sessions/${sessionId}/videos`);
-  await page.getByRole("group", { name: "Game 1" }).getByRole("button", { name: "Add video" }).click();
+  await page.getByRole("button", { name: "Add a video to Match 1 · Game 1" }).click();
   await page.getByRole("button", { name: "New video" }).click();
 
   const add = page.getByRole("dialog").filter({ hasText: "Paste a link" });
@@ -28,6 +28,6 @@ test("a user adds a video to a game and syncs it", async ({ page }) => {
   await sync.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Sync point saved")).toBeVisible();
 
-  await expect(page.getByRole("group", { name: "Game 1" }).getByText(label)).toBeVisible();
-  await expect(page.getByText(/Synced at 1:30/)).toBeVisible();
+  await expect(page.getByRole("button", { name: `Play ${label}` })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Synced at 1:30" })).toBeVisible();
 });

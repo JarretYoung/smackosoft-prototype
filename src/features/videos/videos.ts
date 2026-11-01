@@ -1,4 +1,31 @@
-import type { SessionVideo } from "@/src/contract";
+import type { Match, SessionVideo } from "@/src/contract";
+
+/** One game of the session as the Videos page lists it. */
+export type PlaylistGame = {
+  id: string;
+  /** "Game 3" for a game played on its own, "Match 1 · Game 2" for a game in a match. */
+  name: string;
+  /** "21 : 17" in team order, or null until both sides have a score. */
+  result: string | null;
+  startTime: string;
+};
+
+/** Every game of the session in the order it was played, whichever match it belongs to. */
+export function playlistOf(matches: Match[]): PlaylistGame[] {
+  return matches
+    .flatMap((match) =>
+      match.games.map((game): PlaylistGame => {
+        const points = match.teams.map((team) => game.scores.find((s) => s.matchTeamId === team.id)?.score);
+        return {
+          id: game.id,
+          name: match.format === "BO1" ? match.label : `${match.label} · Game ${game.gameNumber}`,
+          result: points.length === 2 && points.every((p) => p !== undefined) ? `${points[0]} : ${points[1]}` : null,
+          startTime: game.startTime,
+        };
+      }),
+    )
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+}
 
 /**
  * Footage that needs someone to act on it:

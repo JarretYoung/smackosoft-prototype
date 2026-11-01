@@ -172,6 +172,14 @@ Add a line when you make a decision, so later screens stay consistent.
 - **Placeholder art** is always brand red, never green. With no cover photo the session hero is plain red with no pattern. A real photo shows as an inset image.
 - **Bottom nav:** the selected tab is a faint neutral capsule (`bg-foreground/6`) with a red icon and label.
 
+### Videos
+- **Playlist:** the Videos page is a playlist of games, modelled on the YouTube phone playlist. Each game is a row: a 16:9 thumbnail (`w-40`), the video's own label at body weight on up to two lines, then the game and its result, then who added it. A "…" menu holds the secondary actions.
+- **Empty game:** a game with no video keeps its row, with a dashed thumbnail and a red "Add a video". Do not hide it. A viewer sees "No video yet" in muted text.
+- **Not linked to a game:** videos with no game sit in a white `group-list` under the playlist, each with a red "Link". They are obvious without a banner.
+- **Sync chip:** bottom right of the thumbnail, where YouTube puts the duration. Black with a check and the offset when synced. Brand red with "Not synced" when not. The page also says "N videos need syncing" once, and it scrolls to the first.
+- **Player:** playing a row puts the player where the poster was and pins it under the header, so the list scrolls beneath it. The playing row is tinted `bg-accent` with "Playing" on its thumbnail. "Next game" plays the next game that has a video. A link that cannot play in the page opens in a new tab.
+- **Placeholder frame:** with no thumbnail the frame is the drawn court in brand red with the game number, never a photo stand-in in another color.
+
 ### Loading and errors
 - **Skeletons:** one `loading.tsx` per screen. Words that never change stay real ("Welcome back", "Upcoming", "Sessions"). Blocks are `Skeleton`, with the radius and height of what replaces them, and the hero stays red with white-tinted blocks. The agenda uses `AgendaRowsSkeleton` (same date column, same 100px rows). Check it against the real page at 390px: the next heading should sit at the same height.
 - **A tab opens at once.** The browser shows its cached copy and the new data swaps in with no skeleton. Do not add a spinner or a "refreshing" label for it.

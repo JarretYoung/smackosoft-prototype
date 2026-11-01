@@ -1,4 +1,5 @@
 import { VideosPanel } from "@/src/features/videos/videos-panel";
+import { playlistOf } from "@/src/features/videos/videos";
 import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";
 import { atLeast } from "@/src/contract";
@@ -20,16 +21,16 @@ export default async function VideosPage({
   const session = unwrap(sessionResult);
   const linked = unwrap(linkedResult);
 
-  const matches = session.matches.map((match, mi) => ({
-    id: match.id,
-    label: match.label || `Match ${mi + 1}`,
-    ungrouped: match.format === "BO1",
-    games: match.games.map((g) => ({ id: g.id, gameNumber: g.gameNumber })),
-  }));
-
   return (
     <main>
-      <VideosPanel sessionId={id} canEdit={atLeast(session.myRole, "EDITOR")} matches={matches} linked={linked} focus={game ?? null} />
+      <VideosPanel
+        sessionId={id}
+        sessionLabel={session.label}
+        canEdit={atLeast(session.myRole, "EDITOR")}
+        games={playlistOf(session.matches)}
+        linked={linked}
+        focus={game ?? null}
+      />
     </main>
   );
 }

@@ -24,8 +24,12 @@ Standing decisions about how the app is built. Read them before you change the s
 - The session page has two sections. Matches (`BO3`, `BO5`, `FREE`) show a match card that opens the match. Games (`BO1`) show the same game card you see inside a match, and it opens that game's videos. The extra match step is gone for a game on its own.
 
 ## Videos
-- Watching comes first, managing second. The Videos page has two lenses: Games (a playlist of games in time order, the way to watch) and Recordings (the raw files, sync state and assignment).
-- A video plays in the page when its link is from a supported provider (YouTube first), through a player behind a provider interface. Any other link opens in a new tab as today.
+- Watching comes first, managing second. The Videos page is one screen: a playlist where each game is a row, in the order played. A game with no video shows "Add a video". Videos that no game uses sit under the list as "Not linked to a game". There is no separate recordings screen. Games and videos are mostly 1 to 1 and a session has up to 10 games, so one list is enough.
+- A row leads with the video's own label, then the game and its result. A sync chip sits where YouTube puts the duration.
+- A video plays in the page when its link is from a supported provider, through `playableOf` in `src/features/videos/player.ts`. YouTube is the only provider, played as an iframe on the privacy friendly embed host and started at the sync point. Any other link opens in a new tab at the sync point.
+- The YouTube thumbnail comes from the link itself (`thumbnailOf`), so no API key and no stored image. A thumbnail saved on the video wins.
+- Adding a video means pasting a link. Real file upload is not planned yet, and it would need storage and a schema change.
+- Not using video.js yet. Bring it in when the app hosts its own files, or when one control surface across providers is needed. For YouTube only features such as reading the time, use the YouTube player API directly.
 
 ## Speed and freshness
 - Users are in Kuala Lumpur. The target is Supabase and the app in Singapore. Staging sits in Seoul by accident, so a round trip there is slow. Cut round trips first, because that holds in any region.
