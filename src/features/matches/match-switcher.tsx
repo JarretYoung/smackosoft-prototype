@@ -46,7 +46,7 @@ export function MatchSwitcher({
   function add() {
     start(async () => {
       const id = crypto.randomUUID();
-      const created = await saveMatches([{ id, sessionId, label: `Match ${matches.length + 1}`, matchType: "MD" }]);
+      const created = await saveMatches([{ id, sessionId, label: `Match ${matches.length + 1}`, matchType: "MD", format: "BO3" }]);
       if (!created.ok) return void toast.error(errorMessage(created.error));
       const teams = await saveTeams([
         { id: crypto.randomUUID(), matchId: id, label: "Team 1" },

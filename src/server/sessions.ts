@@ -248,6 +248,7 @@ export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { s
             "matches.id",
             "matches.label",
             "matches.match_type",
+            "matches.format",
             jsonArrayFrom(
               m
                 .selectFrom("match_teams")
@@ -319,6 +320,7 @@ export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { s
         id: m.id,
         label: m.label,
         matchType: m.match_type,
+        format: m.format,
         teams: m.teams.map((t) => ({ id: t.id, label: t.label, players: t.players.map(toAccount) })),
         games: m.games.map((g) => ({
           id: g.id,

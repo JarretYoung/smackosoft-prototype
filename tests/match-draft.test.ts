@@ -25,6 +25,7 @@ const match: Match = {
   id: id(),
   label: "Match 1",
   matchType: "MD",
+  format: "BO3",
   teams: [
     { id: team1, label: "Team 1", players: [ann] },
     { id: team2, label: "Team 2", players: [bo] },

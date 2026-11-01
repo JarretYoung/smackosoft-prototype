@@ -33,7 +33,7 @@ describe("authorization by role", () => {
 
     const got: Record<Action, string> = {
       read: code(await w.b.sessions.get({ sessionId })),
-      editMatch: code(await w.b.matches.save([{ id: id(), sessionId, label: "M", matchType: "MS" }])),
+      editMatch: code(await w.b.matches.save([{ id: id(), sessionId, label: "M", matchType: "MS", format: "BO1" }])),
       manageMembers: code(await w.b.members.save([{ sessionId, accountId: w.stranger.accountId, role: "VIEWER" }])),
       deleteSession: code(await w.b.sessions.remove([sessionId])),
     };
@@ -67,7 +67,7 @@ describe("membership rules", () => {
   test("a member who still plays cannot be removed until the player is", async ({ world: w }) => {
     const sessionId = await newSession(w);
     const [matchId, team] = [id(), id()];
-    ok(await w.b.matches.save([{ id: matchId, sessionId, label: "M", matchType: "MS" }]));
+    ok(await w.b.matches.save([{ id: matchId, sessionId, label: "M", matchType: "MS", format: "BO1" }]));
     ok(await w.b.matches.saveTeams([{ id: team, matchId, label: "T" }]));
     ok(await w.b.matches.saveMatchPlayers([{ matchTeamId: team, accountId: w.mate.accountId }]));
 
@@ -80,7 +80,7 @@ describe("membership rules", () => {
   test("saving a player makes them a viewer member", async ({ world: w }) => {
     const sessionId = await newSession(w);
     const [matchId, team] = [id(), id()];
-    ok(await w.b.matches.save([{ id: matchId, sessionId, label: "M", matchType: "MS" }]));
+    ok(await w.b.matches.save([{ id: matchId, sessionId, label: "M", matchType: "MS", format: "BO1" }]));
     ok(await w.b.matches.saveTeams([{ id: team, matchId, label: "T" }]));
     ok(await w.b.matches.saveMatchPlayers([{ matchTeamId: team, accountId: w.mate.accountId }]));
 
@@ -91,7 +91,7 @@ describe("membership rules", () => {
   test("adding a new player takes the manager role", async ({ world: w }) => {
     const sessionId = await newSession(w);
     const [matchId, team] = [id(), id()];
-    ok(await w.b.matches.save([{ id: matchId, sessionId, label: "M", matchType: "MS" }]));
+    ok(await w.b.matches.save([{ id: matchId, sessionId, label: "M", matchType: "MS", format: "BO1" }]));
     ok(await w.b.matches.saveTeams([{ id: team, matchId, label: "T" }]));
     ok(await w.b.members.save([{ sessionId, accountId: w.mate.accountId, role: "EDITOR" }]));
 

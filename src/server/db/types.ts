@@ -11,6 +11,8 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
 
+export type MatchFormat = "BO3" | "BO5" | "BO1";
+
 export type MatchType = "MD" | "MS" | "OTHER" | "PRACTICE" | "WD" | "WS" | "XD" | "XS";
 
 export type Numeric = ColumnType<number, number | string, number | string>;
@@ -38,6 +40,7 @@ export interface Accounts {
 export interface Matches {
   created_at: Generated<Timestamp>;
   created_by: string;
+  format: MatchFormat;
   id: Generated<string>;
   label: string;
   match_type: MatchType;

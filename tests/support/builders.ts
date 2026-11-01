@@ -22,7 +22,7 @@ export async function newSession(w: Pick<Who, "b">, overrides: { label?: string 
 export async function scoredMatch(w: Who) {
   const sessionId = await newSession(w);
   const [matchId, team1, team2, game1, game2] = [id(), id(), id(), id(), id()];
-  ok(await w.b.matches.save([{ id: matchId, sessionId, label: "Match 1", matchType: "MD" }]));
+  ok(await w.b.matches.save([{ id: matchId, sessionId, label: "Match 1", matchType: "MD", format: "BO3" }]));
   ok(await w.b.matches.saveTeams([
     { id: team1, matchId, label: "Team 1" },
     { id: team2, matchId, label: "Team 2" },

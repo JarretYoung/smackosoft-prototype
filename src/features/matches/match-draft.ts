@@ -140,7 +140,13 @@ export function planMatchSave(match: Match, sessionId: string, values: MatchValu
   const keptGameIds = new Set(values.games.map((g) => g.id));
 
   return {
-    match: { id: match.id, sessionId, label: values.label.trim() || match.label, matchType: values.matchType },
+    match: {
+      id: match.id,
+      sessionId,
+      label: values.label.trim() || match.label,
+      matchType: values.matchType,
+      format: match.format,
+    },
     teams: values.teams.map((t) => ({ id: t.id, matchId: match.id, label: t.label })),
     removedPlayers: savedPlayers.filter((p) => !stagedKeys.has(key(p))),
     addedPlayers: stagedPlayers.filter((p) => !savedKeys.has(key(p))),

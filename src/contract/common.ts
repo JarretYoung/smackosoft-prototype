@@ -41,6 +41,13 @@ export type GrantableRole = z.infer<typeof GrantableRole>;
 export const MatchType = z.enum(["MS", "WS", "XS", "MD", "WD", "XD", "PRACTICE", "OTHER"]);
 export type MatchType = z.infer<typeof MatchType>;
 
+/** How many games decide a match. A one-off game is a `BO1` match with one game. */
+export const MatchFormat = z.enum(["BO1", "BO3", "BO5"]);
+export type MatchFormat = z.infer<typeof MatchFormat>;
+
+/** The most games a match of this format can hold. */
+export const MATCH_FORMAT_MAX_GAMES: Record<MatchFormat, number> = { BO1: 1, BO3: 3, BO5: 5 };
+
 /**
  * Array of items with a unique key per call.
  * A repeated key fails with VALIDATION, pointing at the repeated item.

@@ -74,7 +74,7 @@ describe("sessions", () => {
     const before = ok(await w.b.sessions.get({ sessionId: first.sessionId }));
     // Same ids, same values.
     ok(await w.b.sessions.save([{ id: first.sessionId, label: "Smash", date: before.date, timezone: before.timezone, courtFee: 20, currency: "MYR" }]));
-    ok(await w.b.matches.save([{ id: first.matchId, sessionId: first.sessionId, label: "Match 1", matchType: "MD" }]));
+    ok(await w.b.matches.save([{ id: first.matchId, sessionId: first.sessionId, label: "Match 1", matchType: "MD", format: "BO3" }]));
     ok(await w.b.matches.saveTeams([
       { id: first.team1, matchId: first.matchId, label: "Team 1" },
       { id: first.team2, matchId: first.matchId, label: "Team 2" },

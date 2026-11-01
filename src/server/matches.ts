@@ -10,6 +10,7 @@ import {
   SaveMatchesInput,
   SaveMatchPlayersInput,
   SaveTeamsInput,
+  MATCH_FORMAT_MAX_GAMES,
 } from "../contract";
 import {
   matchesPairs,
@@ -33,12 +34,25 @@ async function lockMatches(db: Db, matchIds: string[]) {
   await db.selectFrom("matches").select("id").where("id", "in", unique(matchIds)).orderBy("id").forUpdate().execute();
 }
 
+/** How many games each match holds. A match with none is missing from the map. */
+async function gameCounts(db: Db, matchIds: string[]) {
+  const rows = await db
+    .selectFrom("match_games")
+    .select(["match_id", (eb) => eb.fn.countAll<string>().as("count")])
+    .where("match_id", "in", unique(matchIds))
+    .groupBy("match_id")
+    .execute();
+  return new Map(rows.map((r) => [r.match_id, Number(r.count)]));
+}
+
 // ------------------------------------------------------------------ matches
 
 export const saveMatches = write(SaveMatchesInput, async ({ db, actor }, items) => {
   const sessions = sessionsOfSessions(items.map((m) => m.sessionId));
   await requireOnParents(db, actor, items, (m) => m.sessionId, sessions, "EDITOR", "sessionId");
 
+  // A new format must still hold the games the match has. Lock first so a parallel saveGames counts after us.
+  await lockMatches(db, items.map((m) => m.id));
   const written = await db
     .insertInto("matches")
     .values(
@@ -47,6 +61,7 @@ export const saveMatches = write(SaveMatchesInput, async ({ db, actor }, items) 
         session_id: m.sessionId,
         label: m.label,
         match_type: m.matchType,
+        format: m.format,
         created_by: actor.accountId,
       })),
     )
@@ -56,6 +71,7 @@ export const saveMatches = write(SaveMatchesInput, async ({ db, actor }, items) 
         .doUpdateSet((eb) => ({
           label: eb.ref("excluded.label"),
           match_type: eb.ref("excluded.match_type"),
+          format: eb.ref("excluded.format"),
           updated_at: sql`now()`,
           updated_by: actor.accountId,
         }))
@@ -65,6 +81,13 @@ export const saveMatches = write(SaveMatchesInput, async ({ db, actor }, items) 
     .returning("id")
     .execute();
   expectAll(items, new Set(written.map((r) => r.id)), (m) => m.id, "Id already used elsewhere");
+
+  const counts = await gameCounts(db, items.map((m) => m.id));
+  items.forEach((m, index) => {
+    if ((counts.get(m.id) ?? 0) > MATCH_FORMAT_MAX_GAMES[m.format]) {
+      stop("CONFLICT", [index, "format"], "The match has more games than this format allows");
+    }
+  });
 });
 
 export const removeMatches = write(RemoveMatchesInput, async ({ db, actor }, matchIds) => {
@@ -234,6 +257,24 @@ export const removeMatchPlayers = write(RemoveMatchPlayersInput, async ({ db, ac
 export const saveGames = write(SaveGamesInput, async ({ db, actor }, items) => {
   const lookup = await sessionsOfMatches(db, items.map((g) => g.matchId));
   await requireOnParents(db, actor, items, (g) => g.matchId, lookup, "EDITOR", "matchId");
+
+  // A match holds at most as many games as its format. The database does not enforce it, so count here.
+  const matchIds = unique(items.map((g) => g.matchId));
+  await lockMatches(db, matchIds);
+  const formats = new Map(
+    (await db.selectFrom("matches").select(["id", "format"]).where("id", "in", matchIds).execute()).map((m) => [m.id, m.format]),
+  );
+  const saved = await db.selectFrom("match_games").select(["id", "match_id"]).where("match_id", "in", matchIds).execute();
+  const gamesOf = new Map<string, Set<string>>();
+  for (const game of saved) gamesOf.set(game.match_id, (gamesOf.get(game.match_id) ?? new Set()).add(game.id));
+  items.forEach((game, index) => {
+    const known = gamesOf.get(game.matchId) ?? new Set<string>();
+    known.add(game.id);
+    gamesOf.set(game.matchId, known);
+    if (known.size > MATCH_FORMAT_MAX_GAMES[formats.get(game.matchId)!]) {
+      stop("CONFLICT", [index, "matchId"], "The match has all the games its format allows");
+    }
+  });
 
   const written = await db
     .insertInto("match_games")

@@ -89,10 +89,10 @@ INSERT INTO smackosoft.session_access (session_id, account_id, role, created_by)
 -- Matches, teams, players, games, scores
 -- ------------------------------------------------------------
 
-INSERT INTO smackosoft.matches (id, label, session_id, match_type, created_by) VALUES
-  ('9eb0daa3-9d48-40de-9516-a6347150db04', 'Match 1', '5a27b3f7-4464-4a5a-a97b-7d20ad844b50', 'MD', '5b60f606-2850-4943-a964-ae4285d7db92'),
-  ('89868493-987c-40fb-b4c4-9e5d1d33765f', 'Match 2', '5a27b3f7-4464-4a5a-a97b-7d20ad844b50', 'MS', '5b60f606-2850-4943-a964-ae4285d7db92'),
-  ('1c294583-1a46-4528-befd-085cf615e74a', 'Match 1', 'c88c8371-e40a-4ba5-8188-3dff895ebd29', 'MD', '60357636-416a-4a5e-b954-637beb84143b');
+INSERT INTO smackosoft.matches (id, label, session_id, match_type, format, created_by) VALUES
+  ('9eb0daa3-9d48-40de-9516-a6347150db04', 'Match 1', '5a27b3f7-4464-4a5a-a97b-7d20ad844b50', 'MD', 'BO3', '5b60f606-2850-4943-a964-ae4285d7db92'),
+  ('89868493-987c-40fb-b4c4-9e5d1d33765f', 'Match 2', '5a27b3f7-4464-4a5a-a97b-7d20ad844b50', 'MS', 'BO1', '5b60f606-2850-4943-a964-ae4285d7db92'),
+  ('1c294583-1a46-4528-befd-085cf615e74a', 'Match 1', 'c88c8371-e40a-4ba5-8188-3dff895ebd29', 'MD', 'BO3', '60357636-416a-4a5e-b954-637beb84143b');
 
 INSERT INTO smackosoft.match_teams (id, label, match_id, created_by) VALUES
   ('a04b592b-12e2-47aa-a727-ece0c222ac00', 'Team 1', '9eb0daa3-9d48-40de-9516-a6347150db04', '5b60f606-2850-4943-a964-ae4285d7db92'),

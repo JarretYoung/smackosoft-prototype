@@ -18,6 +18,12 @@ Standing decisions about how the app is built. Read them before you change the s
 - `canonical_offset` is the video timestamp of a game's canonical 0. It is a per-game sync marker, such as a first hit or a clap. It is negative when the video started after that moment. `NULL` means not synced. Links from a session to a video have no offset.
 - Session times are `timestamptz`. The app shows them on the viewer's clock. See [architecture.md](architecture.md#time-and-timezones).
 - Game times stay `NOT NULL`. Session planned times are kept.
+- A game always belongs to a match. A one-off game is a match with `format` `BO1` and one game. There is no game without a match and no nullable parent. `matches.format` is `BO1`, `BO3` or `BO5`, and it is stored, never derived from the game count. The backend limits the number of games to the format.
+- The session page shows a game card for a `BO1` match and a match card for a best-of match. Both open the game or the match at once, with no extra step.
+
+## Videos
+- Watching comes first, managing second. The Videos page has two lenses: Games (a playlist of games in time order, the way to watch) and Recordings (the raw files, sync state and assignment).
+- A video plays in the page when its link is from a supported provider (YouTube first), through a player behind a provider interface. Any other link opens in a new tab as today.
 
 ## Speed and freshness
 - Users are in Kuala Lumpur. The target is Supabase and the app in Singapore. Staging sits in Seoul by accident, so a round trip there is slow. Cut round trips first, because that holds in any region.

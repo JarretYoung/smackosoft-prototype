@@ -1,7 +1,7 @@
 /** One aggregate: a match, its teams and players, its games and their scores. */
 import { z } from "zod";
 import type { Account } from "./accounts";
-import { batch, MatchType, Timestamp, UUID } from "./common";
+import { batch, MatchFormat, MatchType, Timestamp, UUID } from "./common";
 import type { Ack } from "./result";
 
 const ids = batch(UUID, (id) => id);
@@ -13,6 +13,7 @@ export const MatchSave = z.object({
   sessionId: UUID,
   label: z.string().trim().min(1),
   matchType: MatchType,
+  format: MatchFormat,
 });
 export const SaveMatchesInput = batch(MatchSave, (m) => m.id);
 export type SaveMatchesInput = z.input<typeof SaveMatchesInput>;
@@ -90,6 +91,7 @@ export type Match = {
   id: string;
   label: string;
   matchType: z.infer<typeof MatchType>;
+  format: z.infer<typeof MatchFormat>;
   teams: Team[];
   games: Game[];
 };
@@ -98,6 +100,7 @@ export type Match = {
 
 /** Matches are read through `sessions.get`. */
 export interface MatchesApi {
+  /** Fails with CONFLICT if the match already holds more games than the new `format` allows. */
   save(input: SaveMatchesInput): Promise<Ack>;
   remove(input: RemoveMatchesInput): Promise<Ack>;
   saveTeams(input: SaveTeamsInput): Promise<Ack>;
@@ -109,6 +112,7 @@ export interface MatchesApi {
    */
   saveMatchPlayers(input: SaveMatchPlayersInput): Promise<Ack>;
   removeMatchPlayers(input: RemoveMatchPlayersInput): Promise<Ack>;
+  /** Fails with CONFLICT if the match would hold more games than its `format` allows (`MATCH_FORMAT_MAX_GAMES`). */
   saveGames(input: SaveGamesInput): Promise<Ack>;
   removeGames(input: RemoveGamesInput): Promise<Ack>;
   /** Fails with CONFLICT if a score's team and game belong to different matches. */

@@ -29,7 +29,7 @@ describe("matches, teams, games and scores", () => {
     const emptyMatch = async (w: { b: Backend }) => {
       const sessionId = await newSession(w);
       const matchId = id();
-      ok(await w.b.matches.save([{ id: matchId, sessionId, label: "Race", matchType: "MD" }]));
+      ok(await w.b.matches.save([{ id: matchId, sessionId, label: "Race", matchType: "MD", format: "BO3" }]));
       return matchId;
     };
     const lockTeams = (teamIds: string[]): [string, unknown[]] => [
@@ -89,7 +89,7 @@ describe("matches, teams, games and scores", () => {
   test("a score needs a team and a game from the same match", async ({ world: w }) => {
     const { sessionId, game1 } = await scoredMatch(w);
     const [otherMatch, otherTeam] = [id(), id()];
-    ok(await w.b.matches.save([{ id: otherMatch, sessionId, label: "Match 2", matchType: "MS" }]));
+    ok(await w.b.matches.save([{ id: otherMatch, sessionId, label: "Match 2", matchType: "MS", format: "BO1" }]));
     ok(await w.b.matches.saveTeams([{ id: otherTeam, matchId: otherMatch, label: "X" }]));
 
     const result = await w.b.matches.saveGameScores([{ matchTeamId: otherTeam, matchGameId: game1, score: 5 }]);
@@ -107,10 +107,41 @@ describe("matches, teams, games and scores", () => {
     expect(game.scores.map((s) => s.score)).toEqual([21]);
   });
 
+  describe("a match holds the games its format allows", () => {
+    const game = (matchId: string, gameNumber: number) => ({ id: id(), matchId, gameNumber, startTime, endTime });
+
+    test("a single game match refuses a second game", async ({ world: w }) => {
+      const sessionId = await newSession(w);
+      const matchId = id();
+      ok(await w.b.matches.save([{ id: matchId, sessionId, label: "One-off", matchType: "MS", format: "BO1" }]));
+      ok(await w.b.matches.saveGames([game(matchId, 1)]));
+
+      expect(failure(await w.b.matches.saveGames([game(matchId, 2)]))).toEqual({ code: "CONFLICT", paths: [[0, "matchId"]] });
+    });
+
+    test("saving a game again does not count as a new game", async ({ world: w }) => {
+      const sessionId = await newSession(w);
+      const matchId = id();
+      ok(await w.b.matches.save([{ id: matchId, sessionId, label: "One-off", matchType: "MS", format: "BO1" }]));
+      const first = game(matchId, 1);
+      ok(await w.b.matches.saveGames([first]));
+      ok(await w.b.matches.saveGames([{ ...first, endTime: "2026-10-18T10:30:00Z" }]));
+    });
+
+    test("a format cannot shrink below the games already played", async ({ world: w }) => {
+      const { sessionId, matchId } = await scoredMatch(w); // two games
+      const to = (format: "BO1" | "BO5") =>
+        w.b.matches.save([{ id: matchId, sessionId, label: "Match 1", matchType: "MD", format }]);
+
+      expect(failure(await to("BO1"))).toEqual({ code: "CONFLICT", paths: [[0, "format"]] });
+      ok(await to("BO5"));
+    });
+  });
+
   test("a match never moves to another session", async ({ world: w }) => {
     const { matchId } = await scoredMatch(w);
     const otherOwnSession = await newSession(w);
-    const move = (sessionId: string) => w.b.matches.save([{ id: matchId, sessionId, label: "move", matchType: "MD" }]);
+    const move = (sessionId: string) => w.b.matches.save([{ id: matchId, sessionId, label: "move", matchType: "MD", format: "BO3" }]);
 
     expect(failure(await move(otherOwnSession))).toEqual({ code: "CONFLICT", paths: [[0]] });
     expect(failure(await move(id()))).toEqual({ code: "NOT_FOUND", paths: [[0, "sessionId"]] });
