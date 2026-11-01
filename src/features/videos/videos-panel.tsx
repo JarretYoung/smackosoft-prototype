@@ -2,7 +2,7 @@
 
 import { ExternalLink, Play, Plus, SkipForward, Video } from "lucide-react";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { removeVideoGames, removeVideoSessions, saveVideoGames, saveVideoSessions, saveVideos } from "@/src/features/videos/actions";
 import { AddRow } from "@/src/components/add-row";
@@ -52,11 +52,31 @@ export function VideosPanel({
   linked: SessionVideo[];
   focus: string | null;
 }) {
-  const [adding, setAdding] = useState<{ game: Target | null } | null>(null);
-  const [picking, setPicking] = useState<Picking | null>(null);
-  const [syncing, setSyncing] = useState<SyncTarget | null>(null);
   const [playing, setPlaying] = useState<{ videoId: string; gameId: string | null } | null>(null);
+  const [adding, setAddingRaw] = useState<{ game: Target | null } | null>(null);
+  const [picking, setPickingRaw] = useState<Picking | null>(null);
+  const [syncing, setSyncingRaw] = useState<SyncTarget | null>(null);
   const [pending, start] = useTransition();
+
+  // The page player plays only while nothing sits over the page. Opening a sheet stops it, so a video never
+  // plays under a sheet, and the sync sheet's own preview is the only player running. Closing leaves it stopped.
+  const setAdding = (next: { game: Target | null } | null) => {
+    if (next) setPlaying(null);
+    setAddingRaw(next);
+  };
+  const setPicking = (next: Picking | null) => {
+    if (next) setPlaying(null);
+    setPickingRaw(next);
+  };
+  const setSyncing = (next: SyncTarget | null) => {
+    if (next) setPlaying(null);
+    setSyncingRaw(next);
+  };
+
+  // Leaving the page does not unmount it: the app keeps the page mounted but hidden so going back is instant,
+  // and a hidden player keeps playing. React cleans up effects when a page is hidden as well as when it
+  // unmounts, so stopping here tears the player down in both cases.
+  useEffect(() => () => setPlaying(null), []);
 
   const targets: Target[] = games.map((g) => ({ value: g.id, label: g.name }));
   const labelOf = (gameId: string) => targets.find((t) => t.value === gameId)?.label ?? "A game";

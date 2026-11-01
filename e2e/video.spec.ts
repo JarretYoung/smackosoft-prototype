@@ -32,3 +32,35 @@ test("a user adds a video to a game and syncs it", async ({ page }) => {
   await expect(page.getByRole("list", { name: "Games" }).getByRole("button", { name: `Play ${label}` })).toBeVisible();
   await expect(page.getByText(/need.* syncing/)).toHaveCount(0);
 });
+
+test("a playing video stops when a sheet opens over it and when the page is left", async ({ page }) => {
+  // The seeded session has YouTube videos. Nothing here changes them.
+  await go(page, "/sessions");
+  await page.getByRole("link", { name: /Badminton with da Laddies/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Badminton with da Laddies" })).toBeVisible();
+  const sessionId = new URL(page.url()).pathname.split("/").pop()!;
+  const players = page.locator("iframe[src*='youtube.com/embed']");
+
+  await go(page, `/sessions/${sessionId}/videos`);
+  await page.getByRole("list", { name: "Games" }).getByRole("button", { name: "Play Court 3 full recording" }).first().click();
+  await expect(players).toHaveCount(1);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // A sheet that has its own preview leaves one player, its own. The page player is gone, not just hidden.
+  await page.getByRole("button", { name: "More for Court 3 full recording" }).first().click();
+  await page.getByRole("menuitem", { name: /sync point/ }).click();
+  await expect(page.getByRole("dialog").locator("iframe[src*='youtube.com/embed']")).toHaveCount(1);
+  await expect(players).toHaveCount(1);
+
+  // Closing the sheet leaves the page stopped. It does not start again by itself.
+  await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(players).toHaveCount(0);
+
+  // Leaving the page tears the player down. The page stays mounted but hidden, so it must not stay behind.
+  await page.getByRole("list", { name: "Games" }).getByRole("button", { name: "Play Court 3 full recording" }).first().click();
+  await expect(players).toHaveCount(1);
+  await page.getByRole("link", { name: "Back" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Badminton with da Laddies" })).toBeVisible();
+  await expect(players).toHaveCount(0);
+});
