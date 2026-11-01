@@ -2,7 +2,14 @@
 -- SETUP
 -- ============================================================
 
-CREATE ROLE smackosoft_service LOGIN;
+-- Roles are cluster-wide and survive a db reset, so create it only if missing.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'smackosoft_service') THEN
+    CREATE ROLE smackosoft_service LOGIN;
+  END IF;
+END
+$$;
 
 CREATE SCHEMA smackosoft;
 
