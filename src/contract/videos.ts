@@ -11,6 +11,8 @@ export const VideoSave = z.object({
   // Not decided: the storage scheme. `r2` is a placeholder. Never allow `javascript:` or `data:`.
   videoUrl: z.url({ protocol: /^(https?|r2)$/ }),
   thumbnailUrl: HttpUrl.nullish(),
+  // Whole seconds, read by the app from the player when the video is added. Null when it could not be read.
+  durationSeconds: z.number().int().min(1).nullish(),
 });
 export const SaveVideosInput = batch(VideoSave, (v) => v.id);
 export type SaveVideosInput = z.input<typeof SaveVideosInput>;
@@ -50,6 +52,8 @@ export type Video = {
   label: string;
   videoUrl: string;
   thumbnailUrl: string | null;
+  /** Seconds, as it was when the video was added. Null when it could not be read. */
+  durationSeconds: number | null;
   createdBy: string;
   createdAt: string;
 };

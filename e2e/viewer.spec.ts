@@ -42,3 +42,18 @@ test("a viewer can read a session but not change it", async ({ page }) => {
   await expect(page.getByText("We could not find that")).toBeVisible();
   await expect(page.getByLabel("Name", { exact: true })).toHaveCount(0);
 });
+
+test("a viewer can watch a game's video but not add or change videos", async ({ page }) => {
+  await go(page, "/sessions");
+  await page.getByRole("link", { name: new RegExp(SESSION) }).click();
+  await expect(page.getByRole("heading", { level: 1, name: SESSION })).toBeVisible();
+  const sessionId = new URL(page.url()).pathname.split("/").pop()!;
+
+  await go(page, `/sessions/${sessionId}/videos`);
+  await page.getByRole("button", { name: "Play Court 3 full recording" }).first().click();
+  await expect(page.locator("iframe[title='Court 3 full recording']")).toBeVisible();
+
+  await expect(page.getByRole("button", { name: "Add video" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Add a video to/ })).toHaveCount(0);
+  await expect(page.getByText("Link", { exact: true })).toHaveCount(0);
+});

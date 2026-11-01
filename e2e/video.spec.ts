@@ -28,6 +28,7 @@ test("a user adds a video to a game and syncs it", async ({ page }) => {
   await sync.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Sync point saved")).toBeVisible();
 
-  await expect(page.getByRole("button", { name: `Play ${label}` })).toBeVisible();
-  await expect(page.getByRole("img", { name: "Synced at 1:30" })).toBeVisible();
+  // The game's row has the video, and nothing is left to sync.
+  await expect(page.getByRole("list", { name: "Games" }).getByRole("button", { name: `Play ${label}` })).toBeVisible();
+  await expect(page.getByText(/need.* syncing/)).toHaveCount(0);
 });

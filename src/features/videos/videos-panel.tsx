@@ -16,6 +16,7 @@ import { openUrl } from "@/src/features/videos/offset";
 import { playableOf, thumbnailOf } from "@/src/features/videos/player";
 import { cn } from "@/src/lib/utils";
 import { VideoPlayer } from "./video-player";
+import { readDuration } from "./youtube-api";
 import { attentionOf, type PlaylistGame } from "@/src/features/videos/videos";
 import { AddVideoSheet } from "./add-video-sheet";
 import type { NewVideo } from "./use-add-video-form";
@@ -92,7 +93,9 @@ export function VideosPanel({
     const game = adding?.game ?? null;
     run(
       async () => {
-        const saved = await saveVideos([{ id: videoId, ...video }]);
+        // The length is read once, here, and kept. Null for other links or if it cannot be read in time.
+        const durationSeconds = await readDuration(video.videoUrl);
+        const saved = await saveVideos([{ id: videoId, ...video, durationSeconds }]);
         // A link to a game also puts the video in the session.
         if (!saved.ok) return saved;
         return game ? saveVideoGames([{ videoId, matchGameId: game.value }]) : saveVideoSessions([{ videoId, sessionId }]);
@@ -289,7 +292,7 @@ export function VideosPanel({
               )}
             </section>
 
-            <ul aria-label="Games" className="flex flex-col gap-4">
+            <ul aria-label="Games" className="flex flex-col gap-3">
               {shown.map((game) => {
                 const inGame = videosOf(game.id);
                 const item = inGame[0];

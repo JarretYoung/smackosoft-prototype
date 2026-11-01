@@ -10,6 +10,21 @@ describe("videos", () => {
     }
   });
 
+  test("keeps the length a video had when it was added, and refuses a length that is not positive", async ({ world: w }) => {
+    const sessionId = await newSession(w);
+    const [timed, untimed] = [id(), id()];
+    ok(await w.b.videos.save([
+      { id: timed, label: "Timed", videoUrl: "r2://t", durationSeconds: 463 },
+      { id: untimed, label: "Untimed", videoUrl: "r2://u" },
+    ]));
+    ok(await w.b.videos.saveVideoSessions([{ videoId: timed, sessionId }, { videoId: untimed, sessionId }]));
+
+    const lengths = ok(await w.b.videos.listBySession({ sessionId })).map((l) => [l.video.label, l.video.durationSeconds]);
+    expect(lengths.sort()).toEqual([["Timed", 463], ["Untimed", null]]);
+
+    expect(code(await w.b.videos.save([{ id: id(), label: "Zero", videoUrl: "r2://z", durationSeconds: 0 }]))).toBe("VALIDATION");
+  });
+
   test("puts a video in a session, links it to a game, and replays with a new offset", async ({ world: w }) => {
     const { sessionId, game1 } = await scoredMatch(w);
     const video = id();

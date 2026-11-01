@@ -28,6 +28,7 @@ Standing decisions about how the app is built. Read them before you change the s
 - A row leads with the video's own label, then the game and its result. A sync chip sits where YouTube puts the duration.
 - A video plays in the page when its link is from a supported provider, through `playableOf` in `src/features/videos/player.ts`. YouTube is the only provider, played as an iframe on the privacy friendly embed host and started at the sync point. Any other link opens in a new tab at the sync point.
 - The YouTube thumbnail comes from the link itself (`thumbnailOf`), so no API key and no stored image. A thumbnail saved on the video wins.
+- The length of a video is stored in `videos.duration_seconds`, read once when the video is added. It is a snapshot, like the sync point. Reading it for every row on every visit would mean one hidden player per video. The app reads it with YouTube's own player API (`youtube-api.ts`), out of sight and never played. If it cannot be read in 6 seconds, or the link is not YouTube, the video still saves with no length and the row shows none. A length is never shown for a video that has none.
 - Adding a video means pasting a link. Real file upload is not planned yet, and it would need storage and a schema change.
 - Not using video.js yet. Bring it in when the app hosts its own files, or when one control surface across providers is needed. For YouTube only features such as reading the time, use the YouTube player API directly.
 

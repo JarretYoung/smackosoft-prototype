@@ -167,6 +167,10 @@ export interface VideoGames {
 export interface Videos {
   created_at: Generated<Timestamp>;
   created_by: string;
+  /**
+   * Length of the video when it was added. A snapshot taken by the app from the player, so listing a session needs no player. NULL when it could not be read.
+   */
+  duration_seconds: number | null;
   id: Generated<string>;
   label: string;
   thumbnail_url: string | null;

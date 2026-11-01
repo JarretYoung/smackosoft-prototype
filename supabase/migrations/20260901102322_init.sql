@@ -308,14 +308,19 @@ CREATE TABLE smackosoft.videos (
   label            text        NOT NULL,
   video_url        text        NOT NULL,
   thumbnail_url    text,
+  duration_seconds int,
   created_at       timestamptz NOT NULL DEFAULT now(),
   created_by       uuid        NOT NULL,
   updated_at       timestamptz,
   updated_by       uuid,
   CONSTRAINT videos_pkey PRIMARY KEY (id),
+  CONSTRAINT videos_duration_seconds_check CHECK (duration_seconds > 0),
   CONSTRAINT videos_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT videos_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
+
+COMMENT ON COLUMN smackosoft.videos.duration_seconds IS
+  'Length of the video when it was added. A snapshot taken by the app from the player, so listing a session needs no player. NULL when it could not be read.';
 
 GRANT ALL ON TABLE smackosoft.videos TO smackosoft_service;
 

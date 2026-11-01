@@ -1,15 +1,15 @@
 "use client";
 
-import { Check, EllipsisVertical, ExternalLink, Plus, Video } from "lucide-react";
+import { EllipsisVertical, ExternalLink, Plus, Video } from "lucide-react";
 import type { ReactNode } from "react";
 import { CourtArt } from "@/src/components/court-art";
 import { Button } from "@/src/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/src/components/ui/dropdown-menu";
 import type { SessionVideo } from "@/src/contract";
 import { cn } from "@/src/lib/utils";
-import { formatOffset, openUrl } from "@/src/features/videos/offset";
+import { openUrl } from "@/src/features/videos/offset";
 import { thumbnailOf } from "@/src/features/videos/player";
-import type { PlaylistGame } from "@/src/features/videos/videos";
+import { formatLength, type PlaylistGame } from "@/src/features/videos/videos";
 import { RelativeTime } from "./relative-time";
 
 /** A small thumbnail for sheets and the unlinked list. */
@@ -61,24 +61,12 @@ export function VideoThumb({
 /** The number in "Game 3", for the placeholder frame. */
 export const markOf = (game: PlaylistGame) => game.name.match(/Game (\d+)$/)?.[1];
 
-/** Synced at 0:12, or not synced. It sits where YouTube puts the duration. */
-function SyncChip({ offset }: { offset: number | null }) {
+/** The length of the video, bottom right of its thumbnail, where YouTube puts it. Nothing when it is not known. */
+function LengthChip({ seconds }: { seconds: number | null }) {
+  if (!seconds) return null;
   return (
-    <span
-      role="img"
-      aria-label={offset === null ? "Not synced" : `Synced at ${formatOffset(offset)}`}
-      className={cn(
-        "absolute right-1.5 bottom-1.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-caption font-semibold text-white tabular-nums",
-        offset === null ? "bg-primary" : "bg-black/70",
-      )}
-    >
-      {offset === null ? (
-        "Not synced"
-      ) : (
-        <>
-          <Check className="size-3" strokeWidth={3} /> {formatOffset(offset)}
-        </>
-      )}
+    <span className="absolute right-1.5 bottom-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-caption font-semibold text-white tabular-nums">
+      {formatLength(seconds)}
     </span>
   );
 }
@@ -144,7 +132,7 @@ export function GameRow({
           {playing && (
             <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-caption font-semibold text-white">Playing</span>
           )}
-          <SyncChip offset={item.canonicalOffset} />
+          <LengthChip seconds={item.video.durationSeconds} />
         </VideoThumb>
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-body leading-snug font-semibold tracking-tight">{item.video.label}</p>
@@ -193,7 +181,7 @@ export function EmptyGameRow({ game, canEdit, onAdd }: { game: PlaylistGame; can
   const frame = "flex aspect-video w-40 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-border";
   if (!canEdit) {
     return (
-      <li className="flex items-start gap-3">
+      <li className="-mx-2 flex items-start gap-3 p-2">
         <div className={cn(frame, "text-muted-foreground")}>
           <Video className="size-6" />
         </div>
@@ -205,7 +193,7 @@ export function EmptyGameRow({ game, canEdit, onAdd }: { game: PlaylistGame; can
     );
   }
   return (
-    <li>
+    <li className="-mx-2 p-2">
       <button type="button" onClick={onAdd} aria-label={`Add a video to ${game.name}`} className="pressable flex w-full items-start gap-3 text-left">
         <div className={cn(frame, "text-primary")}>
           <Plus className="size-6" strokeWidth={2.5} />

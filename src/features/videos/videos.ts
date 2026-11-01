@@ -1,5 +1,14 @@
 import type { Match, SessionVideo } from "@/src/contract";
 
+/** 463 as "7:43", 3725 as "1:02:05". The length of a video, as YouTube writes it. */
+export function formatLength(seconds: number): string {
+  const whole = Math.max(0, Math.round(seconds));
+  const h = Math.floor(whole / 3600);
+  const m = Math.floor((whole % 3600) / 60);
+  const s = String(whole % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
+}
+
 /** One game of the session as the Videos page lists it. */
 export type PlaylistGame = {
   id: string;

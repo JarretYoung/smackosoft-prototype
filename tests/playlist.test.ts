@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Match } from "../src/contract";
-import { playlistOf } from "../src/features/videos/videos";
+import { formatLength, playlistOf } from "../src/features/videos/videos";
 
 const [team1, team2] = ["t1", "t2"];
 const game = (id: string, gameNumber: number, start: string, scores: [number, number] | []) => ({
@@ -13,6 +13,15 @@ const game = (id: string, gameNumber: number, start: string, scores: [number, nu
 });
 const match = (label: string, format: Match["format"], games: Match["games"]) =>
   ({ id: label, label, format, matchType: "MD", teams: [{ id: team1 }, { id: team2 }], games }) as unknown as Match;
+
+describe("the length of a video", () => {
+  it("is written the way YouTube writes it", () => {
+    expect(formatLength(463)).toBe("7:43");
+    expect(formatLength(59)).toBe("0:59");
+    expect(formatLength(3725)).toBe("1:02:05");
+    expect(formatLength(7200)).toBe("2:00:00");
+  });
+});
 
 describe("the games the Videos page lists", () => {
   it("puts games from every match in the order they were played", () => {

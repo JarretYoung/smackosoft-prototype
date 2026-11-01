@@ -27,6 +27,7 @@ const videoColumns = [
   "videos.label",
   "videos.video_url",
   "videos.thumbnail_url",
+  "videos.duration_seconds",
   "videos.created_by",
   "videos.created_at",
 ] as const;
@@ -36,6 +37,7 @@ const toVideo = (row: {
   label: string;
   video_url: string;
   thumbnail_url: string | null;
+  duration_seconds: number | null;
   created_by: string;
   created_at: Date;
 }): Video => ({
@@ -43,6 +45,7 @@ const toVideo = (row: {
   label: row.label,
   videoUrl: row.video_url,
   thumbnailUrl: row.thumbnail_url,
+  durationSeconds: row.duration_seconds,
   createdBy: row.created_by,
   createdAt: row.created_at.toISOString(),
 });
@@ -146,6 +149,7 @@ export const saveVideos = write(SaveVideosInput, async ({ db, actor }, items) =>
         label: v.label,
         video_url: v.videoUrl,
         thumbnail_url: v.thumbnailUrl ?? null,
+        duration_seconds: v.durationSeconds ?? null,
         created_by: actor.accountId,
       })),
     )
@@ -156,6 +160,7 @@ export const saveVideos = write(SaveVideosInput, async ({ db, actor }, items) =>
           label: eb.ref("excluded.label"),
           video_url: eb.ref("excluded.video_url"),
           thumbnail_url: eb.ref("excluded.thumbnail_url"),
+          duration_seconds: eb.ref("excluded.duration_seconds"),
           updated_at: sql`now()`,
           updated_by: actor.accountId,
         }))

@@ -143,9 +143,9 @@ INSERT INTO smackosoft.match_game_scores (match_team_id, match_game_id, score, c
 -- It is linked to game 2 but not synced yet. The second video is only in the pool.
 -- ------------------------------------------------------------
 
-INSERT INTO smackosoft.videos (id, label, video_url, created_by) VALUES
-  ('e953055b-f8ac-467d-ada8-c403fe5a868c', 'Court 3 full recording', 'https://www.youtube.com/watch?v=SbmMMj88kmc', '5b60f606-2850-4943-a964-ae4285d7db92'),
-  ('dfb2e6c8-320c-4efe-8ccc-5aa1a1470d2e', 'Warm up clip',           'https://www.youtube.com/watch?v=SbmMMj88kmc', '5b60f606-2850-4943-a964-ae4285d7db92');
+INSERT INTO smackosoft.videos (id, label, video_url, duration_seconds, created_by) VALUES
+  ('e953055b-f8ac-467d-ada8-c403fe5a868c', 'Court 3 full recording', 'https://www.youtube.com/watch?v=SbmMMj88kmc', 463, '5b60f606-2850-4943-a964-ae4285d7db92'),
+  ('dfb2e6c8-320c-4efe-8ccc-5aa1a1470d2e', 'Warm up clip',           'https://www.youtube.com/watch?v=SbmMMj88kmc', 463, '5b60f606-2850-4943-a964-ae4285d7db92');
 
 INSERT INTO smackosoft.video_sessions (video_id, session_id, created_by) VALUES
   ('e953055b-f8ac-467d-ada8-c403fe5a868c', '5a27b3f7-4464-4a5a-a97b-7d20ad844b50', '5b60f606-2850-4943-a964-ae4285d7db92'),

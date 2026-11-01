@@ -207,7 +207,7 @@ Unverified: `videos.listOwn` follows the fourth story in the story map, "link th
 | Game | `matches.saveGames` | `matches.removeGames` | client UUID | `EDITOR` | Frontend supplies start and end time. |
 | Game score | `matches.saveGameScores` | `matches.removeGameScores` | team, game | `EDITOR` | Removing a game removes its scores. Clearing one team's score leaves the game and the other score. No screen clears a score today. |
 | Guest account | `accounts.saveGuests` | `accounts.removeGuests` (soft delete) | client UUID | signed in | Creator edits it. Handle changes twice at most. `accounts.listGuests` reads them. |
-| Video | `videos.save` | none | client UUID | own videos only | Record only. No storage upload. |
+| Video | `videos.save` | none | client UUID | own videos only | Record only. No storage upload. `durationSeconds` is the length the app read when the video was added, or null. |
 | Video in a session | `videos.saveVideoSessions` | `videos.removeVideoSessions` | video, session | `EDITOR` | The video is the actor's own, or already in the session. Removing also removes its game links in that session. |
 | Video in a game | `videos.saveVideoGames` | `videos.removeVideoGames` | video, game | `EDITOR` | Also puts the video in the game's session. `canonicalOffset` is seconds, null when not synced. Saving again only updates the offset. |
 
