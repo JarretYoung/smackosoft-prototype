@@ -2,7 +2,14 @@
 -- SETUP
 -- ============================================================
 
-CREATE ROLE smackosoft_service LOGIN;
+-- Roles are cluster-wide and survive a db reset, so create it only if missing.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'smackosoft_service') THEN
+    CREATE ROLE smackosoft_service LOGIN;
+  END IF;
+END
+$$;
 
 CREATE SCHEMA smackosoft;
 
@@ -15,24 +22,32 @@ GRANT USAGE ON SCHEMA smackosoft TO smackosoft_service;
 CREATE TYPE smackosoft.account_type AS ENUM ('STANDARD', 'GUEST');
 
 CREATE TABLE smackosoft.accounts (
-  id           uuid                    NOT NULL DEFAULT gen_random_uuid(),
-  user_id      uuid,
-  account_type smackosoft.account_type NOT NULL DEFAULT 'STANDARD',
-  display_name text                    NOT NULL,
-  handle       text                    NOT NULL,
-  avatar_url   text,
-  deleted      boolean                 NOT NULL DEFAULT false,
-  created_at   timestamptz             NOT NULL DEFAULT now(),
-  created_by   uuid                    NOT NULL, -- has write access to guest accounts
-  updated_at   timestamptz,
-  updated_by   uuid,
+  id                  uuid                    NOT NULL DEFAULT gen_random_uuid(),
+  user_id             uuid,
+  account_type        smackosoft.account_type NOT NULL DEFAULT 'STANDARD',
+  display_name        text                    NOT NULL,
+  handle              text                    NOT NULL,
+  handle_change_count integer                 NOT NULL DEFAULT 0,
+  avatar_url          text,
+  claim_code          text,                             -- used to claim a guest account
+  deleted             boolean                 NOT NULL DEFAULT false,
+  created_at          timestamptz             NOT NULL DEFAULT now(),
+  created_by          uuid                    NOT NULL, -- has write access to guest accounts
+  updated_at          timestamptz,
+  updated_by          uuid,
   CONSTRAINT accounts_pkey PRIMARY KEY (id),
   CONSTRAINT accounts_user_id_key UNIQUE (user_id),
+  CONSTRAINT accounts_claim_code_key UNIQUE (claim_code),
+  CONSTRAINT accounts_guest_has_no_user_check CHECK (account_type = 'STANDARD' OR user_id IS NULL),
+  CONSTRAINT accounts_claim_code_guest_check CHECK (claim_code IS NULL OR account_type = 'GUEST'),
   CONSTRAINT accounts_handle_format_check CHECK (handle ~ '^[a-z0-9_]{3,30}$'),
+  CONSTRAINT accounts_handle_change_count_check CHECK (handle_change_count >= 0),
   CONSTRAINT accounts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL,
   CONSTRAINT accounts_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT accounts_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
+
+CREATE INDEX accounts_created_by_guest_idx ON smackosoft.accounts (created_by) WHERE account_type = 'GUEST' AND NOT deleted;
 
 CREATE UNIQUE INDEX accounts_handle_key ON smackosoft.accounts (handle) WHERE NOT deleted;
 
@@ -69,21 +84,43 @@ CREATE TABLE smackosoft.sessions (
   id           uuid        NOT NULL DEFAULT gen_random_uuid(),
   label        text        NOT NULL,
   date         date        NOT NULL,
-  organiser_id uuid,
+  timezone     text        NOT NULL,
   location     text,
+  location_url text,
+  latitude     double precision,
+  longitude    double precision,
+  start_time   timestamptz,
+  end_time     timestamptz,
+  cover_url    text,
+  court_fee    numeric(10, 2),
+  currency     text,
   created_at   timestamptz NOT NULL DEFAULT now(),
   created_by   uuid        NOT NULL,
   updated_at   timestamptz,
   updated_by   uuid,
   CONSTRAINT sessions_pkey PRIMARY KEY (id),
-  CONSTRAINT sessions_organiser_id_fkey FOREIGN KEY (organiser_id) REFERENCES smackosoft.accounts(id),
+  CONSTRAINT sessions_timezone_check CHECK (timezone <> ''),
+  CONSTRAINT sessions_time_order_check CHECK (start_time IS NULL OR end_time IS NULL OR end_time > start_time),
+  CONSTRAINT sessions_latitude_check CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90),
+  CONSTRAINT sessions_longitude_check CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180),
+  CONSTRAINT sessions_coordinates_together_check CHECK ((latitude IS NULL) = (longitude IS NULL)),
+  CONSTRAINT sessions_court_fee_check CHECK (court_fee IS NULL OR court_fee >= 0),
+  CONSTRAINT sessions_currency_format_check CHECK (currency IS NULL OR currency ~ '^[A-Z]{3}$'),
+  CONSTRAINT sessions_court_fee_currency_check CHECK ((court_fee IS NULL) = (currency IS NULL)),
   CONSTRAINT sessions_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT sessions_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
 
 GRANT ALL ON TABLE smackosoft.sessions TO smackosoft_service;
 
-CREATE INDEX sessions_organiser_id_idx ON smackosoft.sessions (organiser_id);
+COMMENT ON COLUMN smackosoft.sessions.date IS
+  'The calendar day of the session in its timezone. Not shifted for the viewer.';
+COMMENT ON COLUMN smackosoft.sessions.timezone IS
+  'IANA name of the zone the session happens in, for example Asia/Kuala_Lumpur. Times are shown and entered in this zone, whatever the viewer''s zone. The app checks the name.';
+COMMENT ON COLUMN smackosoft.sessions.latitude IS
+  'Where the session is, in degrees (WGS 84). Read from the maps link when it is pasted. NULL when unknown. Set with longitude or not at all.';
+COMMENT ON COLUMN smackosoft.sessions.longitude IS
+  'See latitude.';
 
 -- ============================================================
 -- SESSION_ACCESS
@@ -95,7 +132,7 @@ CREATE TABLE smackosoft.session_access (
   id         uuid                 NOT NULL DEFAULT gen_random_uuid(),
   session_id uuid                 NOT NULL,
   account_id uuid                 NOT NULL,
-  role_type  smackosoft.role_type NOT NULL DEFAULT 'VIEWER',
+  role       smackosoft.role_type NOT NULL DEFAULT 'VIEWER',
   created_at timestamptz          NOT NULL DEFAULT now(),
   created_by uuid                 NOT NULL,
   updated_at timestamptz,
@@ -112,23 +149,29 @@ GRANT ALL ON TABLE smackosoft.session_access TO smackosoft_service;
 
 CREATE INDEX session_access_account_id_idx ON smackosoft.session_access (account_id);
 
+CREATE UNIQUE INDEX session_access_one_owner_key ON smackosoft.session_access (session_id) WHERE role = 'OWNER';
+
 -- ============================================================
 -- MATCHES
 -- ============================================================
 
 CREATE TYPE smackosoft.match_type AS ENUM ('MS', 'WS', 'XS', 'MD', 'WD', 'XD', 'PRACTICE', 'OTHER');
 
+-- How many games a match holds. FREE has no limit. A game played on its own is a BO1 match with one game.
+CREATE TYPE smackosoft.match_format AS ENUM ('BO1', 'BO3', 'BO5', 'FREE');
+
 CREATE TABLE smackosoft.matches (
-  id         uuid                   NOT NULL DEFAULT gen_random_uuid(),
-  label      text                   NOT NULL,
-  session_id uuid                   NOT NULL,
-  match_type smackosoft.match_type  NOT NULL,
-  created_at timestamptz            NOT NULL DEFAULT now(),
+  id         uuid                    NOT NULL DEFAULT gen_random_uuid(),
+  label      text                    NOT NULL,
+  session_id uuid                    NOT NULL,
+  match_type smackosoft.match_type   NOT NULL,
+  format     smackosoft.match_format NOT NULL,
+  created_at timestamptz             NOT NULL DEFAULT now(),
   created_by uuid                   NOT NULL,
   updated_at timestamptz,
   updated_by uuid,
   CONSTRAINT matches_pkey PRIMARY KEY (id),
-  CONSTRAINT matches_session_id_fkey FOREIGN KEY (session_id) REFERENCES smackosoft.sessions(id),
+  CONSTRAINT matches_session_id_fkey FOREIGN KEY (session_id) REFERENCES smackosoft.sessions(id) ON DELETE CASCADE,
   CONSTRAINT matches_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT matches_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
@@ -150,7 +193,7 @@ CREATE TABLE smackosoft.match_teams (
   updated_at timestamptz,
   updated_by uuid,
   CONSTRAINT match_teams_pkey PRIMARY KEY (id),
-  CONSTRAINT match_teams_match_id_fkey FOREIGN KEY (match_id) REFERENCES smackosoft.matches(id),
+  CONSTRAINT match_teams_match_id_fkey FOREIGN KEY (match_id) REFERENCES smackosoft.matches(id) ON DELETE CASCADE,
   CONSTRAINT match_teams_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT match_teams_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
@@ -177,7 +220,7 @@ CREATE TABLE smackosoft.match_games (
   CONSTRAINT match_games_match_id_game_number_key UNIQUE (match_id, game_number),
   CONSTRAINT match_games_game_number_check CHECK (game_number > 0),
   CONSTRAINT match_games_time_order_check CHECK (end_time > start_time),
-  CONSTRAINT match_games_match_id_fkey FOREIGN KEY (match_id) REFERENCES smackosoft.matches(id),
+  CONSTRAINT match_games_match_id_fkey FOREIGN KEY (match_id) REFERENCES smackosoft.matches(id) ON DELETE CASCADE,
   CONSTRAINT match_games_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT match_games_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
@@ -198,7 +241,7 @@ CREATE TABLE smackosoft.match_players (
   updated_by    uuid,
   CONSTRAINT match_players_pkey PRIMARY KEY (id),
   CONSTRAINT match_players_match_team_id_account_id_key UNIQUE (match_team_id, account_id),
-  CONSTRAINT match_players_match_team_id_fkey FOREIGN KEY (match_team_id) REFERENCES smackosoft.match_teams(id),
+  CONSTRAINT match_players_match_team_id_fkey FOREIGN KEY (match_team_id) REFERENCES smackosoft.match_teams(id) ON DELETE CASCADE,
   CONSTRAINT match_players_account_id_fkey FOREIGN KEY (account_id) REFERENCES smackosoft.accounts(id),
   CONSTRAINT match_players_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT match_players_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
@@ -224,8 +267,8 @@ CREATE TABLE smackosoft.match_game_scores (
   CONSTRAINT match_game_scores_pkey PRIMARY KEY (id),
   CONSTRAINT match_game_scores_match_team_id_match_game_id_key UNIQUE (match_team_id, match_game_id),
   CONSTRAINT match_game_scores_score_check CHECK (score >= 0),
-  CONSTRAINT match_game_scores_match_team_id_fkey FOREIGN KEY (match_team_id) REFERENCES smackosoft.match_teams(id),
-  CONSTRAINT match_game_scores_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id),
+  CONSTRAINT match_game_scores_match_team_id_fkey FOREIGN KEY (match_team_id) REFERENCES smackosoft.match_teams(id) ON DELETE CASCADE,
+  CONSTRAINT match_game_scores_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id) ON DELETE CASCADE,
   CONSTRAINT match_game_scores_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT match_game_scores_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
@@ -249,11 +292,14 @@ CREATE TABLE smackosoft.match_game_highlights (
   updated_at       timestamptz,
   updated_by       uuid,
   CONSTRAINT match_game_highlights_pkey PRIMARY KEY (id),
-  CONSTRAINT match_game_highlights_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id),
-  CONSTRAINT match_game_highlights_match_player_id_fkey FOREIGN KEY (match_player_id) REFERENCES smackosoft.match_players(id),
+  CONSTRAINT match_game_highlights_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id) ON DELETE CASCADE,
+  CONSTRAINT match_game_highlights_match_player_id_fkey FOREIGN KEY (match_player_id) REFERENCES smackosoft.match_players(id) ON DELETE CASCADE,
   CONSTRAINT match_game_highlights_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT match_game_highlights_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
+
+COMMENT ON COLUMN smackosoft.match_game_highlights.canonical_offset IS
+  'Time since the game''s canonical 0 (the sync marker shared by all videos of the game). Not a position in any one video.';
 
 GRANT ALL ON TABLE smackosoft.match_game_highlights TO smackosoft_service;
 
@@ -268,45 +314,78 @@ CREATE TABLE smackosoft.videos (
   id               uuid        NOT NULL DEFAULT gen_random_uuid(),
   label            text        NOT NULL,
   video_url        text        NOT NULL,
+  thumbnail_url    text,
+  duration_seconds int,
   created_at       timestamptz NOT NULL DEFAULT now(),
   created_by       uuid        NOT NULL,
   updated_at       timestamptz,
   updated_by       uuid,
   CONSTRAINT videos_pkey PRIMARY KEY (id),
+  CONSTRAINT videos_duration_seconds_check CHECK (duration_seconds > 0),
   CONSTRAINT videos_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT videos_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
+
+COMMENT ON COLUMN smackosoft.videos.duration_seconds IS
+  'Length of the video when it was added. A snapshot taken by the app from the player, so listing a session needs no player. NULL when it could not be read.';
 
 GRANT ALL ON TABLE smackosoft.videos TO smackosoft_service;
 
 CREATE INDEX videos_created_by_idx ON smackosoft.videos (created_by);
 
 -- ============================================================
--- VIDEO_LINKAGES
+-- VIDEO_SESSIONS
 -- ============================================================
 
-CREATE TABLE smackosoft.video_linkages (
+CREATE TABLE smackosoft.video_sessions (
+  id         uuid        NOT NULL DEFAULT gen_random_uuid(),
+  video_id   uuid        NOT NULL,
+  session_id uuid        NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  created_by uuid        NOT NULL,
+  updated_at timestamptz,
+  updated_by uuid,
+  CONSTRAINT video_sessions_pkey PRIMARY KEY (id),
+  CONSTRAINT video_sessions_video_id_session_id_key UNIQUE (video_id, session_id),
+  CONSTRAINT video_sessions_video_id_fkey FOREIGN KEY (video_id) REFERENCES smackosoft.videos(id) ON DELETE CASCADE,
+  CONSTRAINT video_sessions_session_id_fkey FOREIGN KEY (session_id) REFERENCES smackosoft.sessions(id) ON DELETE CASCADE,
+  CONSTRAINT video_sessions_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
+  CONSTRAINT video_sessions_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
+);
+
+COMMENT ON TABLE smackosoft.video_sessions IS
+  'A video in a session''s pool. Any session member with the right role can contribute footage here before it is linked to a game.';
+
+GRANT ALL ON TABLE smackosoft.video_sessions TO smackosoft_service;
+
+CREATE INDEX video_sessions_session_id_idx ON smackosoft.video_sessions (session_id);
+
+-- ============================================================
+-- VIDEO_GAMES
+-- ============================================================
+
+CREATE TABLE smackosoft.video_games (
   id               uuid        NOT NULL DEFAULT gen_random_uuid(),
   video_id         uuid        NOT NULL,
-  session_id       uuid        NOT NULL,
-  match_game_id    uuid,
-  canonical_offset interval    NOT NULL,
+  match_game_id    uuid        NOT NULL,
+  canonical_offset interval,
   created_at       timestamptz NOT NULL DEFAULT now(),
   created_by       uuid        NOT NULL,
   updated_at       timestamptz,
   updated_by       uuid,
-  CONSTRAINT video_linkages_pkey PRIMARY KEY (id),
-  CONSTRAINT video_linkages_video_id_session_id_match_game_id_key UNIQUE (video_id, session_id, match_game_id),
-  CONSTRAINT video_linkages_video_id_fkey FOREIGN KEY (video_id) REFERENCES smackosoft.videos(id),
-  CONSTRAINT video_linkages_session_id_fkey FOREIGN KEY (session_id) REFERENCES smackosoft.sessions(id),
-  CONSTRAINT video_linkages_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id),
-  CONSTRAINT video_linkages_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
-  CONSTRAINT video_linkages_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
+  CONSTRAINT video_games_pkey PRIMARY KEY (id),
+  CONSTRAINT video_games_video_id_match_game_id_key UNIQUE (video_id, match_game_id),
+  CONSTRAINT video_games_video_id_fkey FOREIGN KEY (video_id) REFERENCES smackosoft.videos(id) ON DELETE CASCADE,
+  CONSTRAINT video_games_match_game_id_fkey FOREIGN KEY (match_game_id) REFERENCES smackosoft.match_games(id) ON DELETE CASCADE,
+  CONSTRAINT video_games_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
+  CONSTRAINT video_games_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
 
-GRANT ALL ON TABLE smackosoft.video_linkages TO smackosoft_service;
+COMMENT ON TABLE smackosoft.video_games IS
+  'A video that covers a game. canonical_offset says how it lines up with the other videos of the same game.';
+COMMENT ON COLUMN smackosoft.video_games.canonical_offset IS
+  'Video timestamp of the game''s canonical 0, a sync marker chosen per game (for example the first shuttle hit or a clap). Negative when the video started after that moment. NULL means not synced yet. To show canonical time t, seek to canonical_offset + t.';
 
-CREATE INDEX video_linkages_video_id_idx ON smackosoft.video_linkages (video_id);
-CREATE INDEX video_linkages_session_id_match_game_id_idx ON smackosoft.video_linkages (session_id, match_game_id);
+GRANT ALL ON TABLE smackosoft.video_games TO smackosoft_service;
 
-CREATE UNIQUE INDEX video_linkages_video_id_session_id_key ON smackosoft.video_linkages (video_id, session_id) WHERE match_game_id IS NULL;
+CREATE INDEX video_games_match_game_id_idx ON smackosoft.video_games (match_game_id);

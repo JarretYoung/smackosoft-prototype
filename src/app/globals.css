@@ -1,68 +1,242 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-  }
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-  }
+/*
+ * Design tokens. Light only.
+ *
+ * Model: Apple's grouped layout. A warm gray page (the "grouped background"),
+ * white content surfaces on top, one red accent used for action and emphasis.
+ * Colors are named by role, not by value.
+ *
+ *   background   page (grouped background)
+ *   card         content surface (secondary grouped background)
+ *   fill         inputs and quiet controls (system fill)
+ *   primary      the one accent: actions, selection, key numbers
+ *   ink          the dark court tone used for contrast moments
+ */
+
+:root {
+  --background: oklch(0.962 0.004 50);
+  --foreground: oklch(0.19 0.012 30);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.19 0.012 30);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.19 0.012 30);
+
+  /* Smash red. White text on it passes 4.5:1. */
+  --primary: oklch(0.49 0.18 24); /* #b01e28 */
+  --primary-foreground: oklch(0.99 0 0);
+  --primary-deep: oklch(0.36 0.14 24);
+
+  --secondary: oklch(0.94 0.005 50);
+  --secondary-foreground: oklch(0.25 0.012 30);
+  --muted: oklch(0.94 0.005 50);
+  --muted-foreground: oklch(0.5 0.012 40);
+
+  /* Tinted: the quiet red used behind selected and highlighted items. */
+  /* The brand red at 10%, not a fixed pink, so it reads the same on white and on the page gray. */
+  --accent: oklch(0.49 0.18 24 / 10%);
+  --accent-foreground: oklch(0.49 0.18 24);
+
+  --destructive: oklch(0.49 0.18 24);
+  --success: oklch(0.55 0.15 150);
+  --gold: oklch(0.76 0.15 80);
+  --ink: oklch(0.22 0.02 160);
+
+  --border: oklch(0.91 0.005 50);
+  --input: oklch(0.94 0.005 50);
+  --ring: oklch(0.49 0.18 24 / 45%);
+  --radius: 1rem;
+
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-deep: var(--primary-deep);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-gold: var(--gold);
+  --color-ink: var(--ink);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+
+  /*
+   * Radius roles (see DESIGN.local.md):
+   *   full  buttons, chips, avatars, tab bar
+   *   4xl   hero surfaces, dialogs, sheets (32px)
+   *   2xl   cards, grouped lists, menus (24px)
+   *   xl    inputs, selects, menu items (20px)
+   *   lg    tiles in rows, such as the date tile (16px)
+   *   md    thumbnails and small icon tiles (12px)
+   * A shape inside a padded surface uses the next step down.
+   */
+
+  /* Type roles. Only sizes without a Tailwind name live here. */
+  --text-caption: 0.6875rem;
+  --text-footnote: 0.8125rem;
+  --text-subhead: 0.9375rem;
+  --text-body: 1rem;
+
+  --shadow-card: 0 1px 2px oklch(0.2 0.02 30 / 0.04), 0 2px 12px oklch(0.2 0.02 30 / 0.04);
+  --shadow-float: 0 8px 30px oklch(0.2 0.02 30 / 0.14), 0 1px 3px oklch(0.2 0.02 30 / 0.08);
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+    /* Always reserve the scrollbar's width so pages of different heights, and open sheets, do not shift. */
+    scrollbar-gutter: stable;
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "cv11";
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  /*
+   * Everything you can click shows a pointer. Tailwind v4 resets buttons to the default cursor.
+   * :where() keeps this at zero specificity, so a component can still choose another cursor.
+   */
+  :where(
+    button:not(:disabled),
+    [role="button"]:not([aria-disabled="true"]),
+    [role="radio"],
+    [role="checkbox"],
+    [role="switch"],
+    [role="tab"],
+    [role="option"],
+    [role="menuitem"],
+    [role="menuitemradio"],
+    [role="menuitemcheckbox"],
+    [role="combobox"],
+    a[href],
+    summary,
+    select:not(:disabled),
+    label[for],
+    input:is([type="checkbox"], [type="radio"], [type="submit"], [type="button"]):not(:disabled)
+  ) {
+    cursor: pointer;
+  }
+}
+
+/*
+ * Radix pads the body by the scrollbar width while a sheet or dialog locks scrolling. The gutter
+ * above is already reserved, so that padding would push the page sideways. Unlayered and more
+ * specific than the injected rule, so it wins.
+ */
+html body[data-scroll-locked] {
+  padding-right: 0 !important;
+  margin-right: 0 !important;
+}
+
+@layer components {
+  /* Large title, the way iOS opens a top level screen. */
+  .large-title {
+    @apply text-[2rem] leading-[1.1] font-bold tracking-tight;
+  }
+
+  /* Small caps label above a group of rows. */
+  .section-label {
+    @apply px-1 text-footnote font-medium tracking-wide text-muted-foreground uppercase;
+  }
+
+  /* Heading for a top level section of a screen. */
+  .section-title {
+    @apply text-xl leading-tight font-bold tracking-tight;
+  }
+
+  /* One row in a grouped list. Every row is the same height class: 48px tile or icon plus 12px above and below. */
+  .list-row {
+    @apply flex items-center gap-3 px-4 py-3;
+  }
+
+  /* Scores and stats: equal width digits so they never jitter. */
+  .score {
+    @apply font-bold tracking-tight tabular-nums;
+  }
+
+  /* Grouped list: one rounded surface, hairline dividers between rows. */
+  .group-list {
+    @apply overflow-hidden rounded-2xl bg-card shadow-card;
+  }
+  .group-list > * + * {
+    @apply border-t border-border/70;
+  }
+
+  /* Press feedback. Everything tappable shrinks a touch. */
+  .pressable {
+    @apply transition-[transform,background-color,opacity] duration-150 ease-out active:scale-[0.97];
+  }
+  .pressable-row {
+    @apply transition-colors duration-150 active:bg-muted;
+  }
+
+  /*
+   * Functional layer: floating bars. Content never uses this.
+   * Opaque enough that the red label of the active tab keeps 4.5:1 over anything that scrolls under
+   * it, including today's solid red date column. At 72% it blended to a pink that failed.
+   */
+  .glass {
+    background: oklch(1 0 0 / 0.88);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    backdrop-filter: blur(24px) saturate(1.5);
+    box-shadow:
+      inset 0 0 0 0.5px oklch(1 0 0 / 0.6),
+      var(--shadow-float);
+  }
+  .glass-bar {
+    background: oklch(0.962 0.004 50 / 0.78);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    backdrop-filter: blur(24px) saturate(1.5);
+  }
+
+  /* Hero: the one bold surface per screen. */
+  .hero {
+    background:
+      radial-gradient(120% 90% at 100% 0%, oklch(0.55 0.19 25) 0%, transparent 55%),
+      linear-gradient(160deg, oklch(0.49 0.18 24) 0%, var(--primary-deep) 100%);
+    color: var(--primary-foreground);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .glass,
+  .glass-bar {
+    background: var(--card);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pressable {
+    @apply active:scale-100;
   }
 }

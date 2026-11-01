@@ -1,0 +1,122 @@
+"use client";
+
+import { Crown, Minus } from "lucide-react";
+import { TimeRange } from "@/src/components/time-range";
+import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
+import type { GameDraft, TeamDraft } from "@/src/features/matches/match-draft";
+import { durationLabel } from "@/src/lib/format";
+import { isoToTime } from "@/src/lib/zoned";
+import { cn } from "@/src/lib/utils";
+
+/** One game: its times and a score box per team. The winner is marked as scores are typed. */
+export function GameCard({
+  game,
+  index,
+  timezone,
+  teams,
+  winner,
+  timesOpen,
+  onShowTimes,
+  onTime,
+  onScore,
+  onRemove,
+  solo = false,
+}: {
+  game: GameDraft;
+  index: number;
+  /** The only game of a best of 1 match. The match is the game, so it has no title and cannot be removed here. */
+  solo?: boolean;
+  /** The session's zone. The times are read and written on its clock. */
+  timezone: string;
+  teams: TeamDraft[];
+  winner: string | null;
+  timesOpen: boolean;
+  onShowTimes: () => void;
+  onTime: (field: "startTime" | "endTime", time: string) => void;
+  onScore: (teamId: string, value: string, input: HTMLInputElement) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-4 rounded-2xl bg-card p-4 shadow-card">
+      {!solo && (
+        <div className="flex items-center gap-2">
+          <h3 className="text-body font-semibold tracking-tight">Game {index + 1}</h3>
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon-sm"
+            className="ml-auto"
+            aria-label={`Remove game ${index + 1}`}
+            onClick={onRemove}
+          >
+            <Minus />
+          </Button>
+        </div>
+      )}
+      {timesOpen ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Input
+            type="time"
+            aria-label={`Start time for game ${index + 1}`}
+            value={isoToTime(game.startTime, timezone)}
+            onChange={(e) => onTime("startTime", e.target.value)}
+          />
+          to
+          <Input
+            type="time"
+            aria-label={`End time for game ${index + 1}`}
+            value={isoToTime(game.endTime, timezone)}
+            onChange={(e) => onTime("endTime", e.target.value)}
+          />
+        </div>
+      ) : (
+        <button
+          type="button"
+          aria-label={`Edit times for game ${index + 1}`}
+          onClick={onShowTimes}
+          className={cn(
+            "pressable flex min-h-11 items-center justify-between gap-2 rounded-xl text-left text-sm text-muted-foreground",
+            !solo && "-mt-2",
+          )}
+        >
+          <span>
+            <TimeRange start={game.startTime} end={game.endTime} zone={timezone} />
+            {" · "}
+            {durationLabel(Math.max(0, Math.round((Date.parse(game.endTime) - Date.parse(game.startTime)) / 60_000))) || "0 min"}
+          </span>
+          <span className="font-semibold text-primary">Edit</span>
+        </button>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        {teams.map((team) => (
+          <div key={team.id} className="flex flex-col gap-1.5">
+            <div
+              className={cn(
+                "flex flex-col items-center gap-2 rounded-xl p-3 transition-colors",
+                winner === team.id ? "bg-accent" : "bg-muted",
+              )}
+            >
+              <span className="flex w-full items-center justify-between gap-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                <span className="truncate">{team.label}</span>
+                {winner === team.id && <Crown aria-label="Winner" className="size-4 shrink-0 fill-gold text-gold" />}
+              </span>
+              <Input
+                data-score
+                inputMode="numeric"
+                enterKeyHint="next"
+                autoComplete="off"
+                aria-label={`${team.label} score for game ${index + 1}`}
+                placeholder="-"
+                className="score h-14 rounded-lg bg-card text-center text-3xl"
+                value={game.scores[team.id] ?? ""}
+                onFocus={(e) => e.currentTarget.select()}
+                onChange={(e) => onScore(team.id, e.target.value, e.currentTarget)}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

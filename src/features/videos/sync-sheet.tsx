@@ -1,0 +1,139 @@
+"use client";
+
+import { Minus, Plus } from "lucide-react";
+import { Button } from "@/src/components/ui/button";
+import { Field, FieldDescription, FieldLabel } from "@/src/components/ui/field";
+import { Input } from "@/src/components/ui/input";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
+import { Spinner } from "@/src/components/ui/spinner";
+import { useSyncForm } from "@/src/features/videos/use-sync-form";
+import { playableOf } from "@/src/features/videos/player";
+import { OffsetRuler } from "./offset-ruler";
+import { SyncPreview } from "./sync-preview";
+
+export type SyncTarget = {
+  videoId: string;
+  label: string;
+  videoUrl: string;
+  matchGameId: string;
+  gameLabel: string;
+  /** The saved sync point, or null when the video is not synced yet. */
+  offset: number | null;
+};
+
+/**
+ * Set where a game's shared moment (the first hit, a clap) sits in one video.
+ * Play the preview to the moment and pause, and the number follows the video. Then fine tune with the ruler
+ * or by typing, and the video follows the number. A link that cannot play in the page has no preview, and the
+ * number is the only way in.
+ */
+export function SyncSheet({
+  target,
+  pending,
+  onClose,
+  onSave,
+}: {
+  target: SyncTarget | null;
+  pending: boolean;
+  onClose: () => void;
+  /** Null clears the sync point. */
+  onSave: (target: SyncTarget, offset: number | null) => void;
+}) {
+  return (
+    <Sheet open={target !== null} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent side="bottom" className="overflow-y-auto">
+        {target && <SyncForm key={`${target.videoId}:${target.matchGameId}`} target={target} pending={pending} onClose={onClose} onSave={onSave} />}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function SyncForm({
+  target,
+  pending,
+  onClose,
+  onSave,
+}: {
+  target: SyncTarget;
+  pending: boolean;
+  onClose: () => void;
+  onSave: (target: SyncTarget, offset: number | null) => void;
+}) {
+  const { value, draft, valid, set, type, tidy, clear, onSubmit } = useSyncForm({
+    offset: target.offset,
+    pending,
+    save: (offset) => onSave(target, offset),
+  });
+  const invalid = !valid;
+  const synced = target.offset !== null;
+  // The preview starts at the saved sync point, then follows the number.
+  const playable = playableOf(target.videoUrl, target.offset);
+
+  return (
+    <form className="flex min-h-0 flex-1 flex-col gap-4" onSubmit={onSubmit}>
+      <SheetHeader className="px-5 pt-2 pb-0">
+        <SheetTitle>Sync video</SheetTitle>
+        <SheetDescription>
+          {target.label} · {target.gameLabel}
+        </SheetDescription>
+      </SheetHeader>
+
+      <div className="flex flex-col gap-5 px-5">
+        {playable && <SyncPreview playable={playable} seconds={value} onFollow={set} />}
+        <Field>
+          <FieldLabel htmlFor="sync-offset" className="sr-only">
+            Sync point
+          </FieldLabel>
+          <div className="flex items-center gap-3">
+            <Button type="button" variant="secondary" size="icon" aria-label="One second earlier" onClick={() => set(value - 1)}>
+              <Minus />
+            </Button>
+            <Input
+              id="sync-offset"
+              value={draft}
+              inputMode="text"
+              enterKeyHint="done"
+              autoComplete="off"
+              aria-invalid={invalid}
+              onChange={(e) => type(e.target.value)}
+              onBlur={tidy}
+              className="h-14 flex-1 text-center text-3xl font-bold tracking-tight tabular-nums"
+            />
+            <Button type="button" variant="secondary" size="icon" aria-label="One second later" onClick={() => set(value + 1)}>
+              <Plus />
+            </Button>
+          </div>
+          <OffsetRuler value={value} onChange={set} />
+          <FieldDescription className="text-center">
+            {playable
+              ? "Play to the first serve and pause. The time follows the video. Drag the ruler to fine tune, a frame at a time."
+              : "Line up a moment every video shares, like the first serve"}
+          </FieldDescription>
+        </Field>
+      </div>
+
+      <SheetFooter className="px-5 pb-6">
+        <Button type="submit" size="lg" disabled={pending || invalid}>
+          {pending && <Spinner />}
+          {pending ? "Saving" : "Save"}
+        </Button>
+        <div className="flex justify-center gap-2">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
+            {synced ? "Cancel" : "Not now"}
+          </Button>
+          {synced && (
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              disabled={pending}
+              onClick={clear}
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+      </SheetFooter>
+    </form>
+  );
+}
