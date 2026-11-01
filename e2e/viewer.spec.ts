@@ -23,7 +23,7 @@ test("a viewer can read a session but not change it", async ({ page }) => {
   // Matches show, but there is no way into the score editor.
   await expect(page.getByRole("heading", { level: 2, name: "Matches" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Edit", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Add the first match" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add a game" })).toHaveCount(0);
 
   // Members open in a read-only list: the only control is the close button.
   await page.getByRole("button", { name: /Members/ }).click();

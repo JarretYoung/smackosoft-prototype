@@ -48,6 +48,12 @@ export function useMatchForm({ sessionId, timezone, match }: { sessionId: string
     submit: async (values): Promise<Result<null>> => {
       const plan = planMatchSave(match, sessionId, values);
 
+      // Removed games go first, so a smaller format never meets the games it replaces.
+      if (plan.removedGameIds.length) {
+        const result = await removeGames(plan.removedGameIds);
+        if (!result.ok) return result;
+      }
+
       const saveMatch = await saveMatches([plan.match]);
       if (!saveMatch.ok) return saveMatch;
       const teams = await saveTeams(plan.teams);
@@ -62,10 +68,6 @@ export function useMatchForm({ sessionId, timezone, match }: { sessionId: string
         if (!result.ok) return result;
       }
 
-      if (plan.removedGameIds.length) {
-        const result = await removeGames(plan.removedGameIds);
-        if (!result.ok) return result;
-      }
       if (plan.games.length) {
         const result = await saveGames(plan.games);
         if (!result.ok) return result;
@@ -127,6 +129,7 @@ export function useMatchForm({ sessionId, timezone, match }: { sessionId: string
         id: crypto.randomUUID(),
         now: new Date(),
         savedNumbers: match.games.map((g) => g.gameNumber),
+        format: values.format,
       }),
     setTeamPlayers: (teamId: string, playerIds: string[]) =>
       app.form.setFieldValue("teams", (list) => list.map((t) => (t.id === teamId ? { ...t, playerIds } : t))),

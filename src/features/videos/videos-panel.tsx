@@ -19,8 +19,13 @@ import { PickSheet, type PickItem } from "./pick-sheet";
 import { SyncSheet, type SyncTarget } from "./sync-sheet";
 import { AddVideoRow, GameVideoRow, UnassignedRow } from "./video-rows";
 
-export type MatchGroup = { id: string; label: string; games: { id: string; gameNumber: number }[] };
+/** `ungrouped` is a best of 1 match. It is shown as the game, with no match heading above it. */
+export type MatchGroup = { id: string; label: string; ungrouped: boolean; games: { id: string; gameNumber: number }[] };
 type Target = { value: string; label: string };
+
+/** "Game 1 of Match 2", or just "Game 3" for a game played on its own. */
+const gameLabel = (match: MatchGroup, game: { gameNumber: number }) =>
+  match.ungrouped ? match.label : `${match.label} · Game ${game.gameNumber}`;
 
 type Result = { ok: true } | { ok: false; error: Parameters<typeof errorMessage>[0] };
 type Picking = { kind: "game"; video: SessionVideo["video"] } | { kind: "video"; game: Target };
@@ -52,7 +57,7 @@ export function VideosPanel({
   const [syncing, setSyncing] = useState<SyncTarget | null>(null);
   const [pending, start] = useTransition();
 
-  const targets: Target[] = matches.flatMap((m) => m.games.map((g) => ({ value: g.id, label: `${m.label} · Game ${g.gameNumber}` })));
+  const targets: Target[] = matches.flatMap((m) => m.games.map((g) => ({ value: g.id, label: gameLabel(m, g) })));
   const labelOf = (gameId: string) => targets.find((t) => t.value === gameId)?.label ?? "A game";
 
   // A video in the session has one row with no game. Its other rows say which games it is in.
@@ -214,7 +219,7 @@ export function VideosPanel({
 
         {!nothingYet && shown.map((match) => (
           <section key={match.id} aria-label={match.label} className="flex flex-col gap-4">
-            <h2 className="px-1 text-2xl font-bold tracking-tight">{match.label}</h2>
+            {!match.ungrouped && <h2 className="px-1 text-2xl font-bold tracking-tight">{match.label}</h2>}
             {match.games.length === 0 && (
               <Empty className="bg-card p-6 shadow-card">
                 <EmptyHeader>
@@ -224,11 +229,12 @@ export function VideosPanel({
               </Empty>
             )}
             {match.games.map((g) => {
-              const game = { value: g.id, label: `${match.label} · Game ${g.gameNumber}` };
+              const game = { value: g.id, label: gameLabel(match, g) };
+              const heading = match.ungrouped ? match.label : `Game ${g.gameNumber}`;
               const inGame = videosOf(g.id);
               return (
-                <div key={g.id} role="group" aria-label={`Game ${g.gameNumber}`} className="flex flex-col gap-2">
-                  <h3 className="section-label">Game {g.gameNumber}</h3>
+                <div key={g.id} role="group" aria-label={heading} className="flex flex-col gap-2">
+                  <h3 className="section-label">{heading}</h3>
                   <ul className="group-list">
                     {inGame.map((item) => (
                       <GameVideoRow

@@ -37,7 +37,7 @@ export function TodayCard({ session, viewerZone }: { session: SessionListItem; v
           </span>
         )}
         <span className="ml-auto shrink-0 text-sm font-semibold text-primary">
-          {plural(session.matchCount, "Match", "Matches")}
+          {plural(session.gameCount, "Game")}
         </span>
       </div>
     </Link>

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Match } from "../../contract";
+import { MATCH_FORMAT_MAX_GAMES, type Match } from "../../contract";
 import { withTime } from "../../lib/zoned";
 
 export type TeamDraft = { id: string; label: string; playerIds: string[] };
@@ -17,6 +17,7 @@ export type GameDraft = {
 export type MatchValues = {
   label: string;
   matchType: Match["matchType"];
+  format: Match["format"];
   teams: TeamDraft[];
   games: GameDraft[];
 };
@@ -30,6 +31,7 @@ const SCORE_TEXT = /^\d{0,3}$/;
 export const matchSchema = z.object({
   label: z.string(),
   matchType: z.custom<MatchValues["matchType"]>(),
+  format: z.custom<MatchValues["format"]>(),
   teams: z.custom<TeamDraft[]>(),
   games: z.custom<GameDraft[]>(),
 });
@@ -38,6 +40,7 @@ export function toValues(match: Match): MatchValues {
   return {
     label: match.label,
     matchType: match.matchType,
+    format: match.format,
     teams: match.teams.map((t) => ({ id: t.id, label: t.label, playerIds: t.players.map((p) => p.id) })),
     games: match.games.map((game) => ({
       id: game.id,
@@ -54,7 +57,7 @@ export type GamesAction =
   /** `time` is "HH:mm" on the clock of `timezone`, the session's zone. */
   | { type: "time"; gameId: string; field: "startTime" | "endTime"; time: string; timezone: string }
   /** `savedNumbers` are the saved games' numbers, so a number is never reused. */
-  | { type: "add"; id: string; now: Date; savedNumbers: number[] }
+  | { type: "add"; id: string; now: Date; savedNumbers: number[]; format: Match["format"] }
   | { type: "remove"; id: string }
   /** Undo a removal. Does nothing when the game is back already. */
   | { type: "restore"; game: GameDraft; index: number };
@@ -72,6 +75,8 @@ export function gamesReducer(list: GameDraft[], action: GamesAction): GameDraft[
         g.id === action.gameId ? { ...g, [action.field]: withTime(g[action.field], action.time, action.timezone) } : g,
       );
     case "add": {
+      // A match holds the games its format allows. The backend refuses more.
+      if (list.length >= MATCH_FORMAT_MAX_GAMES[action.format]) return list;
       // The next game starts when the last one ended, or now for the first.
       const start = list.length ? new Date(list[list.length - 1].endTime) : action.now;
       return [
@@ -115,6 +120,7 @@ function snapshot(values: MatchValues): string {
   return JSON.stringify([
     values.label,
     values.matchType,
+    values.format,
     values.teams.map((t) => [t.id, [...t.playerIds].sort()]),
     values.games.map((g) => [g.id, g.startTime, g.endTime, values.teams.map((t) => g.scores[t.id] ?? "")]),
   ]);
@@ -145,7 +151,7 @@ export function planMatchSave(match: Match, sessionId: string, values: MatchValu
       sessionId,
       label: values.label.trim() || match.label,
       matchType: values.matchType,
-      format: match.format,
+      format: values.format,
     },
     teams: values.teams.map((t) => ({ id: t.id, matchId: match.id, label: t.label })),
     removedPlayers: savedPlayers.filter((p) => !stagedKeys.has(key(p))),

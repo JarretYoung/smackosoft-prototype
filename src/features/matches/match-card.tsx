@@ -5,10 +5,10 @@ import { RowChevron } from "@/src/components/row-chevron";
 import type { Match, Team } from "@/src/contract";
 import { cn } from "@/src/lib/utils";
 import { MATCH_TYPE_LABEL } from "./match-type";
-import { summarize, teamNames } from "./scores";
+import { tally, teamNames } from "./scores";
 
 export function MatchCard({ sessionId, match, index }: { sessionId: string; match: Match; index: number }) {
-  const { rows, winnerId } = summarize(match);
+  const { rows, winnerId } = tally(match);
   const [left, right] = rows;
   return (
     <Link
@@ -26,11 +26,11 @@ export function MatchCard({ sessionId, match, index }: { sessionId: string; matc
           <Side team={left.team} won={winnerId === left.team.id} />
           <div className="score flex items-center gap-2.5 text-[2.25rem] leading-none">
             <span className={cn(winnerId === left.team.id ? "text-primary" : winnerId ? "text-muted-foreground/60" : "")}>
-              {left.wins}
+              {left.value}
             </span>
             <span className="text-lg font-medium text-muted-foreground/60">:</span>
             <span className={cn(winnerId === right.team.id ? "text-primary" : winnerId ? "text-muted-foreground/60" : "")}>
-              {right.wins}
+              {right.value}
             </span>
           </div>
           <Side team={right.team} won={winnerId === right.team.id} align="end" />

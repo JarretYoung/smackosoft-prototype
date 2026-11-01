@@ -19,5 +19,5 @@ test("a user creates a session with a guest member", async ({ page }) => {
   await expect(page).toHaveURL(/\/sessions\/[0-9a-f-]{36}$/);
 
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
-  await expect(page.getByText("No matches yet")).toBeVisible();
+  await expect(page.getByText("Nothing played yet")).toBeVisible();
 });

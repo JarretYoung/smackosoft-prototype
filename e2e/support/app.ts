@@ -61,7 +61,8 @@ export async function onboard(page: Page, { name, handle }: { name: string; hand
 /** Add an empty match in the editor and wait for it to open. */
 export async function addMatch(page: Page, sessionId: string) {
   await go(page, `/sessions/${sessionId}/matches/edit`);
-  await page.getByRole("button", { name: "Add match" }).click();
+  await page.getByRole("button", { name: "Add a game or match" }).click();
+  await page.getByRole("menuitem", { name: "Match", exact: true }).click();
   await expect(page).toHaveURL(/\/matches\/edit\?m=/);
   await expect(page.getByRole("button", { name: "Edit Team 1 players" })).toBeVisible();
 }

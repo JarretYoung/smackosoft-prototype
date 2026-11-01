@@ -11,7 +11,7 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
 
-export type MatchFormat = "BO3" | "BO5" | "BO1";
+export type MatchFormat = "BO1" | "BO3" | "BO5" | "FREE";
 
 export type MatchType = "MD" | "MS" | "OTHER" | "PRACTICE" | "WD" | "WS" | "XD" | "XS";
 

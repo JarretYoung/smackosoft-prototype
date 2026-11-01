@@ -110,7 +110,21 @@ describe("matches, teams, games and scores", () => {
   describe("a match holds the games its format allows", () => {
     const game = (matchId: string, gameNumber: number) => ({ id: id(), matchId, gameNumber, startTime, endTime });
 
-    test("a single game match refuses a second game", async ({ world: w }) => {
+    test("a free format match takes any number of games", async ({ world: w }) => {
+      const sessionId = await newSession(w);
+      const matchId = id();
+      ok(await w.b.matches.save([{ id: matchId, sessionId, label: "Casual", matchType: "MD", format: "FREE" }]));
+      ok(await w.b.matches.saveGames([1, 2, 3, 4, 5, 6].map((n) => game(matchId, n))));
+    });
+
+    test("a best of 3 match takes fewer games than its format", async ({ world: w }) => {
+      const sessionId = await newSession(w);
+      const matchId = id();
+      ok(await w.b.matches.save([{ id: matchId, sessionId, label: "Short", matchType: "MD", format: "BO3" }]));
+      ok(await w.b.matches.saveGames([game(matchId, 1), game(matchId, 2)]));
+    });
+
+    test("a best of 1 match refuses a second game", async ({ world: w }) => {
       const sessionId = await newSession(w);
       const matchId = id();
       ok(await w.b.matches.save([{ id: matchId, sessionId, label: "One-off", matchType: "MS", format: "BO1" }]));

@@ -195,13 +195,15 @@ export const listSessions = read(ListSessionsInput, async ({ db, actor }, input)
 
   const ids = sessions.map((s) => s.id);
   const members = await loadMembers(db, ids);
+  // Games, not matches: a game played on its own is a match of one, and people count what they played.
   const counts = await db
-    .selectFrom("matches")
-    .select(["session_id", (eb) => eb.fn.countAll<string>().as("count")])
-    .where("session_id", "in", ids)
-    .groupBy("session_id")
+    .selectFrom("match_games")
+    .innerJoin("matches", "matches.id", "match_games.match_id")
+    .select(["matches.session_id as session_id", (eb) => eb.fn.countAll<string>().as("count")])
+    .where("matches.session_id", "in", ids)
+    .groupBy("matches.session_id")
     .execute();
-  const matchCount = new Map(counts.map((c) => [c.session_id, Number(c.count)]));
+  const gameCount = new Map(counts.map((c) => [c.session_id, Number(c.count)]));
 
   return sessions.map(
     (s): SessionListItem => ({
@@ -213,7 +215,7 @@ export const listSessions = read(ListSessionsInput, async ({ db, actor }, input)
       endTime: isoOrNull(s.end_time),
       location: s.location,
       coverUrl: s.cover_url,
-      matchCount: matchCount.get(s.id) ?? 0,
+      gameCount: gameCount.get(s.id) ?? 0,
       myRole: s.role,
       members: members.get(s.id) ?? [],
     }),

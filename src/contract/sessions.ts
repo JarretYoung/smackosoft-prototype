@@ -74,7 +74,8 @@ export type SessionListItem = {
   endTime: string | null;
   location: string | null;
   coverUrl: string | null;
-  matchCount: number;
+  /** Games played in the session, across all its matches. */
+  gameCount: number;
   myRole: Role;
   members: Member[];
 };

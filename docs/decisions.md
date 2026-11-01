@@ -18,8 +18,10 @@ Standing decisions about how the app is built. Read them before you change the s
 - `canonical_offset` is the video timestamp of a game's canonical 0. It is a per-game sync marker, such as a first hit or a clap. It is negative when the video started after that moment. `NULL` means not synced. Links from a session to a video have no offset.
 - Session times are `timestamptz`. The app shows them on the viewer's clock. See [architecture.md](architecture.md#time-and-timezones).
 - Game times stay `NOT NULL`. Session planned times are kept.
-- A game always belongs to a match. A one-off game is a match with `format` `BO1` and one game. There is no game without a match and no nullable parent. `matches.format` is `BO1`, `BO3` or `BO5`, and it is stored, never derived from the game count. The backend limits the number of games to the format.
-- The session page shows a game card for a `BO1` match and a match card for a best-of match. Both open the game or the match at once, with no extra step.
+- A game always belongs to a match. A game played on its own is a match with `format` `BO1` and one game. There is no game without a match and no nullable parent.
+- `matches.format` is `BO1`, `BO3`, `BO5` or `FREE`. It is stored, never derived from the game count. The backend limits the games to the format. A match may hold fewer games than its format. `FREE` has no limit, for casual play where nobody knows the count.
+- Never call a format "single". It reads as singles, the badminton event. The words are "Best of 1" and "Free format".
+- The session page has two sections. Matches (`BO3`, `BO5`, `FREE`) show a match card that opens the match. Games (`BO1`) show the same game card you see inside a match, and it opens that game's videos. The extra match step is gone for a game on its own.
 
 ## Videos
 - Watching comes first, managing second. The Videos page has two lenses: Games (a playlist of games in time order, the way to watch) and Recordings (the raw files, sync state and assignment).

@@ -21,9 +21,12 @@ export function GameCard({
   onTime,
   onScore,
   onRemove,
+  solo = false,
 }: {
   game: GameDraft;
   index: number;
+  /** The only game of a best of 1 match. The match is the game, so it has no title and cannot be removed here. */
+  solo?: boolean;
   /** The session's zone. The times are read and written on its clock. */
   timezone: string;
   teams: TeamDraft[];
@@ -36,19 +39,21 @@ export function GameCard({
 }) {
   return (
     <div className="flex flex-col gap-4 rounded-2xl bg-card p-4 shadow-card">
-      <div className="flex items-center gap-2">
-        <h3 className="text-body font-semibold tracking-tight">Game {index + 1}</h3>
-        <Button
-          type="button"
-          variant="destructive"
-          size="icon-sm"
-          className="ml-auto"
-          aria-label={`Remove game ${index + 1}`}
-          onClick={onRemove}
-        >
-          <Minus />
-        </Button>
-      </div>
+      {!solo && (
+        <div className="flex items-center gap-2">
+          <h3 className="text-body font-semibold tracking-tight">Game {index + 1}</h3>
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon-sm"
+            className="ml-auto"
+            aria-label={`Remove game ${index + 1}`}
+            onClick={onRemove}
+          >
+            <Minus />
+          </Button>
+        </div>
+      )}
       {timesOpen ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Input
@@ -70,7 +75,10 @@ export function GameCard({
           type="button"
           aria-label={`Edit times for game ${index + 1}`}
           onClick={onShowTimes}
-          className="pressable -mt-2 flex min-h-11 items-center justify-between gap-2 rounded-xl text-left text-sm text-muted-foreground"
+          className={cn(
+            "pressable flex min-h-11 items-center justify-between gap-2 rounded-xl text-left text-sm text-muted-foreground",
+            !solo && "-mt-2",
+          )}
         >
           <span>
             <TimeRange start={game.startTime} end={game.endTime} zone={timezone} />

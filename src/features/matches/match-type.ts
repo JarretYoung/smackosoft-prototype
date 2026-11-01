@@ -1,4 +1,12 @@
-import type { MatchType } from "@/src/contract";
+import type { MatchFormat, MatchType } from "@/src/contract";
+
+/** How many games a match holds, in words a player uses. Show these, never the code. */
+export const MATCH_FORMAT_LABEL: Record<MatchFormat, string> = {
+  BO1: "Best of 1",
+  BO3: "Best of 3",
+  BO5: "Best of 5",
+  FREE: "Free format",
+};
 
 /** What each match type code means, in words a player uses. Show these, never the code. */
 export const MATCH_TYPE_LABEL: Record<MatchType, string> = {

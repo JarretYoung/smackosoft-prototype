@@ -9,13 +9,14 @@ import { Field, FieldGroup, FieldLabel } from "@/src/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Spinner } from "@/src/components/ui/spinner";
 import { ZoneNote } from "@/src/components/zone-note";
-import { MatchType, type Account, type Match } from "@/src/contract";
+import { MATCH_FORMAT_MAX_GAMES, MatchFormat, MatchType, type Account, type Match } from "@/src/contract";
 import { GameCard } from "@/src/features/matches/game-card";
-import { MATCH_TYPE_LABEL } from "@/src/features/matches/match-type";
+import { MATCH_FORMAT_LABEL, MATCH_TYPE_LABEL } from "@/src/features/matches/match-type";
 import { useMatchForm } from "@/src/features/matches/use-match-form";
 import { TeamPlayersSheet } from "./team-players-sheet";
 
 const MATCH_TYPES = MatchType.options;
+const MATCH_FORMATS = MatchFormat.options;
 
 /**
  * Edit one match: label and type, who plays for each team, and the games with their scores.
@@ -70,6 +71,26 @@ export function MatchEditor({
               </Field>
             )}
           </form.Field>
+          <form.Field name="format">
+            {(field) => (
+              <Field>
+                <FieldLabel htmlFor="match-format">Format</FieldLabel>
+                <Select value={field.state.value} onValueChange={(v) => field.handleChange(v as typeof field.state.value)}>
+                  <SelectTrigger id="match-format" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MATCH_FORMATS.map((f) => (
+                      // A format cannot hold fewer games than the match has.
+                      <SelectItem key={f} value={f} disabled={MATCH_FORMAT_MAX_GAMES[f] < values.games.length}>
+                        {MATCH_FORMAT_LABEL[f]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
+          </form.Field>
         </FieldGroup>
       </section>
 
@@ -102,7 +123,7 @@ export function MatchEditor({
 
       <section aria-labelledby="games-heading" className="flex flex-col gap-3">
         <h2 id="games-heading" className="section-label">
-          Games
+          {values.format === "BO1" ? "Score" : "Games"}
         </h2>
         {values.games[0] && (
           <ZoneNote zone={timezone} at={values.games[0].startTime} className="-mt-1 px-1 text-sm text-muted-foreground" />
@@ -112,6 +133,7 @@ export function MatchEditor({
             key={game.id}
             game={game}
             index={index}
+            solo={values.format === "BO1" && values.games.length === 1}
             timezone={timezone}
             teams={values.teams}
             winner={state.winnerOf(game)}            timesOpen={state.openTimes.has(game.id)}
@@ -121,16 +143,18 @@ export function MatchEditor({
             onRemove={() => state.removeGame(game, index)}
           />
         ))}
-        <div className="group-list rounded-2xl">
-          <AddRow onClick={state.addGame}>Add game</AddRow>
-        </div>
+        {values.games.length < MATCH_FORMAT_MAX_GAMES[values.format] && (
+          <div className="group-list rounded-2xl">
+            <AddRow onClick={state.addGame}>Add game</AddRow>
+          </div>
+        )}
       </section>
 
       {/* Stays in reach however many games there are. */}
       <div className="sticky bottom-0 -mx-4 bg-gradient-to-t from-background from-70% to-transparent px-4 pt-6 pb-4">
         <Button type="button" size="lg" className="w-full" disabled={state.saveDisabled} onClick={state.save}>
           {state.pending && <Spinner />}
-          {state.pending ? "Saving" : "Save match"}
+          {state.pending ? "Saving" : values.format === "BO1" ? "Save game" : "Save match"}
         </Button>
       </div>
 

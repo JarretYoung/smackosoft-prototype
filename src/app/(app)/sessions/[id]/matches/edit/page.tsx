@@ -23,10 +23,10 @@ export default async function EditMatchPage({
 
   return (
     <main>
-      <PageHeader title="Edit match" back={`/sessions/${id}`} />
+      <PageHeader title={match?.format === "BO1" ? "Edit game" : "Edit match"} back={`/sessions/${id}`} />
       <MatchSwitcher
         sessionId={id}
-        matches={session.matches.map((x) => ({ id: x.id, label: x.label }))}
+        matches={session.matches.map((x) => ({ id: x.id, label: x.label, format: x.format, matchType: x.matchType }))}
         currentId={match?.id ?? null}
       />
       {match ? (
@@ -36,8 +36,8 @@ export default async function EditMatchPage({
         <div className="px-4">
           <Empty className="bg-card shadow-card">
             <EmptyHeader>
-              <EmptyTitle>No matches yet</EmptyTitle>
-              <EmptyDescription>Use the plus button above to add one.</EmptyDescription>
+              <EmptyTitle>Nothing yet</EmptyTitle>
+              <EmptyDescription>Use the plus button above to add a game or a match.</EmptyDescription>
             </EmptyHeader>
           </Empty>
         </div>

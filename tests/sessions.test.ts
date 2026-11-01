@@ -66,7 +66,7 @@ describe("sessions", () => {
     expect(match.teams[0].id).toBe(team1);
 
     const listed = ok(await w.b.sessions.list()).find((s) => s.id === sessionId);
-    expect(listed).toMatchObject({ matchCount: 1, myRole: "OWNER" });
+    expect(listed).toMatchObject({ gameCount: 2, myRole: "OWNER" });
   });
 
   test("replaying a full build changes nothing", async ({ world: w }) => {

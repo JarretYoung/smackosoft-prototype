@@ -4,7 +4,10 @@ import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { removeMatches, saveMatches, saveTeams } from "@/src/features/matches/actions";
+import { removeMatches } from "@/src/features/matches/actions";
+import { addMatch, nounOf } from "@/src/features/matches/add-match";
+import type { MatchFormat, MatchType } from "@/src/contract";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/src/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,9 +23,9 @@ import { errorMessage } from "@/src/lib/errors";
 import { LeaveLink, useConfirmDiscard } from "@/src/hooks/unsaved-changes";
 import { cn } from "@/src/lib/utils";
 
-type Item = { id: string; label: string };
+type Item = { id: string; label: string; format: MatchFormat; matchType: MatchType };
 
-/** Previous and next match, add a match, delete the current one. */
+/** Previous and next match, add a game or a match, delete the current one. */
 export function MatchSwitcher({
   sessionId,
   matches,
@@ -43,17 +46,11 @@ export function MatchSwitcher({
   const prev = index > 0 ? matches[index - 1] : null;
   const next = index >= 0 && index < matches.length - 1 ? matches[index + 1] : null;
 
-  function add() {
+  function add(format: MatchFormat) {
     start(async () => {
-      const id = crypto.randomUUID();
-      const created = await saveMatches([{ id, sessionId, label: `Match ${matches.length + 1}`, matchType: "MD", format: "BO3" }]);
-      if (!created.ok) return void toast.error(errorMessage(created.error));
-      const teams = await saveTeams([
-        { id: crypto.randomUUID(), matchId: id, label: "Team 1" },
-        { id: crypto.randomUUID(), matchId: id, label: "Team 2" },
-      ]);
-      if (!teams.ok) return void toast.error(errorMessage(teams.error));
-      router.push(`${base}?m=${id}`);
+      const added = await addMatch(sessionId, format, matches);
+      if (!added.ok) return void toast.error(errorMessage(added.error));
+      router.push(`${base}?m=${added.data}`);
     });
   }
 
@@ -62,7 +59,7 @@ export function MatchSwitcher({
     start(async () => {
       const result = await removeMatches([current.id]);
       if (!result.ok) return void toast.error(errorMessage(result.error));
-      toast.success("Match deleted");
+      toast.success(`${current.format === "BO1" ? "Game" : "Match"} deleted`);
       setConfirming(false);
       const other = next ?? prev;
       router.replace(other ? `${base}?m=${other.id}` : base);
@@ -87,16 +84,24 @@ export function MatchSwitcher({
   return (
     <div className="flex items-center gap-2 px-4 py-4">
       <div className="flex flex-1 items-center justify-between rounded-full bg-card p-1 shadow-card">
-        {arrow(prev, ChevronLeft, "Previous match")}
+        {arrow(prev, ChevronLeft, "Previous")}
         <span className={cn("text-subhead font-semibold tabular-nums", !current && "text-muted-foreground")}>
-          {current ? `${current.label} · ${index + 1} of ${matches.length}` : "No matches"}
+          {current ? `${current.label} · ${index + 1} of ${matches.length}` : "Nothing yet"}
         </span>
-        {arrow(next, ChevronRight, "Next match")}
+        {arrow(next, ChevronRight, "Next")}
       </div>
       {discardDialog}
-      <Button type="button" variant="outline" size="icon" onClick={() => discard(add)} disabled={pending} aria-label="Add match">
-        <Plus />
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="outline" size="icon" disabled={pending} aria-label="Add a game or match">
+            <Plus />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-44">
+          <DropdownMenuItem onSelect={() => discard(() => add("BO1"))}>Game</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => discard(() => add("BO3"))}>Match</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <Button
         type="button"
         variant="outline"
@@ -104,7 +109,7 @@ export function MatchSwitcher({
         className="text-destructive"
         onClick={() => setConfirming(true)}
         disabled={!current || pending}
-        aria-label="Delete match"
+        aria-label={`Delete ${current ? nounOf(current.format) : "match"}`}
       >
         <Trash2 />
       </Button>
@@ -113,7 +118,11 @@ export function MatchSwitcher({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {current?.label}?</AlertDialogTitle>
-            <AlertDialogDescription>Its teams, games, scores and video links will be removed.</AlertDialogDescription>
+            <AlertDialogDescription>
+              {current?.format === "BO1"
+                ? "Its teams, score and video links will be removed."
+                : "Its teams, games, scores and video links will be removed."}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel variant="secondary">Cancel</AlertDialogCancel>
@@ -124,7 +133,7 @@ export function MatchSwitcher({
                 remove();
               }}
             >
-              {pending ? "Deleting" : "Delete match"}
+              {pending ? "Deleting" : `Delete ${current ? nounOf(current.format) : "match"}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -75,19 +75,26 @@ describe("match editor games", () => {
   it("never reuses a game number, even after the last game is removed", () => {
     let list = toValues(match).games;
     list = gamesReducer(list, { type: "remove", id: game1 });
-    list = gamesReducer(list, { type: "add", id: id(), now: new Date("2026-11-06T12:00:00.000Z"), savedNumbers: [3] });
+    list = gamesReducer(list, { type: "add", id: id(), now: new Date("2026-11-06T12:00:00.000Z"), savedNumbers: [3], format: "BO3" });
     expect(list.map((g) => g.gameNumber)).toEqual([4]);
   });
 
+  it("adds no game past what the format allows", () => {
+    const games = toValues(match).games; // one game
+    const add = (format: "BO1" | "BO3") => gamesReducer(games, { type: "add", id: id(), now: new Date(), savedNumbers: [3], format });
+    expect(add("BO1")).toBe(games);
+    expect(add("BO3")).toHaveLength(2);
+  });
+
   it("starts a new game when the last one ended, and lasts 20 minutes", () => {
-    const list = gamesReducer(toValues(match).games, { type: "add", id: id(), now: new Date(), savedNumbers: [3] });
+    const list = gamesReducer(toValues(match).games, { type: "add", id: id(), now: new Date(), savedNumbers: [3], format: "BO3" });
     expect(list[1].startTime).toBe("2026-11-06T11:20:00.000Z");
     expect(list[1].endTime).toBe("2026-11-06T11:40:00.000Z");
   });
 
   it("puts a removed game back where it was, once", () => {
     const first = toValues(match).games[0];
-    const two = gamesReducer([first], { type: "add", id: id(), now: new Date(), savedNumbers: [3] });
+    const two = gamesReducer([first], { type: "add", id: id(), now: new Date(), savedNumbers: [3], format: "BO3" });
     const removed = gamesReducer(two, { type: "remove", id: first.id });
     const undone = gamesReducer(removed, { type: "restore", game: first, index: 0 });
     expect(undone.map((g) => g.id)).toEqual(two.map((g) => g.id));

@@ -1,12 +1,16 @@
-import { Banknote, ChevronLeft, MapPin, Plus, Users, Video } from "lucide-react";
+import { Banknote, ChevronLeft, MapPin, Users, Video } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { AvatarStack } from "@/src/components/avatar-stack";
 import { SessionCover } from "@/src/components/court-art";
 import { RowChevron } from "@/src/components/row-chevron";
 import { Button } from "@/src/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/components/ui/empty";
 import { atLeast } from "@/src/contract";
+import { AddFirstButtons } from "@/src/features/matches/add-first-buttons";
+import { GameResultCard } from "@/src/features/matches/game-result-card";
 import { MatchCard } from "@/src/features/matches/match-card";
+import { MATCH_TYPE_LABEL } from "@/src/features/matches/match-type";
 import { FactRow, RowIcon } from "@/src/features/sessions/fact-row";
 import { MembersSheetRow } from "@/src/features/sessions/members-sheet";
 import { SessionMenu } from "@/src/features/sessions/session-menu";
@@ -17,6 +21,35 @@ import { unwrap } from "@/src/lib/result";
 import { getViewerZone } from "@/src/lib/viewer-zone";
 import { todayIn } from "@/src/lib/zoned";
 import { backend } from "@/src/server";
+
+/** A titled list of results with an Edit link for people who can score. */
+function ResultsSection({
+  id,
+  title,
+  editHref,
+  children,
+}: {
+  id: string;
+  title: string;
+  editHref: string | false;
+  children: ReactNode;
+}) {
+  return (
+    <section aria-labelledby={`${id}-heading`} className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h2 id={`${id}-heading`} className="section-title">
+          {title}
+        </h2>
+        {editHref && (
+          <Button asChild variant="text" size="sm">
+            <Link href={editHref}>Edit</Link>
+          </Button>
+        )}
+      </div>
+      <ul className="flex flex-col gap-3">{children}</ul>
+    </section>
+  );
+}
 
 export default async function SessionDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -37,6 +70,9 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
     session.matches.flatMap((m) => m.games.map((g) => g.id)),
     null,
   );
+  // A best of 1 match is a game played on its own. Any other format is a match with games under it.
+  const matches = session.matches.filter((m) => m.format !== "BO1");
+  const games = session.matches.filter((m) => m.format === "BO1");
   const needAttention = unsynced.length + unassigned.length;
   const videoCount = new Set(videos.map((l) => l.videoId)).size;
 
@@ -145,41 +181,48 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
           </Link>
         </section>
 
-        <section aria-labelledby="matches-heading" className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h2 id="matches-heading" className="section-title">
-              Matches
-            </h2>
-            {canScore && session.matches.length > 0 && (
-              <Button asChild variant="text" size="sm">
-                <Link href={`/sessions/${session.id}/matches/edit`}>Edit</Link>
-              </Button>
-            )}
-          </div>
-          {session.matches.length === 0 ? (
+        {session.matches.length === 0 && (
+          <section aria-label="Games and matches">
             <Empty className="bg-card shadow-card">
               <EmptyHeader>
-                <EmptyTitle>No matches yet</EmptyTitle>
-                <EmptyDescription>Add a match to start keeping score.</EmptyDescription>
+                <EmptyTitle>Nothing played yet</EmptyTitle>
+                <EmptyDescription>Add a game or a match to start keeping score.</EmptyDescription>
               </EmptyHeader>
-              {canScore && (
-                <Button asChild>
-                  <Link href={`/sessions/${session.id}/matches/edit`}>
-                    <Plus /> Add the first match
-                  </Link>
-                </Button>
-              )}
+              {canScore && <AddFirstButtons sessionId={session.id} />}
             </Empty>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {session.matches.map((match, index) => (
-                <li key={match.id}>
+          </section>
+        )}
+
+        {matches.length > 0 && (
+          <ResultsSection id="matches" title="Matches" editHref={canScore && `/sessions/${session.id}/matches/edit?m=${matches[0].id}`}>
+            {matches.map((match, index) => (
+              <li key={match.id}>
+                <MatchCard sessionId={session.id} match={match} index={index} />
+              </li>
+            ))}
+          </ResultsSection>
+        )}
+
+        {/* A game played on its own is the card you would see inside a match, one tap from its videos. */}
+        {games.length > 0 && (
+          <ResultsSection id="games" title="Games" editHref={canScore && `/sessions/${session.id}/matches/edit?m=${games[0].id}`}>
+            {games.map((match, index) => (
+              <li key={match.id}>
+                {match.games[0] ? (
+                  <GameResultCard
+                    sessionId={session.id}
+                    match={match}
+                    game={match.games[0]}
+                    title={`${match.label} · ${MATCH_TYPE_LABEL[match.matchType]}`}
+                  />
+                ) : (
+                  // Its game was deleted. The match page is where to add it back.
                   <MatchCard sessionId={session.id} match={match} index={index} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+                )}
+              </li>
+            ))}
+          </ResultsSection>
+        )}
       </div>
     </main>
   );

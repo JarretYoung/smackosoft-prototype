@@ -23,6 +23,22 @@ export function summarize(match: Match) {
   return { rows, winnerId: leaders.length === 1 ? leaders[0].team.id : null };
 }
 
+/**
+ * The number shown big for each side, and who won. A best of 1 match shows the points of its game.
+ * A longer match shows the games each side has won.
+ */
+export function tally(match: Match) {
+  const game = match.games[0];
+  if (match.format !== "BO1" || !game) {
+    const { rows, winnerId } = summarize(match);
+    return { rows: rows.map(({ team, wins }) => ({ team, value: wins })), winnerId };
+  }
+  return {
+    rows: match.teams.map((team) => ({ team, value: scoreOf(match, game.id, team) ?? 0 })),
+    winnerId: gameWinnerId(match, game.id),
+  };
+}
+
 export function gameWinnerId(match: Match, gameId: string): string | null {
   const game = match.games.find((g) => g.id === gameId);
   if (!game || game.scores.length < 2) return null;

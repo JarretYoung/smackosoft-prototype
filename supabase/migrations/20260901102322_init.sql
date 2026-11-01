@@ -150,8 +150,8 @@ CREATE UNIQUE INDEX session_access_one_owner_key ON smackosoft.session_access (s
 
 CREATE TYPE smackosoft.match_type AS ENUM ('MS', 'WS', 'XS', 'MD', 'WD', 'XD', 'PRACTICE', 'OTHER');
 
--- How many games decide a match. A one-off game is a BO1 match with one game.
-CREATE TYPE smackosoft.match_format AS ENUM ('BO1', 'BO3', 'BO5');
+-- How many games a match holds. FREE has no limit. A game played on its own is a BO1 match with one game.
+CREATE TYPE smackosoft.match_format AS ENUM ('BO1', 'BO3', 'BO5', 'FREE');
 
 CREATE TABLE smackosoft.matches (
   id         uuid                    NOT NULL DEFAULT gen_random_uuid(),

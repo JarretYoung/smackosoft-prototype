@@ -23,6 +23,7 @@ export default async function VideosPage({
   const matches = session.matches.map((match, mi) => ({
     id: match.id,
     label: match.label || `Match ${mi + 1}`,
+    ungrouped: match.format === "BO1",
     games: match.games.map((g) => ({ id: g.id, gameNumber: g.gameNumber })),
   }));
 

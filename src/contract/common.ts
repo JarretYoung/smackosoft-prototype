@@ -41,12 +41,15 @@ export type GrantableRole = z.infer<typeof GrantableRole>;
 export const MatchType = z.enum(["MS", "WS", "XS", "MD", "WD", "XD", "PRACTICE", "OTHER"]);
 export type MatchType = z.infer<typeof MatchType>;
 
-/** How many games decide a match. A one-off game is a `BO1` match with one game. */
-export const MatchFormat = z.enum(["BO1", "BO3", "BO5"]);
+/**
+ * How many games a match holds. `FREE` has no limit, for casual play where nobody knows the count.
+ * A game played on its own is a `BO1` match with one game.
+ */
+export const MatchFormat = z.enum(["BO1", "BO3", "BO5", "FREE"]);
 export type MatchFormat = z.infer<typeof MatchFormat>;
 
-/** The most games a match of this format can hold. */
-export const MATCH_FORMAT_MAX_GAMES: Record<MatchFormat, number> = { BO1: 1, BO3: 3, BO5: 5 };
+/** The most games a match of this format can hold. A match may hold fewer. */
+export const MATCH_FORMAT_MAX_GAMES: Record<MatchFormat, number> = { BO1: 1, BO3: 3, BO5: 5, FREE: Infinity };
 
 /**
  * Array of items with a unique key per call.

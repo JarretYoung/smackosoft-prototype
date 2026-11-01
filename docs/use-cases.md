@@ -122,7 +122,7 @@ There is no `reason` field. Every error points at the input item that caused it 
 | A new auth user gets an account from an explicit `accounts.saveCurrent` call on onboarding. No lazy creation. | `accounts.saveCurrent` |
 | A player cannot be on both teams of one match. | `matches.saveMatchPlayers` |
 | A score's team and game must belong to the same match. | `matches.saveGameScores` |
-| A match holds at most as many games as its `format` allows (`BO1` 1, `BO3` 3, `BO5` 5). A one-off game is a `BO1` match. A format cannot shrink below the games the match already has. | `matches.saveGames`, `matches.save` |
+| A match holds at most as many games as its `format` allows (`BO1` 1, `BO3` 3, `BO5` 5, `FREE` no limit). A match may hold fewer games than its format. A game played on its own is a `BO1` match. A format cannot shrink below the games the match already has. | `matches.saveGames`, `matches.save` |
 | A game link needs `EDITOR` on the game's session. The session comes from the game, so a game link cannot point at another session. | `videos.saveVideoGames` |
 | Adding a member gives instant access. No acceptance step. | `members.save` |
 | A `VIEWER` reads everything in the session. | All reads |
