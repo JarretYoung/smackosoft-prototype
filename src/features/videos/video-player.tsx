@@ -1,35 +1,36 @@
 "use client";
 
-import { YouTubeVideo } from "@videojs/react/media/youtube-video";
-import { NeutralVideoSkin, VideoPlayer as Player } from "@videojs/react/video";
-import "@videojs/react/video/neutral-skin.css";
+import { YouTubeVideo, type YouTubeVideoProps } from "@videojs/react/media/youtube-video";
 import type { YouTubeAdapter } from "@videojs/youtube-video";
 import { useMemo, type Ref } from "react";
 import type { Playable } from "@/src/features/videos/player";
 import { cn } from "@/src/lib/utils";
 
+type PlayerEvents = Pick<YouTubeVideoProps, "onPlaying" | "onPause" | "onSeeked" | "onTimeUpdate">;
+
 /**
- * Plays a link in the page with Video.js: its lighter `NeutralVideoSkin` over the media element for the link.
- * YouTube is the only element today. It restarts when the link or start changes, which is how a new game
- * or sync point takes effect. `mediaRef` hands out the player, so a parent can read `currentTime`,
- * `duration` and call `pause()` the way it would on a `<video>`.
+ * Plays a link in the page with Video.js: the YouTube media element, showing YouTube's own minimal controls.
+ * Video.js is the wrapper that makes the player ours to drive: `mediaRef` hands out the adapter, so a parent
+ * reads `currentTime` and `duration` and calls `pause()` like on a `<video>`, and the media events
+ * (`onTimeUpdate`, `onPause`, `onSeeked`, `onPlaying`) arrive as React props.
+ * It restarts when the link or start changes, which is how a new game or sync point takes effect.
  */
 export function VideoPlayer({
   playable,
   autoplay = false,
   mediaRef,
-  onPlaying,
   className,
+  ...events
 }: {
   playable: Playable;
   autoplay?: boolean;
   mediaRef?: Ref<YouTubeAdapter>;
-  onPlaying?: () => void;
   className?: string;
-}) {
+} & PlayerEvents) {
   // Engine parameters are read once, when the embed is built, so a new start needs a new element.
-  // The rest keep YouTube's own chrome as quiet as the embed allows: no related videos from other channels,
-  // no annotations, and none of its keyboard shortcuts, since the skin has its own.
+  // Related videos stay on the same channel, annotations are off, and the controls are white.
+  // YouTube's keyboard shortcuts are off: its frame step (, and .) and jump to a percent (0 to 9) would move the
+  // video without the sync sheet knowing, or fire while typing a time. It is all or nothing, so space and the arrows go too.
   const source = useMemo(
     () => ({
       src: playable.link,
@@ -38,16 +39,15 @@ export function VideoPlayer({
     [playable.link, playable.start],
   );
   return (
-    <Player>
-      <NeutralVideoSkin className={cn("aspect-video w-full overflow-hidden rounded-2xl bg-black", className)}>
-        <YouTubeVideo
-          key={`${playable.link}#${playable.start}`}
-          source={source}
-          autoplay={autoplay}
-          mediaRef={mediaRef}
-          onPlaying={onPlaying}
-        />
-      </NeutralVideoSkin>
-    </Player>
+    <div className={cn("relative aspect-video w-full overflow-hidden rounded-2xl bg-black [&_iframe]:absolute [&_iframe]:inset-0", className)}>
+      <YouTubeVideo
+        key={`${playable.link}#${playable.start}`}
+        source={source}
+        autoplay={autoplay}
+        controls
+        mediaRef={mediaRef}
+        {...events}
+      />
+    </div>
   );
 }

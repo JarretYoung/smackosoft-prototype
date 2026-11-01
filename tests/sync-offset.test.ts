@@ -18,6 +18,12 @@ describe("sync sheet state", () => {
     expect(isSyncValid(state)).toBe(true);
   });
 
+  it("takes a time from the player to the millisecond, and shows it with hundredths", () => {
+    const state = syncReducer(startSync(10), { type: "set", seconds: 12.3456789 });
+    expect(state).toEqual({ value: 12.346, draft: "0:12.35" });
+    expect(isSyncValid(state)).toBe(true);
+  });
+
   it("clamps the ruler and steps to the limit and rewrites the text", () => {
     const state = syncReducer(startSync(0), { type: "set", seconds: OFFSET_LIMIT + 50 });
     expect(state.value).toBe(OFFSET_LIMIT);

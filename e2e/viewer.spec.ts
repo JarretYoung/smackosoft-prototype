@@ -51,7 +51,7 @@ test("a viewer can watch a game's video but not add or change videos", async ({ 
 
   await go(page, `/sessions/${sessionId}/videos`);
   await page.getByRole("button", { name: "Play Court 3 full recording" }).first().click();
-  await expect(page.locator(".media-skin iframe[title='YouTube video player']")).toBeVisible();
+  await expect(page.locator("iframe[src*='youtube.com/embed']")).toBeVisible();
 
   await expect(page.getByRole("button", { name: "Add video" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Add a video to/ })).toHaveCount(0);

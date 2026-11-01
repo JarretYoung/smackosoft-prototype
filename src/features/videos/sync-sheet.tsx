@@ -23,8 +23,9 @@ export type SyncTarget = {
 
 /**
  * Set where a game's shared moment (the first hit, a clap) sits in one video.
- * Slide the ruler or type the time, or play the preview and take its time. The number is the source of
- * truth: the preview follows it. A link that cannot play in the page has no preview.
+ * Play the preview to the moment and pause, and the number follows the video. Then fine tune with the ruler
+ * or by typing, and the video follows the number. A link that cannot play in the page has no preview, and the
+ * number is the only way in.
  */
 export function SyncSheet({
   target,
@@ -78,7 +79,7 @@ function SyncForm({
       </SheetHeader>
 
       <div className="flex flex-col gap-5 px-5">
-        {playable && <SyncPreview playable={playable} seconds={value} onUseCurrent={set} />}
+        {playable && <SyncPreview playable={playable} seconds={value} onFollow={set} />}
         <Field>
           <FieldLabel htmlFor="sync-offset" className="sr-only">
             Sync point
@@ -103,7 +104,11 @@ function SyncForm({
             </Button>
           </div>
           <OffsetRuler value={value} onChange={set} />
-          <FieldDescription className="text-center">Line up a moment every video shares, like the first serve</FieldDescription>
+          <FieldDescription className="text-center">
+            {playable
+              ? "Play to the first serve and pause. The time follows the video. Drag the ruler to fine tune, a frame at a time."
+              : "Line up a moment every video shares, like the first serve"}
+          </FieldDescription>
         </Field>
       </div>
 

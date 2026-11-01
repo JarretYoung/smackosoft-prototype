@@ -1,10 +1,10 @@
-import { formatOffset, OFFSET_LIMIT, parseOffset } from "./offset";
+import { formatOffset, OFFSET_LIMIT, parseOffset, roundOffset } from "./offset";
 
 /** The sync point twice over: the number the ruler shows, and the text in the box, which can be mid-typing. */
 export type SyncState = { value: number; draft: string };
 
 export type SyncAction =
-  /** The ruler or a step button moved the point. Clamped, and the text follows. */
+  /** The ruler, a step button or the player moved the point. Clamped and kept to the millisecond, and the text follows. */
   | { type: "set"; seconds: number }
   /** The person typed. The number follows only while the text is a valid time. */
   | { type: "type"; text: string }
@@ -19,7 +19,7 @@ export function startSync(offset: number | null): SyncState {
 export function syncReducer(state: SyncState, action: SyncAction): SyncState {
   switch (action.type) {
     case "set": {
-      const value = Math.max(-OFFSET_LIMIT, Math.min(OFFSET_LIMIT, action.seconds));
+      const value = roundOffset(Math.max(-OFFSET_LIMIT, Math.min(OFFSET_LIMIT, action.seconds)));
       return { value, draft: formatOffset(value) };
     }
     case "type": {

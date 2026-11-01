@@ -25,6 +25,16 @@ describe("videos", () => {
     expect(code(await w.b.videos.save([{ id: id(), label: "Zero", videoUrl: "r2://z", durationSeconds: 0 }]))).toBe("VALIDATION");
   });
 
+  test("a sync point keeps its fraction of a second", async ({ world: w }) => {
+    const { sessionId, game1 } = await scoredMatch(w);
+    const video = id();
+    ok(await w.b.videos.save([{ id: video, label: "Frame accurate", videoUrl: "r2://f" }]));
+    ok(await w.b.videos.saveVideoGames([{ videoId: video, matchGameId: game1, canonicalOffset: 10.033 }]));
+
+    const link = ok(await w.b.videos.listBySession({ sessionId })).find((l) => l.matchGameId === game1);
+    expect(link?.canonicalOffset).toBe(10.033);
+  });
+
   test("puts a video in a session, links it to a game, and replays with a new offset", async ({ world: w }) => {
     const { sessionId, game1 } = await scoredMatch(w);
     const video = id();
