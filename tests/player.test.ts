@@ -24,11 +24,11 @@ describe("which links play in the page", () => {
     expect(youtubeIdOf(`javascript:alert('${ID}')`)).toBeNull();
   });
 
-  it("starts a YouTube embed at the sync point, and never before the start", () => {
-    expect(playableOf(`https://youtu.be/${ID}`, 90.7)).toMatchObject({ kind: "youtube" });
-    expect(playableOf(`https://youtu.be/${ID}`, 90.7)!.src).toContain("start=90");
-    expect(playableOf(`https://youtu.be/${ID}`, -5)!.src).toContain("start=0");
-    expect(playableOf(`https://youtu.be/${ID}`, null)!.src).toContain("start=0");
+  it("starts a YouTube video at the sync point, and never before the start", () => {
+    const link = `https://youtu.be/${ID}`;
+    expect(playableOf(link, 90.7)).toEqual({ link, start: 90 });
+    expect(playableOf(link, -5)).toEqual({ link, start: 0 });
+    expect(playableOf(link, null)).toEqual({ link, start: 0 });
   });
 
   it("leaves other links to open in a new tab", () => {

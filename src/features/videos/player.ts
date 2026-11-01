@@ -1,10 +1,14 @@
 /**
- * How a video link plays in the page. A link is playable when we know how to embed it. Today that is
- * YouTube only, as an iframe on the privacy friendly embed host, started at the sync point.
- * Anything else is not playable here and opens in a new tab.
- * Add a provider by teaching `playableOf` one more link shape and the player one more `kind`.
+ * Which video links play in the page. A link is playable when Video.js has a media element for it. Today
+ * that is YouTube. Anything else is not playable here and opens in a new tab.
+ * Add a provider by teaching `playableOf` one more link shape and `VideoPlayer` the element for it.
  */
-export type Playable = { kind: "youtube"; src: string };
+export type Playable = {
+  /** The link as saved. The YouTube element reads every YouTube link shape. */
+  link: string;
+  /** Whole seconds to start from. */
+  start: number;
+};
 
 const YOUTUBE_ID = /^[\w-]{11}$/;
 
@@ -38,12 +42,9 @@ export function thumbnailOf(link: string): string | null {
   return id ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : null;
 }
 
-/** Whole seconds to start from. The sync point can be negative when the video began after the game did. */
+/** The sync point can be negative when the video began after the game did, and a video cannot start before 0. */
 const startOf = (offset: number | null) => Math.max(0, Math.floor(offset ?? 0));
 
 export function playableOf(link: string, offset: number | null): Playable | null {
-  const id = youtubeIdOf(link);
-  if (!id) return null;
-  const params = new URLSearchParams({ start: String(startOf(offset)), autoplay: "1", playsinline: "1", rel: "0" });
-  return { kind: "youtube", src: `https://www.youtube-nocookie.com/embed/${id}?${params}` };
+  return youtubeIdOf(link) ? { link, start: startOf(offset) } : null;
 }

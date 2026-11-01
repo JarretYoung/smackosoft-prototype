@@ -16,7 +16,6 @@ import { openUrl } from "@/src/features/videos/offset";
 import { playableOf, thumbnailOf } from "@/src/features/videos/player";
 import { cn } from "@/src/lib/utils";
 import { VideoPlayer } from "./video-player";
-import { readDuration } from "./youtube-api";
 import { attentionOf, type PlaylistGame } from "@/src/features/videos/videos";
 import { AddVideoSheet } from "./add-video-sheet";
 import type { NewVideo } from "./use-add-video-form";
@@ -93,9 +92,7 @@ export function VideosPanel({
     const game = adding?.game ?? null;
     run(
       async () => {
-        // The length is read once, here, and kept. Null for other links or if it cannot be read in time.
-        const durationSeconds = await readDuration(video.videoUrl);
-        const saved = await saveVideos([{ id: videoId, ...video, durationSeconds }]);
+        const saved = await saveVideos([{ id: videoId, ...video }]);
         // A link to a game also puts the video in the session.
         if (!saved.ok) return saved;
         return game ? saveVideoGames([{ videoId, matchGameId: game.value }]) : saveVideoSessions([{ videoId, sessionId }]);
@@ -103,7 +100,7 @@ export function VideosPanel({
       "Video added",
       () => {
         setAdding(null);
-        if (game) setSyncing({ videoId, label: video.label, matchGameId: game.value, gameLabel: game.label, offset: null });
+        if (game) setSyncing({ videoId, label: video.label, videoUrl: video.videoUrl, matchGameId: game.value, gameLabel: game.label, offset: null });
       },
     );
   }
@@ -115,7 +112,7 @@ export function VideosPanel({
       "Added to game",
       () => {
         setPicking(null);
-        setSyncing({ videoId: video.id, label: video.label, matchGameId: game.value, gameLabel: game.label, offset: null });
+        setSyncing({ videoId: video.id, label: video.label, videoUrl: video.videoUrl, matchGameId: game.value, gameLabel: game.label, offset: null });
       },
     );
   }
@@ -132,6 +129,7 @@ export function VideosPanel({
     setSyncing({
       videoId: item.videoId,
       label: item.video.label,
+      videoUrl: item.video.videoUrl,
       matchGameId: item.matchGameId!,
       gameLabel: labelOf(item.matchGameId!),
       offset: item.canonicalOffset,
@@ -223,7 +221,7 @@ export function VideosPanel({
             {/* The poster, or the player once something plays. It stays in view while you scroll the list. */}
             <div className={cn("-mx-4 -mt-3 px-4 pt-3", playingItem && "sticky top-14 z-10 bg-background pb-3")}>
               {playingItem && playable ? (
-                <VideoPlayer playable={playable} title={playingItem.video.label} />
+                <VideoPlayer playable={playable} autoplay />
               ) : (
                 <VideoThumb video={featured?.item.video} mark={featured && markOf(featured.game)} className="rounded-2xl">
                   {featured && (

@@ -3,7 +3,11 @@
 import { z } from "zod";
 import { useAppForm } from "@/src/hooks/use-app-form";
 
-export type NewVideo = { label: string; videoUrl: string; thumbnailUrl: string | null };
+/** What the form asks for. */
+export type FormVideo = { label: string; videoUrl: string; thumbnailUrl: string | null };
+
+/** What gets saved: the form's answers plus the length, which the app reads from the player. Null when not known. */
+export type NewVideo = FormVideo & { durationSeconds: number | null };
 
 const BAD_LINK = "Paste a full link, starting with https://";
 
@@ -22,7 +26,7 @@ const addVideoSchema = z.object({
 });
 
 /** The parent runs the save, so this form only hands over a clean video and waits on `pending`. */
-export function useAddVideoForm({ pending, onAdd }: { pending: boolean; onAdd: (video: NewVideo) => void }) {
+export function useAddVideoForm({ pending, onAdd }: { pending: boolean; onAdd: (video: FormVideo) => void }) {
   return useAppForm({
     defaultValues: { label: "", videoUrl: "", thumbnailUrl: "" },
     schema: addVideoSchema,

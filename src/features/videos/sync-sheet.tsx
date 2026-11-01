@@ -7,11 +7,14 @@ import { Input } from "@/src/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
 import { Spinner } from "@/src/components/ui/spinner";
 import { useSyncForm } from "@/src/features/videos/use-sync-form";
+import { playableOf } from "@/src/features/videos/player";
 import { OffsetRuler } from "./offset-ruler";
+import { SyncPreview } from "./sync-preview";
 
 export type SyncTarget = {
   videoId: string;
   label: string;
+  videoUrl: string;
   matchGameId: string;
   gameLabel: string;
   /** The saved sync point, or null when the video is not synced yet. */
@@ -20,7 +23,8 @@ export type SyncTarget = {
 
 /**
  * Set where a game's shared moment (the first hit, a clap) sits in one video.
- * Slide the ruler or type the time. There is no preview yet, so the number is the source of truth.
+ * Slide the ruler or type the time, or play the preview and take its time. The number is the source of
+ * truth: the preview follows it. A link that cannot play in the page has no preview.
  */
 export function SyncSheet({
   target,
@@ -61,6 +65,8 @@ function SyncForm({
   });
   const invalid = !valid;
   const synced = target.offset !== null;
+  // The preview starts at the saved sync point, then follows the number.
+  const playable = playableOf(target.videoUrl, target.offset);
 
   return (
     <form className="flex min-h-0 flex-1 flex-col gap-4" onSubmit={onSubmit}>
@@ -72,6 +78,7 @@ function SyncForm({
       </SheetHeader>
 
       <div className="flex flex-col gap-5 px-5">
+        {playable && <SyncPreview playable={playable} seconds={value} onUseCurrent={set} />}
         <Field>
           <FieldLabel htmlFor="sync-offset" className="sr-only">
             Sync point
