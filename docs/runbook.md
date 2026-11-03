@@ -47,6 +47,56 @@ Do this once before `pnpm supabase start`. Google is enabled in `supabase/config
 
 A new Google user lands on onboarding to pick a handle, like any new user. On the hosted project, enter the same two values under Authentication, Sign in providers, Google, and use the callback URL shown there.
 
+### YouTube video lengths
+
+The server reads a video's length from the YouTube Data API. Without a key, videos still save, with no length. Do this once per environment.
+
+1. Open Google Cloud Console and pick the project you use for Google sign in. A new project works too.
+2. Go to APIs and Services, then Library. Search for YouTube Data API v3 and click Enable.
+3. Go to APIs and Services, then Credentials. Click Create credentials, then API key. Copy the key.
+4. Click the key to restrict it:
+   - API restrictions: choose Restrict key, then tick YouTube Data API v3 only.
+   - Application restrictions: leave on None unless your host has fixed outbound IP addresses. Do not pick HTTP referrers. The server sends no referrer, so every call would fail.
+5. Add the key to `.env.local` (not committed):
+   ```
+   YOUTUBE_API_KEY=your-key
+   ```
+6. Restart the dev server. On the hosted app, set the same variable in the hosting project's environment settings.
+
+Check it: add a YouTube video from the Videos tab. The length shows on its thumbnail. No browser code is involved, so a missing length means the key, the restriction or the quota.
+
+Cost and limits:
+- Each save of videos costs 1 quota unit per 50 videos. An import of 104 videos costs 3 units.
+- The default allowance is 10,000 units a day. See it under APIs and Services, YouTube Data API v3, Quotas.
+- Never prefix the variable with `NEXT_PUBLIC_`. That would send the key to every browser.
+
+Not verified here: the exact Console menu names (Google renames them), and whether the default quota needs billing turned on. Neither blocks you. The key works once the API is enabled.
+
+### Building an import file from YouTube playlists
+Run the script with one or more playlist links. It needs the same `YOUTUBE_API_KEY` as above.
+
+```
+node scripts/playlist-to-csv.mjs "<playlist link>" "<another link>" --out playlists.csv
+```
+
+Then upload the file at `/import`.
+
+What it does:
+- Reads each title as "24 Oct SoongJus vs NadGar", with the older shapes too ("Jan 12", "(21st April)", "Nad-Jus", "Game 4").
+- Takes the year from the upload date.
+- Maps spellings to one name through `scripts/playlist-names.json`. Edit that file when the report lists a name it does not know.
+- Makes one session per day, and one named match from the same two teams on that day, such as `GarNad v IanJus`. A match always has a name, even with one game. A second series the same day is `GarNad v IanJus 2`.
+- Writes the game number of every game in the `game` column. A game with no number in its title takes the lowest free number, by upload order, and is listed in the report.
+- Treats "Game 4.1", "Game 4.2" and "Game 4 1" as parts of one game. Part 1 is the game's video. Later parts are unlinked videos.
+- Writes any title that is not "A vs B" as an unlinked video (`kind` is `video`).
+- Cuts a first load over 300 rows into several files (`playlists-1.csv`, `playlists-2.csv`) between days, because 300 is the import limit.
+
+The script reads no CSV and keeps no state. Run it again whenever you like. Keep your own copy of the CSV, fix typos there, and take new rows from a diff.
+
+The script never stops on a problem and never drops a row. Read the `comments` column before you import. It marks games numbered by a choice, years worth checking, names not in the names file, and why a title became an unlinked video. A row with no date has a blank date, and the file step stops at it until you write one. The comments are never imported, so clear them or leave them. The terminal report only counts them.
+
+Not verified: playlists of private or deleted videos. The API may return them with no upload date, and the script then leaves them out and lists them.
+
 ### Regenerating database types
 
 Run `pnpm db:types` after every migration and after every `pnpm supabase db reset`. It reads `DATABASE_URL` from `.env.local` and rewrites `src/server/db/types.ts`. Commit the result.

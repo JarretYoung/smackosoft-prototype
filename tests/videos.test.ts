@@ -1,7 +1,28 @@
-import { describe, expect } from "vitest";
+import { describe, expect, vi } from "vitest";
 import { newSession, scoredMatch } from "./support/builders";
 import { id, test } from "./support/fixtures";
 import { code, failure, ok } from "./support/helpers";
+
+/** Sets a key and answers the YouTube Data API from `durations` (ISO 8601 by id). Call `stop` to put things back. */
+function youtubeSays(durations: Record<string, string>) {
+  const real = globalThis.fetch;
+  const asked: string[][] = [];
+  process.env.YOUTUBE_API_KEY = "test-key";
+  vi.stubGlobal("fetch", async (url: string | URL | Request, init?: RequestInit) => {
+    if (!String(url).startsWith("https://www.googleapis.com/youtube/v3/videos")) return real(url, init);
+    const ids = new URL(String(url)).searchParams.get("id")!.split(",");
+    asked.push(ids);
+    const items = ids.filter((i) => i in durations).map((i) => ({ id: i, contentDetails: { duration: durations[i] } }));
+    return new Response(JSON.stringify({ items }));
+  });
+  return {
+    asked,
+    stop() {
+      delete process.env.YOUTUBE_API_KEY;
+      vi.unstubAllGlobals();
+    },
+  };
+}
 
 describe("videos", () => {
   test("rejects script and data URLs", async ({ world: w }) => {
@@ -23,6 +44,57 @@ describe("videos", () => {
     expect(lengths.sort()).toEqual([["Timed", 463], ["Untimed", null]]);
 
     expect(code(await w.b.videos.save([{ id: id(), label: "Zero", videoUrl: "r2://z", durationSeconds: 0 }]))).toBe("VALIDATION");
+  });
+
+  test("reads a video's length from its source, keeps it through a rename, and lets a given length win", async ({ world: w }) => {
+    const youtube = youtubeSays({ dQw4w9WgXcQ: "PT3M32S" });
+    try {
+      const [known, unknown, hosted, given] = [id(), id(), id(), id()];
+      const lengthOf = async (video: string) =>
+        (await w.admin.query("select duration_seconds from smackosoft.videos where id = $1", [video])).rows[0].duration_seconds;
+
+      ok(await w.b.videos.save([
+        { id: known, label: "Known", videoUrl: "https://youtu.be/dQw4w9WgXcQ" },
+        { id: unknown, label: "Unknown", videoUrl: "https://youtu.be/aaaaaaaaaaa" },
+        { id: hosted, label: "Hosted", videoUrl: "https://example.com/game.mp4" },
+        { id: given, label: "Given", videoUrl: "https://youtu.be/dQw4w9WgXcQ", durationSeconds: 99 },
+      ]));
+      // One call for every YouTube video in the save, and none for a link no source claims.
+      expect(youtube.asked).toEqual([["dQw4w9WgXcQ", "aaaaaaaaaaa"]]);
+      expect([await lengthOf(known), await lengthOf(unknown), await lengthOf(hosted), await lengthOf(given)]).toEqual([212, null, null, 99]);
+
+      // Saving again with a new name keeps the length and does not ask again. A new link is a new video, so it is asked.
+      ok(await w.b.videos.save([{ id: known, label: "Renamed", videoUrl: "https://youtu.be/dQw4w9WgXcQ" }]));
+      expect(youtube.asked).toHaveLength(1);
+      expect(await lengthOf(known)).toBe(212);
+      ok(await w.b.videos.save([{ id: known, label: "Renamed", videoUrl: "https://youtu.be/bbbbbbbbbbb" }]));
+      expect(youtube.asked).toHaveLength(2);
+      expect(await lengthOf(known)).toBeNull();
+    } finally {
+      youtube.stop();
+    }
+  });
+
+  test("saves a video with no length when the source cannot be reached", async ({ world: w }) => {
+    // No key is set, so there is no call at all. The video still saves.
+    const video = id();
+    ok(await w.b.videos.save([{ id: video, label: "Offline", videoUrl: "https://youtu.be/dQw4w9WgXcQ" }]));
+    expect((await w.admin.query("select duration_seconds from smackosoft.videos where id = $1", [video])).rows[0].duration_seconds).toBeNull();
+  });
+
+  test("names the video a link points at, however the link is written", async ({ world: w }) => {
+    const [a, b, c] = [id(), id(), id()];
+    ok(await w.b.videos.save([
+      { id: a, label: "Short link", videoUrl: "https://youtu.be/dQw4w9WgXcQ?si=x" },
+      { id: b, label: "Playlist link", videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1&t=30s" },
+      { id: c, label: "Other host", videoUrl: "https://example.com/game.mp4" },
+    ]));
+    const keys = (await w.admin.query("select label, source_key from smackosoft.videos where id = any($1) order by label", [[a, b, c]])).rows;
+    expect(keys).toEqual([
+      { label: "Other host", source_key: null },
+      { label: "Playlist link", source_key: "youtube:dQw4w9WgXcQ" },
+      { label: "Short link", source_key: "youtube:dQw4w9WgXcQ" },
+    ]);
   });
 
   test("a sync point keeps its fraction of a second", async ({ world: w }) => {

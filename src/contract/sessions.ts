@@ -20,7 +20,7 @@ export const SessionSave = z
     /** Where the session is, in degrees. Set with longitude or not at all. */
     latitude: z.number().min(-90).max(90).nullish(),
     longitude: z.number().min(-180).max(180).nullish(),
-    /** The plan, not what happened. Games carry their own times. */
+    /** The plan, not what happened. Games carry no times. Their order is the match position and the game number. */
     startTime: Timestamp.nullish(),
     endTime: Timestamp.nullish(),
     coverUrl: HttpUrl.nullish(),
@@ -96,7 +96,7 @@ export type SessionDetails = {
   currency: string | null;
   myRole: Role;
   members: Member[];
-  /** Ordered by creation time. */
+  /** In the order played: by `position`, then creation. */
   matches: Match[];
 };
 

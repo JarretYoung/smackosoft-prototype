@@ -251,6 +251,7 @@ export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { s
             "matches.label",
             "matches.match_type",
             "matches.format",
+            "matches.position",
             jsonArrayFrom(
               m
                 .selectFrom("match_teams")
@@ -275,8 +276,6 @@ export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { s
                 .select((g) => [
                   "match_games.id",
                   "match_games.game_number",
-                  "match_games.start_time",
-                  "match_games.end_time",
                   jsonArrayFrom(
                     g
                       .selectFrom("match_game_scores")
@@ -294,6 +293,7 @@ export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { s
             ).as("games"),
           ])
           .whereRef("matches.session_id", "=", "sessions.id")
+          .orderBy("matches.position")
           .orderBy("matches.created_at"),
       ).as("matches"),
     ])
@@ -323,12 +323,11 @@ export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { s
         label: m.label,
         matchType: m.match_type,
         format: m.format,
+        position: m.position,
         teams: m.teams.map((t) => ({ id: t.id, label: t.label, players: t.players.map(toAccount) })),
         games: m.games.map((g) => ({
           id: g.id,
           gameNumber: g.game_number,
-          startTime: new Date(g.start_time).toISOString(),
-          endTime: new Date(g.end_time).toISOString(),
           scores: g.scores.map((s) => ({ matchTeamId: s.match_team_id, score: s.score })),
           videoCount: Number(g.video_count ?? 0),
         })),

@@ -9,8 +9,6 @@ const person = (name: string) => ({ id: id(), displayName: name, handle: name.to
 const game = (scores: [number, number]) => ({
   id: id(),
   gameNumber: 1,
-  startTime: "2026-11-06T11:00:00.000Z",
-  endTime: "2026-11-06T11:20:00.000Z",
   scores: [
     { matchTeamId: team1, score: scores[0] },
     { matchTeamId: team2, score: scores[1] },
@@ -23,6 +21,7 @@ const match = (format: Match["format"], games: Match["games"]): Match => ({
   label: "Match",
   matchType: "MS",
   format,
+  position: 1,
   teams: [
     { id: team1, label: "Team 1", players: [person("Ann")] },
     { id: team2, label: "Team 2", players: [person("Bo")] },

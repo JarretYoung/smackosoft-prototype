@@ -97,3 +97,6 @@ export function leadToday<T extends Timed>(sessions: T[], now: Date): T[] {
   const lead = running >= 0 ? running : next >= 0 ? next : 0;
   return lead <= 0 ? sorted : [sorted[lead], ...sorted.filter((_, i) => i !== lead)];
 }
+
+/** The whole calendar, for a page that lists everything the person can see and not a month around today. */
+export const ALL_TIME = { from: "1970-01-01", to: "2999-12-31" };

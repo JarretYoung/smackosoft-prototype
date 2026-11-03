@@ -40,6 +40,7 @@ const SIGNED_IN_SCREENS: { name: string; open: (page: Page) => Promise<void> }[]
   },
   { name: "session form", open: (page) => go(page, "/sessions/new") },
   { name: "profile", open: (page) => go(page, "/profile") },
+  { name: "import games", open: (page) => go(page, "/import") },
 ];
 
 test.describe("signed out", () => {

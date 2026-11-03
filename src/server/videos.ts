@@ -20,7 +20,9 @@ import {
 } from "./access";
 import { sessionsOfGames, sessionsOfSessions } from "./queries/parents";
 import { expectAll, read, stop, unique, write } from "./core";
+import { sourceKeyOf } from "../lib/video-sources";
 import type { Db } from "./db/client";
+import { lengthsOf } from "./video-lengths";
 
 const videoColumns = [
   "videos.id",
@@ -139,17 +141,42 @@ export const listSessionVideos = read(ListSessionVideosInput, async ({ db, actor
 
 // ------------------------------------------------------------------ writes
 
-/** Creates the record only. Uploading the file to storage is a separate step. */
+/**
+ * The length each video is saved with. A length that is given wins. Otherwise a saved video keeps the length it
+ * has while it is still the same video, and anything left is asked of its source in one batch. Null when no one knows.
+ */
+async function lengthsFor(db: Db, items: { id: string; videoUrl: string; durationSeconds?: number | null }[]): Promise<(number | null)[]> {
+  const open = items.filter((v) => v.durationSeconds == null);
+  if (!open.length) return items.map((v) => v.durationSeconds ?? null);
+
+  const saved = await db
+    .selectFrom("videos")
+    .select(["id", "source_key", "duration_seconds"])
+    .where("id", "in", unique(open.map((v) => v.id)))
+    .execute();
+  const kept = new Map(saved.flatMap((v) => (v.duration_seconds ? [[`${v.id}\u0000${v.source_key}`, v.duration_seconds] as const] : [])));
+  const keptFor = (v: { id: string; videoUrl: string }) => kept.get(`${v.id}\u0000${sourceKeyOf(v.videoUrl)}`);
+
+  const asked = await lengthsOf(open.filter((v) => keptFor(v) === undefined).map((v) => v.videoUrl));
+  return items.map((v) => v.durationSeconds ?? keptFor(v) ?? asked.get(v.videoUrl) ?? null);
+}
+
+/**
+ * Creates the record only. Uploading the file to storage is a separate step.
+ * The length is the video source's to say, so callers leave `durationSeconds` out (see `lengthsFor`).
+ */
 export const saveVideos = write(SaveVideosInput, async ({ db, actor }, items) => {
+  const lengths = await lengthsFor(db, items);
   const written = await db
     .insertInto("videos")
     .values(
-      items.map((v) => ({
+      items.map((v, index) => ({
         id: v.id,
         label: v.label,
         video_url: v.videoUrl,
         thumbnail_url: v.thumbnailUrl ?? null,
-        duration_seconds: v.durationSeconds ?? null,
+        duration_seconds: lengths[index],
+        source_key: sourceKeyOf(v.videoUrl),
         created_by: actor.accountId,
       })),
     )
@@ -161,6 +188,7 @@ export const saveVideos = write(SaveVideosInput, async ({ db, actor }, items) =>
           video_url: eb.ref("excluded.video_url"),
           thumbnail_url: eb.ref("excluded.thumbnail_url"),
           duration_seconds: eb.ref("excluded.duration_seconds"),
+          source_key: eb.ref("excluded.source_key"),
           updated_at: sql`now()`,
           updated_by: actor.accountId,
         }))

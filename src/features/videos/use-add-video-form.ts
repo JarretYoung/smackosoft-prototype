@@ -3,11 +3,8 @@
 import { z } from "zod";
 import { useAppForm } from "@/src/hooks/use-app-form";
 
-/** What the form asks for. */
+/** What the form asks for. The length is not asked: the server reads it from the video's source. */
 export type FormVideo = { label: string; videoUrl: string; thumbnailUrl: string | null };
-
-/** What gets saved: the form's answers plus the length, which the app reads from the player. Null when not known. */
-export type NewVideo = FormVideo & { durationSeconds: number | null };
 
 const BAD_LINK = "Paste a full link, starting with https://";
 

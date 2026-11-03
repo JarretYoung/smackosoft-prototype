@@ -114,7 +114,7 @@ export async function createMatch(input: {
   const by = input.createdBy;
   await inTransaction(async (client) => {
     await client.query(
-      "insert into smackosoft.matches (id, session_id, label, match_type, format, created_by) values ($1, $2, 'Match 1', 'MD', 'BO3', $3)",
+      "insert into smackosoft.matches (id, session_id, label, match_type, format, position, created_by) values ($1, $2, 'Match 1', 'MD', 'BO3', 1, $3)",
       [matchId, input.sessionId, by],
     );
     const teamIds = [randomUUID(), randomUUID()];
@@ -129,7 +129,7 @@ export async function createMatch(input: {
     for (const [index, scores] of (input.games ?? []).entries()) {
       const gameId = randomUUID();
       await client.query(
-        "insert into smackosoft.match_games (id, match_id, game_number, start_time, end_time, created_by) values ($1, $2, $3, now(), now() + interval '20 minutes', $4)",
+        "insert into smackosoft.match_games (id, match_id, game_number, created_by) values ($1, $2, $3, $4)",
         [gameId, matchId, index + 1, by],
       );
       for (const [team, score] of scores.entries()) {

@@ -1,10 +1,8 @@
 import { Banknote, ChevronLeft, MapPin, Users, Video } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { AvatarStack } from "@/src/components/avatar-stack";
 import { SessionCover } from "@/src/components/court-art";
 import { RowChevron } from "@/src/components/row-chevron";
-import { Button } from "@/src/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/components/ui/empty";
 import { atLeast } from "@/src/contract";
 import { AddFirstButtons } from "@/src/features/matches/add-first-buttons";
@@ -12,7 +10,9 @@ import { GameResultCard } from "@/src/features/matches/game-result-card";
 import { MatchCard } from "@/src/features/matches/match-card";
 import { MATCH_TYPE_LABEL } from "@/src/features/matches/match-type";
 import { FactRow, RowIcon } from "@/src/features/sessions/fact-row";
+import { matchPlayerIds, playersOf } from "@/src/features/sessions/match-players";
 import { MembersSheetRow } from "@/src/features/sessions/members-sheet";
+import { PlayerFilteredResults } from "@/src/features/sessions/player-filter";
 import { SessionMenu } from "@/src/features/sessions/session-menu";
 import { WhenRow } from "@/src/features/sessions/when-row";
 import { attentionOf } from "@/src/features/videos/videos";
@@ -21,35 +21,6 @@ import { unwrap } from "@/src/lib/result";
 import { getViewerZone } from "@/src/lib/viewer-zone";
 import { todayIn } from "@/src/lib/zoned";
 import { backend } from "@/src/server";
-
-/** A titled list of results with an Edit link for people who can score. */
-function ResultsSection({
-  id,
-  title,
-  editHref,
-  children,
-}: {
-  id: string;
-  title: string;
-  editHref: string | false;
-  children: ReactNode;
-}) {
-  return (
-    <section aria-labelledby={`${id}-heading`} className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h2 id={`${id}-heading`} className="section-title">
-          {title}
-        </h2>
-        {editHref && (
-          <Button asChild variant="text" size="sm">
-            <Link href={editHref}>Edit</Link>
-          </Button>
-        )}
-      </div>
-      <ul className="flex flex-col gap-3">{children}</ul>
-    </section>
-  );
-}
 
 export default async function SessionDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -193,22 +164,26 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
           </section>
         )}
 
-        {matches.length > 0 && (
-          <ResultsSection id="matches" title="Matches" editHref={canScore && `/sessions/${session.id}/matches/edit?m=${matches[0].id}`}>
-            {matches.map((match, index) => (
-              <li key={match.id}>
-                <MatchCard sessionId={session.id} match={match} index={index} />
-              </li>
-            ))}
-          </ResultsSection>
-        )}
-
-        {/* A game played on its own is the card you would see inside a match, one tap from its videos. */}
-        {games.length > 0 && (
-          <ResultsSection id="games" title="Games" editHref={canScore && `/sessions/${session.id}/matches/edit?m=${games[0].id}`}>
-            {games.map((match, index) => (
-              <li key={match.id}>
-                {match.games[0] ? (
+        {matches.length > 0 || games.length > 0 ? (
+          <PlayerFilteredResults
+            people={playersOf(session.matches)}
+            matches={{
+              title: "Matches",
+              editHref: canScore && matches.length > 0 && `/sessions/${session.id}/matches/edit?m=${matches[0].id}`,
+              entries: matches.map((match, index) => ({
+                id: match.id,
+                playerIds: matchPlayerIds(match),
+                card: <MatchCard sessionId={session.id} match={match} index={index} />,
+              })),
+            }}
+            // A game played on its own is the card you would see inside a match, one tap from its videos.
+            games={{
+              title: "Games",
+              editHref: canScore && games.length > 0 && `/sessions/${session.id}/matches/edit?m=${games[0].id}`,
+              entries: games.map((match, index) => ({
+                id: match.id,
+                playerIds: matchPlayerIds(match),
+                card: match.games[0] ? (
                   <GameResultCard
                     sessionId={session.id}
                     match={match}
@@ -218,11 +193,11 @@ export default async function SessionDetailsPage({ params }: { params: Promise<{
                 ) : (
                   // Its game was deleted. The match page is where to add it back.
                   <MatchCard sessionId={session.id} match={match} index={index} />
-                )}
-              </li>
-            ))}
-          </ResultsSection>
-        )}
+                ),
+              })),
+            }}
+          />
+        ) : null}
       </div>
     </main>
   );

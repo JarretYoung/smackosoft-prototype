@@ -17,7 +17,7 @@ const tabs = [
  */
 /** Editing screens are a focused task with their own back and save, so the tab bar steps aside. */
 const isEditing = (pathname: string) =>
-  pathname === "/sessions/new" || /^\/sessions\/[^/]+\/(edit|matches\/edit)$/.test(pathname);
+  pathname === "/sessions/new" || pathname === "/import" || /^\/sessions\/[^/]+\/(edit|matches\/edit)$/.test(pathname);
 
 export function BottomNav() {
   const pathname = usePathname();

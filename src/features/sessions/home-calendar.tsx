@@ -11,8 +11,9 @@ const toDate = (iso: string) => {
 /**
  * Sessions on a month calendar. Days with a session are filled red and today has a ring.
  * Tapping a day with one session opens it, and a day with several opens the sessions list.
- * `sessions` is what the home page already loaded, so the arrows stop at the months it covers.
- * Today and each session's day are the viewer's own, worked out by the server from their timezone.
+ * The arrows go back to the month of the first session and forward to the month of the last, and never
+ * less than a month either side of today. Today and each session's day are the viewer's own, worked out
+ * by the server from their timezone.
  */
 export function HomeCalendar({ today, sessions }: { today: string; sessions: { id: string; date: string }[] }) {
   const router = useRouter();
@@ -20,13 +21,19 @@ export function HomeCalendar({ today, sessions }: { today: string; sessions: { i
   for (const s of sessions) byDate.set(s.date, [...(byDate.get(s.date) ?? []), s.id]);
 
   const now = toDate(today);
+  const days = [...byDate.keys()].toSorted();
+  const monthOf = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
+  const first = days.length ? monthOf(toDate(days[0])) : now;
+  const last = days.length ? monthOf(toDate(days[days.length - 1])) : now;
+  const earliest = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const latest = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   return (
     <Calendar
       key={today}
       today={now}
       defaultMonth={now}
-      startMonth={new Date(now.getFullYear(), now.getMonth() - 1, 1)}
-      endMonth={new Date(now.getFullYear(), now.getMonth() + 1, 1)}
+      startMonth={first < earliest ? first : earliest}
+      endMonth={last > latest ? last : latest}
       modifiers={{ marked: [...byDate.keys()].map(toDate) }}
       onDayClick={(day) => {
         const ids = byDate.get(day.toLocaleDateString("en-CA"));

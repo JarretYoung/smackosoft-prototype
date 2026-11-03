@@ -1,7 +1,7 @@
 /** One aggregate: a match, its teams and players, its games and their scores. */
 import { z } from "zod";
 import type { Account } from "./accounts";
-import { batch, MatchFormat, MatchType, Timestamp, UUID } from "./common";
+import { batch, MatchFormat, MatchType, UUID } from "./common";
 import type { Ack } from "./result";
 
 const ids = batch(UUID, (id) => id);
@@ -14,6 +14,11 @@ export const MatchSave = z.object({
   label: z.string().trim().min(1),
   matchType: MatchType,
   format: MatchFormat,
+  /**
+   * Where the match sits in the session, in the order played. Leave it out and a new match goes
+   * last, while a saved match keeps its place. Gaps are fine. Nothing renumbers.
+   */
+  position: z.number().int().min(1).optional(),
 });
 export const SaveMatchesInput = batch(MatchSave, (m) => m.id);
 export type SaveMatchesInput = z.input<typeof SaveMatchesInput>;
@@ -39,18 +44,11 @@ export type SaveMatchPlayersInput = z.input<typeof SaveMatchPlayersInput>;
 export const RemoveMatchPlayersInput = batch(MatchPlayerKey, (p) => `${p.matchTeamId}:${p.accountId}`);
 export type RemoveMatchPlayersInput = z.input<typeof RemoveMatchPlayersInput>;
 
-export const GameSave = z
-  .object({
-    id: UUID,
-    matchId: UUID,
-    gameNumber: z.number().int().min(1),
-    startTime: Timestamp,
-    endTime: Timestamp,
-  })
-  .refine((g) => Date.parse(g.endTime) > Date.parse(g.startTime), {
-    message: "endTime must be after startTime",
-    path: ["endTime"],
-  });
+export const GameSave = z.object({
+  id: UUID,
+  matchId: UUID,
+  gameNumber: z.number().int().min(1),
+});
 export const SaveGamesInput = batch(GameSave, (g) => g.id);
 export type SaveGamesInput = z.input<typeof SaveGamesInput>;
 
@@ -74,8 +72,6 @@ export type RemoveGameScoresInput = z.input<typeof RemoveGameScoresInput>;
 export type Game = {
   id: string;
   gameNumber: number;
-  startTime: string;
-  endTime: string;
   /** One entry per team that has a score. Missing means not scored yet. */
   scores: { matchTeamId: string; score: number }[];
   videoCount: number;
@@ -92,6 +88,8 @@ export type Match = {
   label: string;
   matchType: z.infer<typeof MatchType>;
   format: z.infer<typeof MatchFormat>;
+  /** Where the match sits in the session, in the order played. */
+  position: number;
   teams: Team[];
   games: Game[];
 };

@@ -69,11 +69,6 @@ export function zonedToIso(date: string, time: string, zone: string): string {
   return new Date(wall - offsetAt(zone, firstGuess)).toISOString();
 }
 
-/** The same day as `iso` in `zone`, with the wall clock set to `time`. */
-export function withTime(iso: string, time: string, zone: string): string {
-  return zonedToIso(isoToDate(iso, zone), time, zone);
-}
-
 /** True when two zones show the same wall clock at an instant, whatever they are called. */
 export function sameClock(a: string, b: string, instant: number): boolean {
   return a === b || offsetAt(a, instant) === offsetAt(b, instant);

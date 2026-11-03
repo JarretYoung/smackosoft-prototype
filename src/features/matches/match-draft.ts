@@ -1,14 +1,11 @@
 import { z } from "zod";
 import { MATCH_FORMAT_MAX_GAMES, type Match } from "../../contract";
-import { withTime } from "../../lib/zoned";
 
 export type TeamDraft = { id: string; label: string; playerIds: string[] };
 
 export type GameDraft = {
   id: string;
   gameNumber: number;
-  startTime: string;
-  endTime: string;
   /** Score text per team id. Blank means not entered. */
   scores: Record<string, string>;
 };
@@ -21,9 +18,6 @@ export type MatchValues = {
   teams: TeamDraft[];
   games: GameDraft[];
 };
-
-/** A new game is assumed to last this long. The times are editable on each game. */
-export const DEFAULT_GAME_MINUTES = 20;
 
 /** Up to three digits. A blank box is allowed. */
 const SCORE_TEXT = /^\d{0,3}$/;
@@ -45,8 +39,6 @@ export function toValues(match: Match): MatchValues {
     games: match.games.map((game) => ({
       id: game.id,
       gameNumber: game.gameNumber,
-      startTime: game.startTime,
-      endTime: game.endTime,
       scores: Object.fromEntries(game.scores.map((s) => [s.matchTeamId, String(s.score)])),
     })),
   };
@@ -54,10 +46,8 @@ export function toValues(match: Match): MatchValues {
 
 export type GamesAction =
   | { type: "score"; gameId: string; teamId: string; value: string }
-  /** `time` is "HH:mm" on the clock of `timezone`, the session's zone. */
-  | { type: "time"; gameId: string; field: "startTime" | "endTime"; time: string; timezone: string }
   /** `savedNumbers` are the saved games' numbers, so a number is never reused. */
-  | { type: "add"; id: string; now: Date; savedNumbers: number[]; format: Match["format"] }
+  | { type: "add"; id: string; savedNumbers: number[]; format: Match["format"] }
   | { type: "remove"; id: string }
   /** Undo a removal. Does nothing when the game is back already. */
   | { type: "restore"; game: GameDraft; index: number };
@@ -69,24 +59,15 @@ export function gamesReducer(list: GameDraft[], action: GamesAction): GameDraft[
       return list.map((g) =>
         g.id === action.gameId ? { ...g, scores: { ...g.scores, [action.teamId]: action.value } } : g,
       );
-    case "time":
-      if (!action.time) return list;
-      return list.map((g) =>
-        g.id === action.gameId ? { ...g, [action.field]: withTime(g[action.field], action.time, action.timezone) } : g,
-      );
     case "add": {
       // A match holds the games its format allows. The backend refuses more.
       if (list.length >= MATCH_FORMAT_MAX_GAMES[action.format]) return list;
-      // The next game starts when the last one ended, or now for the first.
-      const start = list.length ? new Date(list[list.length - 1].endTime) : action.now;
       return [
         ...list,
         {
           id: action.id,
           // Numbers are never reused, so a removed game leaves a gap nobody sees.
           gameNumber: Math.max(0, ...list.map((g) => g.gameNumber), ...action.savedNumbers) + 1,
-          startTime: start.toISOString(),
-          endTime: new Date(start.getTime() + DEFAULT_GAME_MINUTES * 60_000).toISOString(),
           scores: {},
         },
       ];
@@ -122,7 +103,7 @@ function snapshot(values: MatchValues): string {
     values.matchType,
     values.format,
     values.teams.map((t) => [t.id, [...t.playerIds].sort()]),
-    values.games.map((g) => [g.id, g.startTime, g.endTime, values.teams.map((t) => g.scores[t.id] ?? "")]),
+    values.games.map((g) => [g.id, values.teams.map((t) => g.scores[t.id] ?? "")]),
   ]);
 }
 
@@ -161,8 +142,6 @@ export function planMatchSave(match: Match, sessionId: string, values: MatchValu
       id: g.id,
       matchId: match.id,
       gameNumber: g.gameNumber,
-      startTime: g.startTime,
-      endTime: g.endTime,
     })),
     clearedScores: match.games.flatMap((saved) => {
       const game = values.games.find((g) => g.id === saved.id);

@@ -9,8 +9,7 @@ import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/src/components/ui/empty";
 import { Progress } from "@/src/components/ui/progress";
-import { byViewerDay, dayGroup, viewerDay } from "@/src/features/sessions/session-days";
-import { addDays, monthWindow } from "@/src/lib/format";
+import { ALL_TIME, byViewerDay, dayGroup, viewerDay } from "@/src/features/sessions/session-days";
 import { todayIn } from "@/src/lib/zoned";
 import { unwrap } from "@/src/lib/result";
 import { getViewerZone } from "@/src/lib/viewer-zone";
@@ -26,14 +25,13 @@ export default async function HomePage() {
   const now = new Date();
   // Today, and every day on this page, is the viewer's own.
   const today = todayIn(viewerZone, now);
-  // The calendar shows last, this and next month around today. A session's saved date is in its own
-  // zone, so ask a day wider each side and let each session's day on the viewer's calendar decide.
-  const months = monthWindow(today);
+  // The calendar goes back to the first session and forward to the last. Each session's day on the
+  // viewer's calendar comes from the viewer's zone, so no date window is asked for.
   const [meResult, statsResult, teammatesResult, sessionsResult] = await Promise.all([
     backend.accounts.getCurrent(),
     backend.stats.get(),
     backend.stats.getTeammates(),
-    backend.sessions.list({ from: addDays(months.from, -1), to: addDays(months.to, 1) }),
+    backend.sessions.list(ALL_TIME),
   ]);
   const me = unwrap(meResult);
   const stats = unwrap(statsResult);

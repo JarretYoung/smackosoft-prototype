@@ -58,12 +58,10 @@ Everything below follows from five principles. When a new case does not fit a gu
 One statement per table. Postgres handles insert or update in one pass.
 
 ```sql
-INSERT INTO smackosoft.match_games (id, match_id, game_number, start_time, end_time, created_by)
+INSERT INTO smackosoft.match_games (id, match_id, game_number, created_by)
 VALUES (...), (...)
 ON CONFLICT (id) DO UPDATE
   SET game_number = EXCLUDED.game_number,
-      start_time  = EXCLUDED.start_time,
-      end_time    = EXCLUDED.end_time,
       updated_at  = now(),
       updated_by  = $actor
 WHERE match_games.match_id = EXCLUDED.match_id;   -- G11: do not move rows
@@ -183,7 +181,7 @@ Reads are one per screen or lookup. Writes follow one pattern: `save` and `remov
 | `sessions.list` | Sessions home | any member |
 | `sessions.get` | Session Details | `VIEWER` |
 | `accounts.getCurrent` | Dashboard header, onboarding check | signed in |
-| `sessions.list({ from?, to? })` | Sessions home, dashboard upcoming | signed in. Default window: last month through next month. The frontend may override. Ordered by date, then start time (no start last), then creation. The Sessions page asks for all time. |
+| `sessions.list({ from?, to? })` | Sessions home, dashboard upcoming | signed in. Default window: last month through next month. The frontend may override. Ordered by date, then start time (no start last), then creation. The Sessions page and the Home calendar ask for all time. |
 | `accounts.findByHandle` | Add members | signed in |
 | `accounts.isHandleFree` | Onboarding and Profile, checks a handle as it is typed. Your own handle counts as free. | signed in. Works before onboarding. |
 | `videos.listBySession` | Videos page, session videos row, Match Details video counts. Each row has a nullable `matchGameId` and `canonicalOffset`, plus `changedByName` and `changedAt` (the last editor of the offset, or the person who made the link). | `VIEWER` |
@@ -201,14 +199,15 @@ Unverified: `videos.listOwn` follows the fourth story in the story map, "link th
 |---|---|---|---|---|---|
 | Session | `sessions.save` | `sessions.remove` | client UUID | new: signed in. Existing: `MANAGER`. Remove: `OWNER` | Creator becomes `OWNER` on insert. Court fee and currency saved together. `timezone` (IANA name) is required. `date` is the day in that zone. |
 | Member | `members.save` | `members.remove` | session, account | `MANAGER` | One call adds people and changes roles. Cannot grant `OWNER`. |
-| Match | `matches.save` | `matches.remove` | client UUID | `EDITOR` | |
+| Match | `matches.save` | `matches.remove` | client UUID | `EDITOR` | `position` is where it sits in the session. Leave it out and a new match goes last, a saved one keeps its place. |
 | Team | `matches.saveTeams` | `matches.removeTeams` | client UUID | `EDITOR` | |
 | Match player | `matches.saveMatchPlayers` | `matches.removeMatchPlayers` | team, account | `EDITOR` | Also makes the account a `VIEWER` member if missing. Adding a new member takes `MANAGER`. |
-| Game | `matches.saveGames` | `matches.removeGames` | client UUID | `EDITOR` | Frontend supplies start and end time. |
+| Game | `matches.saveGames` | `matches.removeGames` | client UUID | `EDITOR` | A game has a number in its match and no clock times. |
 | Game score | `matches.saveGameScores` | `matches.removeGameScores` | team, game | `EDITOR` | Removing a game removes its scores. Clearing one team's score leaves the game and the other score. No screen clears a score today. |
 | Guest account | `accounts.saveGuests` | `accounts.removeGuests` (soft delete) | client UUID | signed in | Creator edits it. Handle changes twice at most. `accounts.listGuests` reads them. |
-| Video | `videos.save` | none | client UUID | own videos only | Record only. No storage upload. `durationSeconds` is the length the app read when the video was added, or null. |
+| Video | `videos.save` | none | client UUID | own videos only | Record only. No storage upload. `durationSeconds` is left out by callers: the server reads the length from the video's source (YouTube Data API) and keeps a saved one while the link is the same video. A given value wins. Null when no one could read it. The server sets `source_key` from the link (`youtube:<id>`), so the same video has one key however the link is written. |
 | Video in a session | `videos.saveVideoSessions` | `videos.removeVideoSessions` | video, session | `EDITOR` | The video is the actor's own, or already in the session. Removing also removes its game links in that session. |
+| Import | `imports.games` | none | none | signed in | One transaction. Composes the real save use cases, so every rule and role check applies. `dryRun` runs it all and rolls back. A video the actor already has is handled by where it is: left out, linked, or an error that says where. See decisions.md, Bulk import. |
 | Video in a game | `videos.saveVideoGames` | `videos.removeVideoGames` | video, game | `EDITOR` | Also puts the video in the game's session. `canonicalOffset` is seconds, null when not synced. Saving again only updates the offset. |
 
 ## Side effects are documented, not named
@@ -237,7 +236,7 @@ Foreign keys fix the order. Replaying the whole sequence is always safe.
 
 | Note | Impact |
 |---|---|
-| `match_games.start_time` and `end_time` are `NOT NULL`. | The frontend must send them. |
+| Games have no clock times. Order is `matches.position`, then `game_number`. | Session start and end times are the only times, and they are optional. |
 | Child tables now cascade on delete. | The delete helpers still remove dependents in order. They can be simplified later. |
 | `accounts.handle_change_count` counts handle changes. The database only checks it is not negative. The limit of 2 lives in the backend. | In the init migration. |
 | Nothing creates an `accounts` row when someone signs up. | `accounts.saveCurrent`, called from an onboarding step. See "Account creation and handles". |

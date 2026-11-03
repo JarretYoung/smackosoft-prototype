@@ -31,7 +31,7 @@ export default async function EditMatchPage({
       />
       {match ? (
         // Keyed by match so switching matches starts from that match's saved state.
-        <MatchEditor key={match.id} sessionId={id} timezone={session.timezone} match={match} members={session.members} />
+        <MatchEditor key={match.id} sessionId={id} match={match} members={session.members} />
       ) : (
         <div className="px-4">
           <Empty className="bg-card shadow-card">

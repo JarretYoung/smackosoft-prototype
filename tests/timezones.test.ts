@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { byViewerDay, dayGroup, viewerDay } from "../src/features/sessions/session-days";
 import { sessionTimes } from "../src/features/sessions/session-times";
-import { addDays, monthWindow } from "../src/lib/format";
+import { addDays } from "../src/lib/format";
 import { whenOn } from "../src/features/sessions/when-on";
 import {
   allZones,
@@ -11,7 +11,6 @@ import {
   sameClock,
   searchZones,
   todayIn,
-  withTime,
   zoneAbbr,
   zoneCity,
   zonedToIso,
@@ -56,13 +55,6 @@ describe("session times around a clock change", () => {
     expect(addDays("2026-03-08", 1)).toBe("2026-03-09");
     expect(addDays("2026-11-01", 1)).toBe("2026-11-02");
     expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
-  });
-
-  it("changes a time of day and keeps the day on the session's clock", () => {
-    // 00:30 in Kuala Lumpur is still the day before in UTC.
-    const start = zonedToIso("2026-10-31", "00:30", KL);
-    expect(start).toBe("2026-10-30T16:30:00.000Z");
-    expect(withTime(start, "09:15", KL)).toBe(zonedToIso("2026-10-31", "09:15", KL));
   });
 });
 
@@ -203,16 +195,5 @@ describe("the short name of a zone", () => {
     expect(zoneAbbr(KL, summer)).toBe("UTC+8");
     expect(zoneAbbr("Asia/Kolkata", summer)).toBe("UTC+5:30");
     expect(zoneAbbr("UTC", summer)).toBe("UTC");
-  });
-});
-
-describe("the calendar window follows the date the page calls today", () => {
-  it.each([
-    ["2026-11-01", "2026-10-01", "2026-12-31"],
-    ["2026-01-15", "2025-12-01", "2026-02-28"],
-    ["2026-12-31", "2026-11-01", "2027-01-31"],
-    ["2028-01-10", "2027-12-01", "2028-02-29"],
-  ])("%s covers %s through %s", (today, from, to) => {
-    expect(monthWindow(today)).toEqual({ from, to });
   });
 });

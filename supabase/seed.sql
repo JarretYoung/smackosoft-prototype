@@ -89,10 +89,10 @@ INSERT INTO smackosoft.session_access (session_id, account_id, role, created_by)
 -- Matches, teams, players, games, scores
 -- ------------------------------------------------------------
 
-INSERT INTO smackosoft.matches (id, label, session_id, match_type, format, created_by) VALUES
-  ('9eb0daa3-9d48-40de-9516-a6347150db04', 'Match 1', '5a27b3f7-4464-4a5a-a97b-7d20ad844b50', 'MD', 'BO3', '5b60f606-2850-4943-a964-ae4285d7db92'),
-  ('89868493-987c-40fb-b4c4-9e5d1d33765f', 'Game 1', '5a27b3f7-4464-4a5a-a97b-7d20ad844b50', 'MS', 'BO1', '5b60f606-2850-4943-a964-ae4285d7db92'),
-  ('1c294583-1a46-4528-befd-085cf615e74a', 'Match 1', 'c88c8371-e40a-4ba5-8188-3dff895ebd29', 'MD', 'BO3', '60357636-416a-4a5e-b954-637beb84143b');
+INSERT INTO smackosoft.matches (id, label, session_id, match_type, format, position, created_by) VALUES
+  ('9eb0daa3-9d48-40de-9516-a6347150db04', 'Match 1', '5a27b3f7-4464-4a5a-a97b-7d20ad844b50', 'MD', 'BO3', 1, '5b60f606-2850-4943-a964-ae4285d7db92'),
+  ('89868493-987c-40fb-b4c4-9e5d1d33765f', 'Game 1', '5a27b3f7-4464-4a5a-a97b-7d20ad844b50', 'MS', 'BO1', 2, '5b60f606-2850-4943-a964-ae4285d7db92'),
+  ('1c294583-1a46-4528-befd-085cf615e74a', 'Match 1', 'c88c8371-e40a-4ba5-8188-3dff895ebd29', 'MD', 'BO3', 1, '60357636-416a-4a5e-b954-637beb84143b');
 
 INSERT INTO smackosoft.match_teams (id, label, match_id, created_by) VALUES
   ('a04b592b-12e2-47aa-a727-ece0c222ac00', 'Team 1', '9eb0daa3-9d48-40de-9516-a6347150db04', '5b60f606-2850-4943-a964-ae4285d7db92'),
@@ -114,13 +114,13 @@ INSERT INTO smackosoft.match_players (match_team_id, account_id, created_by) VAL
   ('b21e5edf-df2a-45df-9651-9913683b40ac', 'db7b6603-77f2-488f-94f8-7906072e373c', '60357636-416a-4a5e-b954-637beb84143b'),
   ('b21e5edf-df2a-45df-9651-9913683b40ac', '2ac754ed-e996-42ca-9ab8-c49672f44fe8', '60357636-416a-4a5e-b954-637beb84143b');
 
-INSERT INTO smackosoft.match_games (id, match_id, game_number, start_time, end_time, created_by) VALUES
-  ('a0af34e8-8a97-4f4a-bb28-ab49c1a37ed5', '9eb0daa3-9d48-40de-9516-a6347150db04', 1, now() - interval '3 hours',      now() - interval '2 hours 40 minutes', '5b60f606-2850-4943-a964-ae4285d7db92'),
-  ('2355dfb7-d893-49b4-a38b-8b4f1675f052', '9eb0daa3-9d48-40de-9516-a6347150db04', 2, now() - interval '2 hours 35 minutes', now() - interval '2 hours 15 minutes', '5b60f606-2850-4943-a964-ae4285d7db92'),
-  ('474ace5d-8bea-43ee-aadf-9e297d3eaf13', '9eb0daa3-9d48-40de-9516-a6347150db04', 3, now() - interval '2 hours 10 minutes', now() - interval '1 hour 45 minutes', '5b60f606-2850-4943-a964-ae4285d7db92'),
-  ('da77b4f9-80b9-41e3-afbc-9fc670d205b2', '89868493-987c-40fb-b4c4-9e5d1d33765f', 1, now() - interval '1 hour 30 minutes', now() - interval '1 hour 10 minutes', '5b60f606-2850-4943-a964-ae4285d7db92'),
-  ('21d7f760-5e2b-46d4-8f40-d84b8f073ea6', '1c294583-1a46-4528-befd-085cf615e74a', 1, now() - interval '7 days 3 hours',  now() - interval '7 days 2 hours 40 minutes', '60357636-416a-4a5e-b954-637beb84143b'),
-  ('81430aa8-7012-4ad7-be55-60420c33838b', '1c294583-1a46-4528-befd-085cf615e74a', 2, now() - interval '7 days 2 hours 35 minutes', now() - interval '7 days 2 hours 15 minutes', '60357636-416a-4a5e-b954-637beb84143b');
+INSERT INTO smackosoft.match_games (id, match_id, game_number, created_by) VALUES
+  ('a0af34e8-8a97-4f4a-bb28-ab49c1a37ed5', '9eb0daa3-9d48-40de-9516-a6347150db04', 1, '5b60f606-2850-4943-a964-ae4285d7db92'),
+  ('2355dfb7-d893-49b4-a38b-8b4f1675f052', '9eb0daa3-9d48-40de-9516-a6347150db04', 2, '5b60f606-2850-4943-a964-ae4285d7db92'),
+  ('474ace5d-8bea-43ee-aadf-9e297d3eaf13', '9eb0daa3-9d48-40de-9516-a6347150db04', 3, '5b60f606-2850-4943-a964-ae4285d7db92'),
+  ('da77b4f9-80b9-41e3-afbc-9fc670d205b2', '89868493-987c-40fb-b4c4-9e5d1d33765f', 1, '5b60f606-2850-4943-a964-ae4285d7db92'),
+  ('21d7f760-5e2b-46d4-8f40-d84b8f073ea6', '1c294583-1a46-4528-befd-085cf615e74a', 1, '60357636-416a-4a5e-b954-637beb84143b'),
+  ('81430aa8-7012-4ad7-be55-60420c33838b', '1c294583-1a46-4528-befd-085cf615e74a', 2, '60357636-416a-4a5e-b954-637beb84143b');
 
 INSERT INTO smackosoft.match_game_scores (match_team_id, match_game_id, score, created_by) VALUES
   -- Match 1: Team 1 wins 2-1, as in the Edit Session mockup
@@ -143,9 +143,9 @@ INSERT INTO smackosoft.match_game_scores (match_team_id, match_game_id, score, c
 -- It is linked to game 2 but not synced yet. The second video is only in the pool.
 -- ------------------------------------------------------------
 
-INSERT INTO smackosoft.videos (id, label, video_url, duration_seconds, created_by) VALUES
-  ('e953055b-f8ac-467d-ada8-c403fe5a868c', 'Court 3 full recording', 'https://www.youtube.com/watch?v=SbmMMj88kmc', 463, '5b60f606-2850-4943-a964-ae4285d7db92'),
-  ('dfb2e6c8-320c-4efe-8ccc-5aa1a1470d2e', 'Warm up clip',           'https://www.youtube.com/watch?v=SbmMMj88kmc', 463, '5b60f606-2850-4943-a964-ae4285d7db92');
+INSERT INTO smackosoft.videos (id, label, video_url, duration_seconds, source_key, created_by) VALUES
+  ('e953055b-f8ac-467d-ada8-c403fe5a868c', 'Court 3 full recording', 'https://www.youtube.com/watch?v=SbmMMj88kmc', 463, 'youtube:SbmMMj88kmc', '5b60f606-2850-4943-a964-ae4285d7db92'),
+  ('dfb2e6c8-320c-4efe-8ccc-5aa1a1470d2e', 'Warm up clip',           'https://www.youtube.com/watch?v=SbmMMj88kmc', 463, 'youtube:SbmMMj88kmc', '5b60f606-2850-4943-a964-ae4285d7db92');
 
 INSERT INTO smackosoft.video_sessions (video_id, session_id, created_by) VALUES
   ('e953055b-f8ac-467d-ada8-c403fe5a868c', '5a27b3f7-4464-4a5a-a97b-7d20ad844b50', '5b60f606-2850-4943-a964-ae4285d7db92'),
