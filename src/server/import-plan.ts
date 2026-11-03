@@ -3,7 +3,7 @@
  * The use case in `imports.ts` looks things up, calls this, and writes the result.
  */
 import { MATCH_FORMAT_MAX_GAMES, type ImportRow, type Issue, type MatchFormat, type MatchType } from "../contract";
-import { sourceKeyOf } from "../lib/video-source";
+import { sourceKeyOf } from "../lib/video-sources";
 
 export type PlannedGame = {
   /** Index of the row in the input. */

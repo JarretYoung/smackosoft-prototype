@@ -1,6 +1,6 @@
 "use client";
 
-import type { YouTubeAdapter } from "@videojs/youtube-video";
+import type { MediaHandle } from "@/src/features/videos/players";
 import { useEffect, useRef } from "react";
 import { roundOffset } from "@/src/features/videos/offset";
 import type { Playable } from "@/src/features/videos/player";
@@ -29,7 +29,7 @@ export function SyncPreview({
   seconds: number;
   onFollow: (seconds: number) => void;
 }) {
-  const media = useRef<YouTubeAdapter>(null);
+  const media = useRef<MediaHandle | null>(null);
   // Has the player ever played? A player that has not started plays when it seeks, and pausing it at once
   // cancels the seek. So the first move waits for it to play, pauses it, then seeks again, exactly, while paused.
   const started = useRef(false);
@@ -72,7 +72,9 @@ export function SyncPreview({
   return (
     <VideoPlayer
       playable={playable}
-      mediaRef={media}
+      onMedia={(handle) => {
+        media.current = handle;
+      }}
       onPlaying={() => {
         started.current = true;
         // The first move has played long enough to show the frame. Pause it where it is.

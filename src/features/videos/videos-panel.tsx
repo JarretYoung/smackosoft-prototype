@@ -13,12 +13,13 @@ import type { SessionVideo } from "@/src/contract";
 import { errorMessage } from "@/src/lib/errors";
 import { plural } from "@/src/lib/format";
 import { openUrl } from "@/src/features/videos/offset";
-import { playableOf, thumbnailOf } from "@/src/features/videos/player";
+import { playableOf } from "@/src/features/videos/player";
+import { thumbnailOf } from "@/src/lib/video-sources";
 import { cn } from "@/src/lib/utils";
 import { VideoPlayer } from "./video-player";
 import { attentionOf, type PlaylistGame } from "@/src/features/videos/videos";
 import { AddVideoSheet } from "./add-video-sheet";
-import type { NewVideo } from "./use-add-video-form";
+import type { FormVideo } from "./use-add-video-form";
 import { PickSheet, type PickItem } from "./pick-sheet";
 import { SyncSheet, type SyncTarget } from "./sync-sheet";
 import { EmptyGameRow, GameRow, markOf, UnlinkedRow, VideoThumb } from "./video-rows";
@@ -107,7 +108,7 @@ export function VideosPanel({
     });
   }
 
-  function addVideo(video: NewVideo) {
+  function addVideo(video: FormVideo) {
     const videoId = crypto.randomUUID();
     const game = adding?.game ?? null;
     run(

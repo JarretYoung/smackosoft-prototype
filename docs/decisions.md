@@ -57,7 +57,15 @@ Standing decisions about how the app is built. Read them before you change the s
 - Limit of joining: a match is found by its name, "Match <number>". A match whose name you changed by hand is not found, and the rows make a new match.
 - Adding people to an existing session takes MANAGER, as in `saveMatchPlayers`. An EDITOR who imports into a session with people it does not have gets FORBIDDEN on that row.
 - At most 300 rows per import.
-- The import saves no video lengths. A length comes from the player, so the done screen reads them in the browser after the import (`LengthReader`): three hidden players at a time, each given 20 seconds, saved in groups of 10. A video that is private or blocks embedding keeps no length. Leaving the page stops the reading, and the games are already in. Checked with two real videos (one read, one blocked). Not measured on a long list.
+- The import sends no lengths. `saveVideos` asks each video's source for the length in one batch, so a 300 row import is a handful of calls. See Video sources below.
+
+## Video sources
+- The app is written against one idea of a video: a link, a stable key (`youtube:<id>`), a length, a thumbnail and a way to play it. Nothing outside the source folders names YouTube.
+- Each source has three small files, one per place the source matters: `lib/video-sources/<name>.ts` (read a link, give a thumbnail), `server/video-lengths/<name>.ts` (ask the service for a length) and `features/videos/players/<name>.tsx` (the Video.js media element). A registry in each folder picks by source. To add Vimeo you add those three files and one line in each registry.
+- Lengths are read on the server, never in the browser. The source is YouTube Data API v3, `videos.list` with `part=contentDetails`: 1 quota unit per call and up to 50 videos per call. The key is `YOUTUBE_API_KEY`, server only.
+- `saveVideos` fills the length when the caller gives none. A saved video keeps its length while its link is the same video, so renaming never costs a call. A length that is given wins.
+- A missing key, a refused call, a private or removed video and a live stream all save the video with no length. Reading a length never fails a save.
+- Not yet verified against the live API (needs a key): the exact response for a private or removed video, and a live stream's duration. The code treats both as no length.
 
 ## Speed and freshness
 - Users are in Kuala Lumpur. The target is Supabase and the app in Singapore. Staging sits in Seoul by accident, so a round trip there is slow. Cut round trips first, because that holds in any region.

@@ -79,8 +79,6 @@ export type ImportReport = {
   created: { sessions: number; matches: number; games: number; videos: number; guests: number };
   /** Rows left out, by index in `rows`. */
   skipped: { row: number; reason: string }[];
-  /** The videos the import made, so the page can read their lengths afterwards. */
-  videos: { id: string; label: string; url: string }[];
 };
 
 export interface ImportsApi {

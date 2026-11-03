@@ -38,7 +38,6 @@ describe("bulk import", () => {
     expect(report.dryRun).toBe(false);
     expect(report.created).toEqual({ sessions: 2, matches: 3, games: 4, videos: 4, guests: 4 });
     expect(report.sessions.map((s) => [s.label, s.existing, s.matches, s.games])).toEqual([["Night", false, 2, 3], ["25 Oct 2026", false, 1, 1]]);
-    expect(report.videos).toHaveLength(4);
 
     const [night] = ok(await w.b.sessions.list({ from: "2026-10-24", to: "2026-10-24" })).filter((s) => s.label === "Night");
     const session = ok(await w.b.sessions.get({ sessionId: night.id }));

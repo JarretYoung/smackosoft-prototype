@@ -24,6 +24,8 @@ export const test = base
   })
   .extend("app", { scope: "file" }, async ({}, { onCleanup }) => {
     process.env.DATABASE_URL = inject("serviceUrl");
+    // A key in the developer's shell must not let a test reach YouTube. A test that wants lengths stubs the answer.
+    delete process.env.YOUTUBE_API_KEY;
     const [{ backend }, core, client] = await Promise.all([
       import("../../src/server/index"),
       import("../../src/server/core"),

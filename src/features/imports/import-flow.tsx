@@ -8,7 +8,6 @@ import { Button, buttonVariants } from "@/src/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
 import { Spinner } from "@/src/components/ui/spinner";
 import type { Account, ImportReport } from "@/src/contract";
-import { LengthReader } from "@/src/features/imports/length-reader";
 import { BURNING_MARS_TEMPLATE } from "@/src/features/imports/burning-mars";
 import type { Choice } from "@/src/features/imports/import-input";
 import { PersonSheet } from "@/src/features/imports/person-sheet";
@@ -364,7 +363,6 @@ function DoneStep({ report, onAnother }: { report: ImportReport; onAnother: () =
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
-      <LengthReader videos={report.videos} />
       <Footer>
         <LeaveLink href="/sessions" className={buttonVariants({ size: "lg" })}>
           View sessions

@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import type { SessionVideo } from "@/src/contract";
 import { cn } from "@/src/lib/utils";
 import { openUrl } from "@/src/features/videos/offset";
-import { thumbnailOf } from "@/src/features/videos/player";
+import { thumbnailOf } from "@/src/lib/video-sources";
 import { formatLength, type PlaylistGame } from "@/src/features/videos/videos";
 import { RelativeTime } from "./relative-time";
 

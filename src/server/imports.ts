@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { ImportGamesInput, type ImportReport, type Issue } from "../contract";
-import { sourceKeyOf } from "../lib/video-source";
+import { sourceKeyOf } from "../lib/video-sources";
 import { act, Failure, Rollback, unique, type Ctx } from "./core";
 import { heldKey, planImport, type HeldMatch } from "./import-plan";
 import { saveGuests } from "./accounts";
@@ -150,7 +150,6 @@ export const importGames = act(ImportGamesInput, async (ctx: Ctx, input): Promis
   const rowOfVideo: number[] = [];
   const rowOfPlayer: number[] = [];
   const rowOfScore: number[] = [];
-  const createdVideos: ImportReport["videos"] = [];
   const report: ImportReport["sessions"] = [];
   let newMatches = 0;
 
@@ -205,7 +204,6 @@ export const importGames = act(ImportGamesInput, async (ctx: Ctx, input): Promis
         const videoId = randomUUID();
         videoRecords.push({ id: videoId, label: rows[game.row].label, videoUrl: rows[game.row].videoUrl });
         rowOfVideo.push(game.row);
-        createdVideos.push({ id: videoId, label: rows[game.row].label, url: rows[game.row].videoUrl });
         gameLinks.push({ videoId, matchGameId: gameId });
       });
     }
@@ -239,7 +237,6 @@ export const importGames = act(ImportGamesInput, async (ctx: Ctx, input): Promis
       guests: newGuests.length,
     },
     skipped,
-    videos: createdVideos,
   };
   if (input.dryRun) throw new Rollback(result);
   return result;

@@ -19,6 +19,28 @@ Each layer calls only the one below it.
 
 Pure helpers live in `src/lib/`. Shared client hooks live in `src/hooks/`.
 
+## Parts that vary by source
+
+Some parts change with where data comes from. Each one has a small interface, one file per source, and a registry that picks the file. The rest of the app uses the interface and never names a source. This is a convention, not a lint rule.
+
+| Part | Interface and registry | One file per source |
+|---|---|---|
+| Which video a link is, and its thumbnail | `src/lib/video-sources/index.ts` | `src/lib/video-sources/youtube.ts` |
+| How long a video is | `src/server/video-lengths/index.ts` | `src/server/video-lengths/youtube.ts` |
+| How to play a video | `src/features/videos/players/index.tsx` | `src/features/videos/players/youtube.tsx` |
+| Where import rows come from | `ImportRow` in `src/contract/imports.ts` | `src/features/imports/burning-mars.ts` |
+
+Every video has the same shape to the app: a link, a source key such as `youtube:dQw4w9WgXcQ`, a length and a player. Video.js supplies the player abstraction. It has a media element for YouTube, Vimeo, Twitch, Wistia, HLS and plain files, and `MediaHandle` is the part of it the page uses.
+
+To add a video source such as Vimeo:
+1. Write `lib/video-sources/vimeo.ts` and add it to `SOURCES`.
+2. Write `server/video-lengths/vimeo.ts` and add it to `defaultSources`.
+3. Write `features/videos/players/vimeo.tsx`, add the id to `PLAYABLE_SOURCES` and its player to `PLAYERS`. TypeScript fails until both match.
+
+A source that has no length service or no player still works. Its videos save with no length, or open in a new tab.
+
+An import adapter turns one file shape into `ImportRow`s and knows that source's habits, such as "SoongJit" meaning two players. The backend sees only rows.
+
 ## Where a component lives
 
 | If it is used by | Put it in |

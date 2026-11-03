@@ -47,6 +47,31 @@ Do this once before `pnpm supabase start`. Google is enabled in `supabase/config
 
 A new Google user lands on onboarding to pick a handle, like any new user. On the hosted project, enter the same two values under Authentication, Sign in providers, Google, and use the callback URL shown there.
 
+### YouTube video lengths
+
+The server reads a video's length from the YouTube Data API. Without a key, videos still save, with no length. Do this once per environment.
+
+1. Open Google Cloud Console and pick the project you use for Google sign in. A new project works too.
+2. Go to APIs and Services, then Library. Search for YouTube Data API v3 and click Enable.
+3. Go to APIs and Services, then Credentials. Click Create credentials, then API key. Copy the key.
+4. Click the key to restrict it:
+   - API restrictions: choose Restrict key, then tick YouTube Data API v3 only.
+   - Application restrictions: leave on None unless your host has fixed outbound IP addresses. Do not pick HTTP referrers. The server sends no referrer, so every call would fail.
+5. Add the key to `.env.local` (not committed):
+   ```
+   YOUTUBE_API_KEY=your-key
+   ```
+6. Restart the dev server. On the hosted app, set the same variable in the hosting project's environment settings.
+
+Check it: add a YouTube video from the Videos tab. The length shows on its thumbnail. No browser code is involved, so a missing length means the key, the restriction or the quota.
+
+Cost and limits:
+- Each save of videos costs 1 quota unit per 50 videos. An import of 104 videos costs 3 units.
+- The default allowance is 10,000 units a day. See it under APIs and Services, YouTube Data API v3, Quotas.
+- Never prefix the variable with `NEXT_PUBLIC_`. That would send the key to every browser.
+
+Not verified here: the exact Console menu names (Google renames them), and whether the default quota needs billing turned on. Neither blocks you. The key works once the API is enabled.
+
 ### Regenerating database types
 
 Run `pnpm db:types` after every migration and after every `pnpm supabase db reset`. It reads `DATABASE_URL` from `.env.local` and rewrites `src/server/db/types.ts`. Commit the result.
