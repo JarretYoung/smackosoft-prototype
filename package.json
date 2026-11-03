@@ -23,6 +23,7 @@
     "clsx": "^2.1.1",
     "kysely": "^0.29.6",
     "lucide-react": "^0.511.0",
+    "minisearch": "^7.2.0",
     "next": "^16.4.3",
     "papaparse": "^5.7.0",
     "pg": "^8.23.1",

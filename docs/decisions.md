@@ -157,6 +157,13 @@ Each one removes code. Each fails loudly and has a one step recovery.
 - A missing key, a refused call, a private or removed video and a live stream all save the video with no length. Reading a length never fails a save.
 - Not yet verified against the live API (needs a key): the exact response for a private or removed video, and a live stream's duration. The code treats both as no length.
 
+## Search and filters
+- Sessions search runs in the browser, on the sessions the Sessions page already loads (all of them, with members). Users are far from the database, so a result must not wait for a round trip. Move it to the server (Postgres `pg_trgm`) only when a person has thousands of sessions, or when search must reach what the list does not carry.
+- The library is MiniSearch (`sessionSearch`, behind one function so it can be swapped). It matches word by word across fields, with prefix and typo tolerance. Fuse.js was the other candidate: it scores one pattern against one field, so a query like "ian oct" needs extra work.
+- Searched: session name, place, the day as words, members' names and real handles (a guest's handle is made up, so it is not searched). Not searched: matches, games and videos. Finding games across sessions is a separate feature and needs a server query.
+- Search and filters only leave out sessions. They never reorder, because the list is an archive read by date.
+- The Players filter on Sessions means members of the session. It matches a session when all chosen players are members. Location and Date range filters are planned next. "Has videos" and "no time set" wait for a use case.
+
 ## Speed and freshness
 - Users are in Kuala Lumpur. The target is Supabase and the app in Singapore. Staging sits in Seoul by accident, so a round trip there is slow. Cut round trips first, because that holds in any region.
 - The tabs (Home, Sessions, Profile) open from the browser's cache and redraw in place. Details are in [architecture.md](architecture.md#navigation-caching-and-freshness).
