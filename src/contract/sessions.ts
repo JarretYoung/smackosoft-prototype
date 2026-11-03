@@ -100,10 +100,18 @@ export type SessionDetails = {
   matches: Match[];
 };
 
+/** Where, when and the fee of a session the actor owns. No members or matches. */
+export type OwnedSessionDetails = Pick<
+  SessionDetails,
+  "id" | "date" | "timezone" | "startTime" | "endTime" | "location" | "locationUrl" | "latitude" | "longitude" | "courtFee" | "currency"
+>;
+
 // --------------------------------------------------------------- interface
 
 export interface SessionsApi {
   list(input?: ListSessionsInput): Promise<Result<SessionListItem[]>>;
+  /** The sessions the actor owns, with only the details a new session starts from. Same window and order as `list`. One query. */
+  listOwned(input?: ListSessionsInput): Promise<Result<OwnedSessionDetails[]>>;
   /** Nests members, matches, teams, players, games and scores. */
   get(input: GetSessionInput): Promise<Result<SessionDetails>>;
   /** Also makes the creator OWNER on insert. */

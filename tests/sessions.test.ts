@@ -69,6 +69,40 @@ describe("sessions", () => {
     expect(listed).toMatchObject({ gameCount: 2, myRole: "OWNER" });
   });
 
+  test("listOwned returns the sessions the actor owns, with where, when and the fee, and no one else's", async ({ world: w }) => {
+    const mine = id();
+    ok(
+      await w.b.sessions.save([
+        { id: mine, label: "Mine", date: "2026-10-18", timezone: KL, location: "Sunway Serene", locationUrl: "https://maps.app.goo.gl/x", latitude: 3.07, longitude: 101.6, courtFee: 20, currency: "MYR" },
+      ]),
+    );
+    // Shared with the actor as an editor: it is not theirs to reuse.
+    w.as(w.stranger);
+    const shared = id();
+    ok(await w.b.sessions.save([{ id: shared, label: "Shared", date: "2026-10-18", timezone: KL, location: "Elsewhere" }]));
+    ok(await w.b.members.save([{ sessionId: shared, accountId: w.owner.accountId, role: "EDITOR" }]));
+    w.as(w.owner);
+
+    const owned = ok(await w.b.sessions.listOwned({ from: "2026-10-18", to: "2026-10-18" }));
+    expect(owned.map((s) => s.id)).toContain(mine);
+    expect(owned.map((s) => s.id)).not.toContain(shared);
+    expect(owned.find((s) => s.id === mine)).toEqual({
+      id: mine,
+      date: "2026-10-18",
+      timezone: KL,
+      startTime: null,
+      endTime: null,
+      location: "Sunway Serene",
+      locationUrl: "https://maps.app.goo.gl/x",
+      latitude: 3.07,
+      longitude: 101.6,
+      courtFee: 20,
+      currency: "MYR",
+    });
+    // The window applies as it does for `list`.
+    expect(ok(await w.b.sessions.listOwned({ from: "2026-11-01", to: "2026-11-30" })).map((s) => s.id)).not.toContain(mine);
+  });
+
   test("replaying a full build changes nothing", async ({ world: w }) => {
     const first = await scoredMatch(w);
     const before = ok(await w.b.sessions.get({ sessionId: first.sessionId }));

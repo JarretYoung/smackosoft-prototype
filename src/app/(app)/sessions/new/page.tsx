@@ -8,14 +8,11 @@ import { loadPeople } from "@/src/features/sessions/people";
 import { unwrap } from "@/src/lib/result";
 import { backend } from "@/src/server";
 
-/** The session this person last ran, newest first. Its details are what they most likely want again. */
+/** The session this person last ran, newest first. Its details are what they most likely want again. One read. */
 async function lastSession(viewerZone: string) {
-  const sessions = await backend.sessions.list().then(unwrap);
+  const owned = await backend.sessions.listOwned().then(unwrap);
   const today = todayIn(viewerZone);
-  const latest = sessions
-    .filter((s) => s.myRole === "OWNER" && viewerDay(s, viewerZone) <= today)
-    .sort((a, b) => byViewerDay(viewerZone)(b, a))[0];
-  return latest ? backend.sessions.get({ sessionId: latest.id }).then(unwrap) : null;
+  return owned.filter((s) => viewerDay(s, viewerZone) <= today).sort((a, b) => byViewerDay(viewerZone)(b, a))[0] ?? null;
 }
 
 export default async function NewSessionPage() {

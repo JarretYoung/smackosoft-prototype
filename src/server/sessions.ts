@@ -7,6 +7,7 @@ import {
   SaveSessionsInput,
   type Match,
   type Member,
+  type OwnedSessionDetails,
   type SessionDetails,
   type SessionListItem,
 } from "../contract";
@@ -220,6 +221,47 @@ export const listSessions = read(ListSessionsInput, async ({ db, actor }, input)
       members: members.get(s.id) ?? [],
     }),
   );
+});
+
+export const listOwnedSessions = read(ListSessionsInput, async ({ db, actor }, input): Promise<OwnedSessionDetails[]> => {
+  const window = defaultWindow();
+  const rows = await db
+    .selectFrom("sessions")
+    .innerJoin("session_access", "session_access.session_id", "sessions.id")
+    .select([
+      "sessions.id",
+      "sessions.date",
+      "sessions.timezone",
+      "sessions.start_time",
+      "sessions.end_time",
+      "sessions.location",
+      "sessions.location_url",
+      "sessions.latitude",
+      "sessions.longitude",
+      "sessions.court_fee",
+      "sessions.currency",
+    ])
+    .where("session_access.account_id", "=", actor.accountId)
+    .where("session_access.role", "=", "OWNER")
+    .where("sessions.date", ">=", input?.from ?? window.from)
+    .where("sessions.date", "<=", input?.to ?? window.to)
+    .orderBy("sessions.date")
+    .orderBy("sessions.start_time", (ob) => ob.asc().nullsLast())
+    .orderBy("sessions.created_at")
+    .execute();
+  return rows.map((s) => ({
+    id: s.id,
+    date: s.date,
+    timezone: s.timezone,
+    startTime: isoOrNull(s.start_time),
+    endTime: isoOrNull(s.end_time),
+    location: s.location,
+    locationUrl: s.location_url,
+    latitude: s.latitude,
+    longitude: s.longitude,
+    courtFee: s.court_fee,
+    currency: s.currency,
+  }));
 });
 
 export const getSessionDetails = read(GetSessionInput, async ({ db, actor }, { sessionId }): Promise<SessionDetails> => {

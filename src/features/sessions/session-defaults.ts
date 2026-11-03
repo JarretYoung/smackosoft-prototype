@@ -1,4 +1,4 @@
-import type { Account, Role } from "../../contract";
+import type { Account, OwnedSessionDetails, Role } from "../../contract";
 import { isoToTime } from "../../lib/zoned";
 import type { SessionFormInitial } from "./session-values";
 
@@ -42,7 +42,7 @@ export function newSessionInitial({
   today: string;
   timezone: string;
   me: Account;
-  last: SavedSession | null;
+  last: OwnedSessionDetails | null;
 }): SessionFormInitial {
   return {
     id,

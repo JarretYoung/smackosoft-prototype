@@ -19,7 +19,7 @@ import {
 import { importGames } from "./imports";
 import { removeGameScores, removeMatches, removeMatchPlayers, removeGames, removeTeams, saveGames, saveGameScores, saveMatches, saveMatchPlayers, saveTeams } from "./matches";
 import { removeMembers, saveMembers } from "./members";
-import { getSessionDetails, listSessions, removeSessions, saveSessions } from "./sessions";
+import { getSessionDetails, listOwnedSessions, listSessions, removeSessions, saveSessions } from "./sessions";
 import { getStats, getTeammateStats } from "./stats";
 import { listOwnVideos, listSessionVideos, removeVideoGames, removeVideoSessions, saveVideoGames, saveVideoSessions, saveVideos } from "./videos";
 
@@ -37,6 +37,7 @@ export const backend: Backend = {
   },
   sessions: {
     list: listSessions,
+    listOwned: listOwnedSessions,
     get: getSessionDetails,
     save: saveSessions,
     remove: removeSessions,
