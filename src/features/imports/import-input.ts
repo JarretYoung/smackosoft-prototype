@@ -9,12 +9,14 @@ export type Choice =
 
 /**
  * A first guess for each name, so most people only confirm. Someone you already know with the same name
- * (a teammate or a guest you made) wins. Otherwise it is a new guest.
+ * (a teammate or a guest you made) wins. Otherwise it is a new guest. Names in `previous` keep their choice.
  */
-export function defaultChoices(names: string[], known: Account[]): Record<string, Choice> {
+export function defaultChoices(names: string[], known: Account[], previous: Record<string, Choice> = {}): Record<string, Choice> {
   const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
   return Object.fromEntries(
     names.map((name): [string, Choice] => {
+      // What the person already chose stays. A name that left with its file is gone with its choice.
+      if (previous[name]) return [name, previous[name]];
       const match = known.find((p) => same(p.displayName, name)) ?? known.find((p) => same(p.handle, name));
       return [name, match ? { kind: "account", account: match } : { kind: "guest", displayName: name, handle: guestHandle(name) }];
     }),
@@ -24,10 +26,39 @@ export function defaultChoices(names: string[], known: Account[]): Record<string
 /** Who a choice is, so two names that mean one person can be told. A guest is known by its handle, as the backend does. */
 const personOf = (choice: Choice) => (choice.kind === "account" ? `account:${choice.account.id}` : `guest:${choice.handle.toLowerCase()}`);
 
-/** The other names in the file that mean the same person as `name`. */
-export function alsoCalled(name: string, names: string[], choices: Record<string, Choice>): string[] {
-  const mine = choices[name];
-  return mine ? names.filter((other) => other !== name && choices[other] && personOf(choices[other]) === personOf(mine)) : [];
+/** One person the file's names resolve to, with every name in the file that means them. */
+export type Resolved = {
+  /** The names in the file, the one with the most games first. */
+  names: string[];
+  games: number;
+  displayName: string;
+  avatarUrl: string | null;
+  /** Null for a new guest, which has no account yet. */
+  account: Account | null;
+  handle: string;
+};
+
+/** The people the names mean, most games first. Names that mean one person share one entry. */
+export function whoIsWho(names: string[], choices: Record<string, Choice>, games: (name: string) => number): Resolved[] {
+  const people = new Map<string, Resolved>();
+  for (const name of names) {
+    const choice = choices[name];
+    if (!choice) continue;
+    const key = personOf(choice);
+    const found = people.get(key);
+    if (found) {
+      found.names.push(name);
+      found.games += games(name);
+    } else if (choice.kind === "account") {
+      const { displayName, avatarUrl, handle } = choice.account;
+      people.set(key, { names: [name], games: games(name), displayName, avatarUrl, account: choice.account, handle });
+    } else {
+      people.set(key, { names: [name], games: games(name), displayName: choice.displayName, avatarUrl: null, account: null, handle: choice.handle });
+    }
+  }
+  return [...people.values()]
+    .map((person) => ({ ...person, names: person.names.toSorted((a, b) => games(b) - games(a)) }))
+    .toSorted((a, b) => b.games - a.games);
 }
 
 /** New guests picked for the other names, one per handle, so a name can be set to the same guest. */
@@ -59,6 +90,21 @@ export function importInput(
         : { name, guest: { displayName: choice.displayName, handle: choice.handle } };
     }),
   };
+}
+
+/**
+ * After a file made some guests, the next file links its names to those accounts, so no guest is made twice.
+ * A name whose choice was a new guest with a handle in `made` becomes that account. Every other choice stays.
+ */
+export function applyNewGuests(choices: Record<string, Choice>, made: { handle: string; accountId: string }[]): Record<string, Choice> {
+  const idOf = new Map(made.map((guest) => [guest.handle.toLowerCase(), guest.accountId]));
+  return Object.fromEntries(
+    Object.entries(choices).map(([name, choice]): [string, Choice] => {
+      const id = choice.kind === "guest" ? idOf.get(choice.handle.toLowerCase()) : undefined;
+      if (choice.kind !== "guest" || id === undefined) return [name, choice];
+      return [name, { kind: "account", account: { id, displayName: choice.displayName, handle: choice.handle.toLowerCase(), avatarUrl: null, isGuest: true } }];
+    }),
+  );
 }
 
 /** One line per problem the backend found, in words about the file. */

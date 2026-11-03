@@ -90,7 +90,7 @@ What only the server can decide, because it depends on what is already saved: a 
 ### What the server does
 - The import composes the real save use cases inside one transaction (`.within(ctx, input)` on `write` and `act`). No rule is written twice. Anything that fails imports nothing, and every problem comes back at once with a path to the row or person.
 - A dry run runs the same code and throws `Rollback`, so the preview is exact, including handle clashes and role checks.
-- Names in rows (such as `Soong`) are tokens. The caller says who each token is: an existing account, or a guest to create. The import creates only the guests that imported rows use.
+- Names in rows (such as `Soong`) are tokens. The caller says who each token is: an existing account, or a guest to create. The import creates only the guests that imported rows use, and the report lists them (`newGuests`, by handle and account id). A caller that sends one file after another links the next file's names to those accounts, so no guest is made twice.
 - Several tokens can be one person. Tokens linked to the same account, or given the same new guest handle (compared without case), are merged before planning. The first token listed stands for them and rows are rewritten to it (`mergeAliases`). So "Wen" and "Soong" can both be `@wensoong`, sides can swap across the two spellings, and the same person on both sides of one game is still rejected.
 - A session is found by the actor's own sessions (EDITOR or higher) on that date with that label, or created with the import's time zone and no times.
 - A match is found by its label in that session. If it exists, its teams must be the same players in either order, and its games are added with the numbers the sheet gives. A number the match already has is an error. Sides may swap between games, and scores follow the players. A match grows into a bigger format when it must (BO1 to BO3, BO3 to BO5).
@@ -108,6 +108,21 @@ What only the server can decide, because it depends on what is already saved: a 
 - Adding people to an existing session takes MANAGER, as in `saveMatchPlayers`. An EDITOR who imports into a session with people it does not have gets FORBIDDEN on that row.
 - At most 300 rows per import, games and videos together.
 - The import sends no lengths. `saveVideos` asks each video's source for the length in one batch, so a 300 row import is a handful of calls. See Video sources below.
+
+### Several files
+- The import takes 300 rows a call, so a first load comes as several files (the script cuts them between days). The screens take them as one set and the backend sees one call per file, each in its own transaction, in name order.
+- Names are linked once for the set. The rules about rows together (`checkImportRows`) run over every file at the file step, so a video or a game number used in two files is a problem before anything is sent. A file over 300 rows is a problem at once.
+- After a file is imported, the next file links its names to the guests that file made (`newGuests`), so no guest is made twice.
+- If a later file fails, the earlier files stay imported. Nothing is rolled back across files. Choosing the files again is safe, because rows already in are left out.
+- The check step is a dry run per file, so a file does not see what an earlier file would add. Counts are summed, and a guest used in two files is counted once. The real import is exact.
+
+### An import in progress
+- The screens keep the import in the browser (`localStorage`, one draft per signed in person), so you can leave and carry on. It holds the files' text, who each name is, which names were asked about, the zone, and the step. The preview and counts are worked out again. Nothing goes to the server.
+- It saves after every change. Opening Import with a draft shows "Pick up where you left off", with a "Start over" link. Finishing the import, or removing every file, clears it.
+- A saved check step opens the step before it, because the check is a dry run that must be run again.
+- There is no replace for a file. To change a file, remove it and add it again.
+- Removing a file drops the names that only it used, with their choices. Names another file also uses keep their choice. Adding a file keeps every choice and starts only the new names from a guess, and the people step asks only about names not yet asked.
+- A draft is not shared between devices. Changing the playlist after a draft was saved does nothing to the draft, which keeps the text it saved.
 
 ### Accepted limits
 Each one removes code. Each fails loudly and has a one step recovery.

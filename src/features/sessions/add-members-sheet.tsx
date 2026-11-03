@@ -1,16 +1,15 @@
 "use client";
 
 import { Check, Search, UserPlus } from "lucide-react";
-import { useState, useTransition } from "react";
-import { findByHandle } from "@/src/features/accounts/actions";
+import { useState } from "react";
 import { PersonAvatar } from "@/src/components/avatar-stack";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
-import { Spinner } from "@/src/components/ui/spinner";
 import type { Account } from "@/src/contract";
 import type { NewGuest } from "@/src/features/sessions/members-draft";
-import { errorMessage } from "@/src/lib/errors";
+import { FindHandleRow } from "@/src/features/people/find-handle-row";
+import { usePersonSearch } from "@/src/features/people/use-person-search";
 import { guestHandle } from "@/src/lib/guest";
 import { cn } from "@/src/lib/utils";
 
@@ -65,13 +64,8 @@ function Picker({
   onCancel: () => void;
   onConfirm: (chosen: Person[]) => void;
 }) {
-  const [query, setQuery] = useState("");
   const [chosen, setChosen] = useState<Person[]>([]);
-  const [lookupError, setLookupError] = useState<string | null>(null);
-  const [looking, start] = useTransition();
 
-  const text = query.trim();
-  const handle = text.replace(/^@/, "").toLowerCase();
   const isChosen = (id: string) => chosen.some((p) => p.id === id);
   const toggle = (person: Person) =>
     setChosen((list) => (list.some((p) => p.id === person.id) ? list.filter((p) => p.id !== person.id) : [...list, person]));
@@ -79,23 +73,13 @@ function Picker({
   // Newly found people and guests lead the list, so what you just added is never out of sight.
   const suggestedIds = new Set(people.map((p) => p.id));
   const all: Person[] = [...chosen.filter((p) => !suggestedIds.has(p.id)), ...people].filter((p) => !existingIds.has(p.id));
-  const matches = text
-    ? all.filter((p) => p.displayName.toLowerCase().includes(text.toLowerCase()) || p.handle.includes(handle))
-    : all;
+  const { query, setQuery, text, matches, canLookup, canMakeGuest, lookup, looking, lookupError, handle } = usePersonSearch(all);
 
-  const canLookup = /^[a-z0-9_]{3,30}$/.test(handle) && !all.some((p) => p.handle === handle) && !existingIds.has(handle);
-  const canMakeGuest = text !== "" && !text.startsWith("@") && !all.some((p) => p.displayName.toLowerCase() === text.toLowerCase());
-
-  function lookup() {
-    setLookupError(null);
-    start(async () => {
-      const result = await findByHandle({ handle });
-      if (!result.ok) return void setLookupError(errorMessage(result.error));
-      const found = result.data;
-      if (!found) return void setLookupError(`No one has the handle @${handle}`);
-      if (existingIds.has(found.id)) return void setLookupError(`${found.displayName} is already in this session`);
+  function findHandle() {
+    lookup((found) => {
+      if (existingIds.has(found.id)) return `${found.displayName} is already in this session`;
       if (!isChosen(found.id)) toggle(found);
-      setQuery("");
+      return null;
     });
   }
 
@@ -110,7 +94,7 @@ function Picker({
     if (matches.length === 1) {
       toggle(matches[0]);
       setQuery("");
-    } else if (matches.length === 0 && text.startsWith("@") && canLookup) lookup();
+    } else if (matches.length === 0 && text.startsWith("@") && canLookup) findHandle();
     else if (matches.length === 0 && canMakeGuest) makeGuest();
   }
 
@@ -134,10 +118,7 @@ function Picker({
             autoCorrect="off"
             spellCheck={false}
             enterKeyHint="search"
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setLookupError(null);
-            }}
+            onChange={(e) => setQuery(e.target.value)}
             className="pl-10"
           />
         </div>
@@ -176,17 +157,7 @@ function Picker({
             })}
             {canLookup && (
               <li>
-                <button
-                  type="button"
-                  onClick={lookup}
-                  disabled={looking}
-                  className="pressable-row flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left font-semibold text-primary"
-                >
-                  <span className="flex size-8 items-center justify-center rounded-full bg-accent">
-                    {looking ? <Spinner /> : <Search className="size-4" />}
-                  </span>
-                  Find @{handle}
-                </button>
+                <FindHandleRow handle={handle} looking={looking} error={lookupError} onFind={findHandle} />
               </li>
             )}
             {canMakeGuest && (
@@ -206,11 +177,6 @@ function Picker({
           </ul>
         )}
 
-        {lookupError && (
-          <p role="alert" className="text-sm font-medium text-destructive">
-            {lookupError}
-          </p>
-        )}
         {matches.length === 0 && !text && (
           <p className="py-2 text-center text-sm text-muted-foreground">
             No one to suggest yet. Type a name to add a guest, or a handle to find a friend.

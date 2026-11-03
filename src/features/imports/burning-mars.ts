@@ -5,7 +5,6 @@
  */
 import Papa from "papaparse";
 import { DateOnly, HttpUrl, type ImportRow } from "../../contract";
-import { checkImportRows } from "../../lib/import-rules";
 
 /** A problem in the file, at a line a person can find in their spreadsheet (the header is line 1). */
 export type FileProblem = { line: number; field: string; message: string };
@@ -62,7 +61,7 @@ export function namesIn(block: string): string[] | null {
 const isDate = (value: string) => DateOnly.safeParse(value).success;
 const isUrl = (value: string) => HttpUrl.safeParse(value).success;
 
-/** Reads the file. Each row is checked on its own, so every problem is listed in one pass. */
+/** Reads the file. Each row is checked on its own, so every problem is listed in one pass. The rules about rows together are for the set of files (`combineFiles`). */
 export function adaptBurningMars(text: string): Adapted {
   const parsed = Papa.parse<string[]>(text.replace(/^﻿/, ""), { skipEmptyLines: false });
   const table = parsed.data;
@@ -155,13 +154,6 @@ export function adaptBurningMars(text: string): Adapted {
       }
     }
   });
-
-  // The rules about rows together, the same ones the backend runs, said in lines of this file.
-  for (const issue of checkImportRows(out.rows, (index) => `line ${out.lines[index]}`)) {
-    const index = issue.path[1] as number;
-    problems.push({ line: out.lines[index], field: String(issue.path[2]), message: issue.message });
-  }
-  problems.sort((a, b) => a.line - b.line);
 
   if (!problems.length && !out.rows.length) problems.push({ line: 2, field: "date", message: "The file has no rows" });
   return out;

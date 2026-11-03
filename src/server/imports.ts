@@ -294,6 +294,7 @@ export const importGames = act(ImportGamesInput, async (ctx: Ctx, input): Promis
       guests: newGuests.length,
     },
     skipped,
+    newGuests: newGuests.map(({ id, handle }) => ({ handle, accountId: id })),
   };
   if (input.dryRun) throw new Rollback(result);
   return result;

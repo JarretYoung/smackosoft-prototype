@@ -102,6 +102,10 @@ describe("bulk import", () => {
       }),
     );
     expect(report.created.guests).toBe(1);
+    // The report says which guest it made, so a later upload can link to it.
+    expect(report.newGuests).toHaveLength(1);
+    const made = (await w.admin.query("select handle from smackosoft.accounts where id = $1", [report.newGuests[0].accountId])).rows[0] as { handle: string };
+    expect(made.handle).toBe(report.newGuests[0].handle);
     const [session] = ok(await w.b.sessions.list({ from: "2026-10-24", to: "2026-10-24" })).filter((s) => s.label === "24 Oct 2026");
     const handles = ok(await w.b.sessions.get({ sessionId: session.id })).members.map((m) => m.handle);
     expect(handles).toContain(w.mate.handle);

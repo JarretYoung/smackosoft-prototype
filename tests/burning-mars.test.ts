@@ -122,20 +122,6 @@ describe("the BurningMars playlist file", () => {
     expect(problems.map((p) => [p.line, p.field])).toEqual([[2, "date"], [3, "title"], [4, "url"]]);
   });
 
-  it("holds the rows together to the rules that need no names, in lines of the file", () => {
-    const { problems } = adaptBurningMars(
-      csv(
-        `2026-10-24,,,24 Oct SoongJit vs NadIan,${URL1}`,
-        `2026-10-24,,,24 Oct Soong vs Soong,https://youtu.be/CCCCCCCCCCC`,
-        `2026-10-24,,,24 Oct Far vs Nad,${URL1}`,
-      ),
-    );
-    expect(problems.map((p) => [p.line, p.field, p.message])).toEqual([
-      [3, "sides", "A player appears twice in one game. Two names for one person count as the same player."],
-      [4, "videoUrl", "Same video as line 2"],
-    ]);
-  });
-
   it("accepts a comments column and never reads it", () => {
     const { rows, problems } = adaptBurningMars(
       `date,match,game,title,url,kind,comments

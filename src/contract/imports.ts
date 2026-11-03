@@ -91,6 +91,8 @@ export type ImportReport = {
   created: { sessions: number; matches: number; games: number; videos: number; unlinked: number; guests: number };
   /** Rows left out, by index in `rows`. */
   skipped: { row: number; reason: string }[];
+  /** The guests this import made, so a later upload of more rows can link to them and not make them again. */
+  newGuests: { handle: string; accountId: string }[];
 };
 
 export interface ImportsApi {

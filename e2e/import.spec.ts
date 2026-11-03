@@ -17,16 +17,24 @@ test("a user imports a playlist file, links a name, and sees the games in a sess
   ].join("\n");
 
   await go(page, "/import");
-  await page.getByLabel("Choose a CSV file").setInputFiles({ name: "games.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
-  await expect(page.getByText("has 3 games in 1 session, with 3 names")).toBeVisible();
+  await page.getByLabel("Choose CSV files").setInputFiles({ name: "games.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
+  const holds = page.getByRole("region", { name: "In this import" });
+  await expect(holds).toContainText("with a video");
+  await expect(holds).toContainText("Unlinked video");
   await page.getByRole("button", { name: "Continue" }).click();
 
-  // Every name starts as a new guest. Linking one changes only that row.
+  // The names are asked about one at a time, the most games first. Ann is Izaaq: search and tap. The rest stay guests.
+  await expect(page.getByRole("heading", { name: `Who is ${ann}?` })).toBeVisible();
+  await page.getByLabel("Search people").fill("Izaaq");
+  await page.getByRole("button", { name: /Izaaq Izham/ }).click();
+  await expect(page.getByRole("heading", { name: `Who is ${bob}?` })).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByRole("heading", { name: `Who is ${cat}?` })).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+
+  // The review lists every name, and Ann is now Izaaq.
   await expect(page.getByRole("heading", { name: "Who is who?" })).toBeVisible();
-  await page.getByRole("button", { name: new RegExp(`${ann}.*New guest`) }).click();
-  const sheet = page.getByRole("dialog").filter({ hasText: `Who is ${ann}?` });
-  await sheet.getByRole("button", { name: /Izaaq Izham/ }).click();
-  await expect(page.getByRole("button", { name: new RegExp(`${ann}.*@izaaq`) })).toBeVisible();
+  await expect(page.getByRole("button", { name: new RegExp(`Izaaq Izham.*@izaaq.*imported from “${ann}”`) })).toBeVisible();
 
   await page.getByRole("button", { name: "Check the import" }).click();
   await expect(page.getByRole("heading", { name: "Ready to import" })).toBeVisible();
@@ -56,16 +64,19 @@ test("two names in the file can be linked to the same person", async ({ page }) 
   ].join("\n");
 
   await go(page, "/import");
-  await page.getByLabel("Choose a CSV file").setInputFiles({ name: "games.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
+  await page.getByLabel("Choose CSV files").setInputFiles({ name: "games.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
   await page.getByRole("button", { name: "Continue" }).click();
 
+  // Bob has the most games, so he is asked first and stays a guest. Wen and Soong are both Izaaq.
+  await expect(page.getByRole("heading", { name: `Who is ${bob}?` })).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
   for (const name of [wen, soong]) {
-    await page.getByRole("button", { name: new RegExp(`${name}.*New guest`) }).click();
-    await page.getByRole("dialog").filter({ hasText: `Who is ${name}?` }).getByRole("button", { name: /Izaaq Izham/ }).click();
+    await expect(page.getByRole("heading", { name: `Who is ${name}?` })).toBeVisible();
+    await page.getByLabel("Search people").fill("Izaaq");
+    await page.getByRole("button", { name: /Izaaq Izham/ }).click();
   }
-  // Each row says who else it is.
-  await expect(page.getByRole("button", { name: new RegExp(`${wen}.*@izaaq.*also ${soong}`) })).toBeVisible();
-  await expect(page.getByRole("button", { name: new RegExp(`${soong}.*@izaaq.*also ${wen}`) })).toBeVisible();
+  // Both names are one row, and it says where each came from.
+  await expect(page.getByRole("button", { name: new RegExp(`Izaaq Izham.*@izaaq.*imported from “(${wen}, ${soong}|${soong}, ${wen})”`) })).toBeVisible();
 
   await page.getByRole("button", { name: "Check the import" }).click();
   await expect(page.getByRole("heading", { name: "Ready to import" })).toBeVisible();
@@ -73,6 +84,17 @@ test("two names in the file can be linked to the same person", async ({ page }) 
   await expect(page.getByRole("main")).toContainText("1 new guest");
   await page.getByRole("button", { name: "Import 2 games" }).click();
   await expect(page.getByText("Imported 2 games")).toBeVisible();
+});
+
+test("a file of only unlinked videos skips the people step", async ({ page }) => {
+  const id = unique();
+  const csv = ["date,title,url,kind", `2033-03-03,Top view ${id},https://youtu.be/e2e${id}01,video`].join("\n");
+  await go(page, "/import");
+  await page.getByLabel("Choose CSV files").setInputFiles({ name: "videos.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
+  await page.getByRole("button", { name: "Continue" }).click();
+  // Nobody is named, so there is no one to ask about. It goes straight to the check.
+  await expect(page.getByRole("heading", { name: "Ready to import" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Import 1 unlinked video" })).toBeVisible();
 });
 
 test("a user finds the import in the Sessions menu and can go back to Sessions", async ({ page }) => {
@@ -99,7 +121,7 @@ test.describe("a new person with no sessions", () => {
 test("a file with a bad row says which line and imports nothing", async ({ page }) => {
   const csv = ["date,title,url", "24/10/2026,24 Oct Ann vs Bob,https://youtu.be/aaaaaaaaaaa"].join("\n");
   await go(page, "/import");
-  await page.getByLabel("Choose a CSV file").setInputFiles({ name: "bad.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
+  await page.getByLabel("Choose CSV files").setInputFiles({ name: "bad.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
   await expect(page.getByText("Line 2")).toBeVisible();
   await expect(page.getByText(/YYYY-MM-DD/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
