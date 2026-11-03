@@ -21,6 +21,25 @@ export function defaultChoices(names: string[], known: Account[]): Record<string
   );
 }
 
+/** Who a choice is, so two names that mean one person can be told. A guest is known by its handle, as the backend does. */
+const personOf = (choice: Choice) => (choice.kind === "account" ? `account:${choice.account.id}` : `guest:${choice.handle.toLowerCase()}`);
+
+/** The other names in the file that mean the same person as `name`. */
+export function alsoCalled(name: string, names: string[], choices: Record<string, Choice>): string[] {
+  const mine = choices[name];
+  return mine ? names.filter((other) => other !== name && choices[other] && personOf(choices[other]) === personOf(mine)) : [];
+}
+
+/** New guests picked for the other names, one per handle, so a name can be set to the same guest. */
+export function guestsFromFile(name: string, names: string[], choices: Record<string, Choice>) {
+  const seen = new Map<string, { name: string; choice: Extract<Choice, { kind: "guest" }> }>();
+  for (const other of names) {
+    const choice = choices[other];
+    if (other !== name && choice?.kind === "guest" && !seen.has(personOf(choice))) seen.set(personOf(choice), { name: other, choice });
+  }
+  return [...seen.values()];
+}
+
 /** The backend input for the rows and what each name means. `names` fixes the order of `people`. */
 export function importInput(
   rows: ImportRow[],

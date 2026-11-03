@@ -5,6 +5,7 @@ import { ShowMore } from "@/src/components/show-more";
 import { Button } from "@/src/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/src/components/ui/empty";
 import { AgendaRows, MonthLists, TodayCard } from "@/src/features/sessions/session-list";
+import { SessionsMenu } from "@/src/features/sessions/sessions-menu";
 import {
   byViewerDay,
   dayGroup,
@@ -55,13 +56,16 @@ export default async function SessionsPage() {
   return (
     <main className="flex flex-col gap-7 px-4 pt-6 pb-4">
       <RefreshWhenStale renderedAt={now.getTime()} />
-      <header className="px-1">
-        <h1 className="large-title">Sessions</h1>
-        {sessions.length > 0 && (
-          <p className="mt-1 text-subhead text-muted-foreground">
-            {summary.length ? summary.join(" · ") : "Nothing coming up"}
-          </p>
-        )}
+      <header className="flex items-start justify-between gap-3 px-1">
+        <div className="min-w-0">
+          <h1 className="large-title">Sessions</h1>
+          {sessions.length > 0 && (
+            <p className="mt-1 text-subhead text-muted-foreground">
+              {summary.length ? summary.join(" · ") : "Nothing coming up"}
+            </p>
+          )}
+        </div>
+        <SessionsMenu />
       </header>
 
       {sessions.length === 0 && (
@@ -71,11 +75,16 @@ export default async function SessionsPage() {
               <CalendarPlus />
             </EmptyMedia>
             <EmptyTitle>No sessions yet</EmptyTitle>
-            <EmptyDescription>Create one to start tracking matches.</EmptyDescription>
+            <EmptyDescription>Create one to start tracking matches, or bring in games you already have.</EmptyDescription>
           </EmptyHeader>
-          <Button asChild>
-            <Link href="/sessions/new">New session</Link>
-          </Button>
+          <div className="flex w-full max-w-xs flex-col gap-2">
+            <Button asChild>
+              <Link href="/sessions/new">New session</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/import">Import games</Link>
+            </Button>
+          </div>
         </Empty>
       )}
 

@@ -72,6 +72,31 @@ Cost and limits:
 
 Not verified here: the exact Console menu names (Google renames them), and whether the default quota needs billing turned on. Neither blocks you. The key works once the API is enabled.
 
+### Building an import file from YouTube playlists
+Run the script with one or more playlist links. It needs the same `YOUTUBE_API_KEY` as above.
+
+```
+node scripts/playlist-to-csv.mjs "<playlist link>" "<another link>" --out playlists.csv
+```
+
+Then upload the file at `/import`.
+
+What it does:
+- Reads each title as "24 Oct SoongJus vs NadGar", with the older shapes too ("Jan 12", "(21st April)", "Nad-Jus", "Game 4").
+- Takes the year from the upload date.
+- Maps spellings to one name through `scripts/playlist-names.json`. Edit that file when the report lists a name it does not know.
+- Makes one session per day, and one named match from the same two teams on that day, such as `GarNad v IanJus`. A match always has a name, even with one game. A second series the same day is `GarNad v IanJus 2`.
+- Writes the game number of every game in the `game` column. A game with no number in its title takes the lowest free number, by upload order, and is listed in the report.
+- Treats "Game 4.1", "Game 4.2" and "Game 4 1" as parts of one game. Part 1 is the game's video. Later parts are unlinked videos.
+- Writes any title that is not "A vs B" as an unlinked video (`kind` is `video`).
+- Cuts a first load over 300 rows into several files (`playlists-1.csv`, `playlists-2.csv`) between days, because 300 is the import limit.
+
+The script reads no CSV and keeps no state. Run it again whenever you like. Keep your own copy of the CSV, fix typos there, and take new rows from a diff.
+
+The script never stops on a problem and never drops a row. Read the `comments` column before you import. It marks games numbered by a choice, years worth checking, names not in the names file, and why a title became an unlinked video. A row with no date has a blank date, and the file step stops at it until you write one. The comments are never imported, so clear them or leave them. The terminal report only counts them.
+
+Not verified: playlists of private or deleted videos. The API may return them with no upload date, and the script then leaves them out and lists them.
+
 ### Regenerating database types
 
 Run `pnpm db:types` after every migration and after every `pnpm supabase db reset`. It reads `DATABASE_URL` from `.env.local` and rewrites `src/server/db/types.ts`. Commit the result.

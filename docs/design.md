@@ -182,10 +182,12 @@ Add a line when you make a decision, so later screens stay consistent.
 - **Placeholder frame:** with no thumbnail the frame is the drawn court in brand red with the game number, never a photo stand-in in another color.
 
 ### Import
-- **Four steps on one page** (`/import`, from Profile): file, people, check, done. The tab bar steps aside, as on edit screens. The primary button is pinned at the bottom, with Back as a ghost button under it.
+- **Four steps on one page** (`/import`, from the "..." menu on Sessions, and from the empty Sessions page): file, people, check, done. The tab bar steps aside, as on edit screens. The primary button is pinned at the bottom, with Back as a ghost button under it.
 - **File step:** the format and the time zone for new sessions are two rows in a white list. A bad file lists every problem with its line number, and Continue stays gray until the file is clean.
-- **People step:** one row per name in the file, tapped to open a sheet. A name starts as the person you already know with that name, else a new guest. The sheet is for choosing: pick a person, find an @handle, or keep a guest.
+- **People step:** one row per name in the file, tapped to open a sheet. A name starts as the person you already know with that name, else a new guest. The sheet is for choosing: pick a person, find an @handle, or keep a guest. Two names can be one person: pick the same person for both, or pick a guest already made for another name ("Same as a guest in this file"). A row says "also Soong" when another name is the same person.
+- **No names, no people step:** a file with only unlinked videos names nobody, so Continue goes straight to the check, and Back from the check returns to the file.
 - **Check step:** runs the real import and rolls it back, so the counts and every error are exact. Errors say the line or the name. Nothing is saved until the person presses Import.
+- **Unlinked videos:** a file row with `kind` set to `video` is a video with no game. The import screens call it an "unlinked video". Counts always say games first, then unlinked videos ("250 games and 14 unlinked videos"). A session row in the check step shows the two counts on two lines. Plain game files read exactly as before.
 
 ### Loading and errors
 - **Skeletons:** one `loading.tsx` per screen. Words that never change stay real ("Welcome back", "Upcoming", "Sessions"). Blocks are `Skeleton`, with the radius and height of what replaces them, and the hero stays red with white-tinted blocks. The agenda uses `AgendaRowsSkeleton` (same date column, same 100px rows). Check it against the real page at 390px: the next heading should sit at the same height.

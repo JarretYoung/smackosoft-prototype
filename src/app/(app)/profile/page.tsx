@@ -1,10 +1,7 @@
 import { PersonAvatar } from "@/src/components/avatar-stack";
-import { FileUp } from "lucide-react";
-import { RowChevron } from "@/src/components/row-chevron";
 import { GuestsPanel } from "@/src/features/profile/guests-panel";
 import { ProfileForm } from "@/src/features/profile/profile-form";
 import { LogoutButton } from "@/src/features/auth/logout-button";
-import { LeaveLink } from "@/src/hooks/unsaved-changes";
 import { SignInMethods } from "@/src/features/profile/sign-in-methods";
 import { unwrap } from "@/src/lib/result";
 import { getClaims } from "@/src/lib/supabase/server";
@@ -51,24 +48,6 @@ export default async function ProfilePage() {
       <SignInMethods email={claims?.email ?? null} providers={providers} />
 
       <GuestsPanel guests={guests} />
-
-      <section aria-labelledby="import-heading" className="flex flex-col gap-2">
-        <h2 id="import-heading" className="section-label">
-          Bring in your games
-        </h2>
-        <div className="group-list">
-          <LeaveLink href="/import" className="pressable-row list-row">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
-              <FileUp className="size-5 text-muted-foreground" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-body font-medium">Import games</span>
-              <span className="block truncate text-sm text-muted-foreground">From a file of games and video links</span>
-            </span>
-            <RowChevron />
-          </LeaveLink>
-        </div>
-      </section>
 
       <LogoutButton />
     </main>

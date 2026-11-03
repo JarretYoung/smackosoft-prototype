@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Spinner } from "@/src/components/ui/spinner";
 import type { Account } from "@/src/contract";
 import { findByHandle } from "@/src/features/accounts/actions";
-import type { Choice } from "@/src/features/imports/import-input";
+import type { Choice, guestsFromFile } from "@/src/features/imports/import-input";
 import { normalizeHandle, useHandleCheck } from "@/src/hooks/use-handle-check";
 import { errorMessage } from "@/src/lib/errors";
 
@@ -23,6 +23,7 @@ export function PersonSheet({
   name,
   current,
   people,
+  fromFile,
   onChoose,
   onClose,
 }: {
@@ -31,13 +32,15 @@ export function PersonSheet({
   current: Choice | undefined;
   /** Teammates and guests the viewer already knows. */
   people: Account[];
+  /** New guests picked for the other names, so this name can be set to the same one. */
+  fromFile: ReturnType<typeof guestsFromFile>;
   onChoose: (choice: Choice) => void;
   onClose: () => void;
 }) {
   return (
     <Sheet open={name !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="bottom" className="overflow-y-auto">
-        {name !== null && <Body name={name} current={current} people={people} onChoose={onChoose} />}
+        {name !== null && <Body name={name} current={current} people={people} fromFile={fromFile} onChoose={onChoose} />}
       </SheetContent>
     </Sheet>
   );
@@ -47,11 +50,13 @@ function Body({
   name,
   current,
   people,
+  fromFile,
   onChoose,
 }: {
   name: string;
   current: Choice | undefined;
   people: Account[];
+  fromFile: ReturnType<typeof guestsFromFile>;
   onChoose: (choice: Choice) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -161,6 +166,36 @@ function Body({
           </p>
         )}
       </form>
+
+      {fromFile.length > 0 && (
+        <div className="flex flex-col gap-2 border-t border-border/60 px-5 pt-5">
+          <h3 className="text-subhead font-semibold">Same as a guest in this file</h3>
+          <ul className="group-list border border-border/60 shadow-none">
+            {fromFile.map(({ name: other, choice }) => {
+              const on = guest?.handle === choice.handle;
+              return (
+                <li key={choice.handle}>
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => onChoose(choice)}
+                    className="pressable-row flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left"
+                  >
+                    <PersonAvatar person={{ id: other, displayName: choice.displayName, avatarUrl: null }} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold">{choice.displayName}</span>
+                      <span className="block truncate text-sm text-muted-foreground">
+                        As {other}, @{choice.handle}
+                      </span>
+                    </span>
+                    {on && <span className="text-sm font-semibold text-primary">Chosen</span>}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       <form
         className="flex flex-col gap-3 border-t border-border/60 px-5 pt-5"

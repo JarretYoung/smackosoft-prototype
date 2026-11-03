@@ -43,21 +43,96 @@ Standing decisions about how the app is built. Read them before you change the s
 - Adding a video means pasting a link. Real file upload is not planned yet, and it would need storage and a schema change.
 
 ## Bulk import
+
+### The model
 - One canonical interface: `backend.imports.games` takes rows (`src/contract/imports.ts`). A source is an adapter in the frontend that turns its own shape into rows. The backend knows nothing about YouTube or CSV.
-- One row is one game with one video. Rows of one session with the same `match` value form one match, in row order. A row with no `match` is a game on its own.
+- A row is a statement: "this video is game G of match M in session S, between these two teams." The row carries its own identity. Nothing depends on another row, on file order, or on a count.
+
+| Thing | Identity | Remembered as |
+|---|---|---|
+| Session | `date` and `session`. With no `session`, the day, such as "24 Oct 2026". | the session's date and label |
+| Match | the `match` name, unique inside the session. No name means a game on its own. | the label "Match <name>" |
+| Game | the `game` number inside its match. A game on its own is game 1. | `match_games.game_number` |
+| Video | the link's source, such as `youtube:<id>` | `videos.source_key` |
+
+- The match name is an opaque string. The importer never counts, ranks or derives it. A source may follow its own convention for names (the playlist script uses the teams and the series). Hand files write 1, 2, 3 or any words.
+- A row with no `sides` is a video with no game. It goes into its session's pool (`video_sessions`) for the person to link later: another angle, a practice, a clip. It makes the session if the session does not exist. It may not have a `match`, `game` or `scores`.
+- `game` is a whole number from 1. The database allows gaps (`UNIQUE (match_id, game_number)`, `> 0`), so game 3 can arrive before game 2.
+
+### Laws
+Each law is a test.
+1. **Idempotent.** The same file twice changes nothing.
+2. **Order and split free.** Any row order, or any split into several files, gives the same result. Only the position of new matches in a session follows the file.
+3. **Append-stable.** New rows never change what earlier rows produced.
+4. **Round trip.** Export of the app state, imported again, changes nothing. Export is not built. It will use the same identity rules.
+5. **Conflicts are errors.** Two rows that disagree about one game, or a video already in a different game, fail with the lines or the place named. Nothing merges silently.
+6. **Links only grow.** A row can add a link and never removes one.
+
+### Sheet rules
+The adapter checks the rules marked "file" at the file step, with line numbers. Continue stays disabled until the file is clean. The rules about whole files live in `src/lib/import-rules.ts` (`checkImportRows`, `checkMatchPlayers`). The adapter and the planner both call them, so no rule is written twice.
+
+| # | Rule | Checked |
+|---|---|---|
+| 1 | Required columns are present. No column is unknown or repeated. `comments` is known and never read. | file |
+| 2 | `game` is a whole number, 1 or more. | file |
+| 3 | A game with a `match` has a game number, from the column or from the end of the title ("Game 2" or "2"). A game with no `match` has none. | file |
+| 4 | A game row has two sides. No token is on both sides or twice on one side. | file, and again after names are merged |
+| 5 | In one session, one match name means one pair of teams, either side first. The error names the first line. | check step only |
+| 6 | In one match, each game number appears once. The error names both lines. | file |
+| 7 | Each video appears once in the file, however its link is written. | file |
+| 8 | A `video` row has no match, game or sides. A game row's title names two sides. | file |
+| 9 | When the column and the title both give a game number, they agree. | file |
+
+Rule 5 waits for the check step because two names can be one person. "Wen" and "Soong" can be linked to the same account in the people step, so rows that look like different teams in the raw file can be the same teams.
+
+What only the server can decide, because it depends on what is already saved: a video already in a different game, a match name already in that session with different players, two matches in one session with the same name (the database has no unique index on the label, so this is an error and not a guess), names not yet linked to a person, permissions, handle clashes and the row limit.
+
+### What the server does
 - The import composes the real save use cases inside one transaction (`.within(ctx, input)` on `write` and `act`). No rule is written twice. Anything that fails imports nothing, and every problem comes back at once with a path to the row or person.
 - A dry run runs the same code and throws `Rollback`, so the preview is exact, including handle clashes and role checks.
 - Names in rows (such as `Soong`) are tokens. The caller says who each token is: an existing account, or a guest to create. The import creates only the guests that imported rows use.
-- Format is worked out from the number of games in a match: 1 is BO1, 2 or 3 is BO3, 4 or 5 is BO5, more is FREE. A `format` on a row overrides it. This is set once at creation. The format is still stored, never derived later.
-- Match type is worked out from the sides: 1 v 1 is `MS`, 2 v 2 is `MD`, anything else is `OTHER`. Gender is not known, so `XD`, `WS` and `WD` are set by hand afterwards.
-- Sides may swap between the games of a match. Scores follow the players. Games of one match must have the same two sets of players.
-- A session is found by the actor's own sessions (EDITOR or higher) on that date with that label, or created with the import's time zone and no times. With no `session` value, the title is the day, such as "24 Oct 2026".
-- Match names: a match with a number is "Match <number>". A game on its own is "Game <n>", numbered on from the session's last one. New matches go last in the session.
-- Idempotency, in two parts. A row whose video the actor already has (same `source_key`) is skipped and reported. A row with a match number that the session already has joins that match: its games number on from the last one, and the format grows if it must (BO1 to BO3, BO3 to BO5). The sides must be the same players, in either order. Uploading a sheet again, or a longer one, adds only what is new.
-- Limit of joining: a match is found by its name, "Match <number>". A match whose name you changed by hand is not found, and the rows make a new match.
+- Several tokens can be one person. Tokens linked to the same account, or given the same new guest handle (compared without case), are merged before planning. The first token listed stands for them and rows are rewritten to it (`mergeAliases`). So "Wen" and "Soong" can both be `@wensoong`, sides can swap across the two spellings, and the same person on both sides of one game is still rejected.
+- A session is found by the actor's own sessions (EDITOR or higher) on that date with that label, or created with the import's time zone and no times.
+- A match is found by its label in that session. If it exists, its teams must be the same players in either order, and its games are added with the numbers the sheet gives. A number the match already has is an error. Sides may swap between games, and scores follow the players. A match grows into a bigger format when it must (BO1 to BO3, BO3 to BO5).
+- Format is worked out from the number of games in the match: 1 is BO1, 2 or 3 is BO3, 4 or 5 is BO5, more is FREE. Rows cannot override it. Match type is worked out from the sides: 1 v 1 is `MS`, 2 v 2 is `MD`, anything else is `OTHER`. Gender is not known, so `XD`, `WS` and `WD` are set by hand afterwards.
+- A video the actor already has is handled by where it is, so a row can fix an earlier import:
+
+| Where the video is now | What the row does |
+|---|---|
+| Not in the app | Creates it, and links it to its game or the pool. |
+| In the row's game | Nothing. Reported as already there. |
+| In no game | A row with a game links the saved video to it, so an unlinked video becomes a game video. A row with no game adds it to the row's session pool if it is not there. No second copy is made. |
+| In a different game | Fails, and says which session, match and game. |
+
+- Labels are cosmetic for identity but visible. A named match is "Match <name>". A game on its own is "Game <n>", numbered on from the session's last one. New matches go last in the session, in file order. The match card shows the label. The Videos page reads a game's number mark from a trailing "Game N" in its name, so a named match with one game shows no mark.
 - Adding people to an existing session takes MANAGER, as in `saveMatchPlayers`. An EDITOR who imports into a session with people it does not have gets FORBIDDEN on that row.
-- At most 300 rows per import.
+- At most 300 rows per import, games and videos together.
 - The import sends no lengths. `saveVideos` asks each video's source for the length in one batch, so a 300 row import is a handful of calls. See Video sources below.
+
+### Accepted limits
+Each one removes code. Each fails loudly and has a one step recovery.
+
+| Limit | Recovery |
+|---|---|
+| The import only adds. It never edits or deletes. | Fix wrong data in the app, or delete the session and import again. |
+| The import makes one video per game. Extra angles stay in the pool and are linked in the app. | Link the angle in the app. |
+| A file cannot change a match's teams. | A different team set is an error. Change teams in the app. |
+| The match name is the label. Renaming a match in the app loses the join. | Do not rename imported matches, or the rows make a new match. |
+| A match made by hand in the app is named "Match 1", "Match 2" and so on. A row whose `match` is "1" joins it, and fails if the teams differ. | Name imported matches with words, or check the session first. |
+| A deleted match comes back on the next import, with its videos linked again. | None needed. |
+| Names are linked to people in the app, outside the file. | The same file with the same links gives the same result. |
+| Labels and match order are not part of equality. | None. |
+| Session is one per day unless the file gives `session`. | Write `session`. |
+
+### The playlist script
+`scripts/playlist-to-csv.mjs` is a pure function of the playlist and `scripts/playlist-names.json`. It reads no CSV and writes no state.
+- It writes every column on every row. A match is always named, even with one game, so a late second game joins it. Names come from the teams and the series, such as `GarNad v IanJus` and `GarNad v IanJus 2`.
+- It writes `game` on every matched row. Ties break by upload time, then video id, so a newer upload does not move an older video. The one exception is a game with no number, which is numbered by guess and listed in the report. If a later video is titled with that number, the guessed game moves, and the import refuses it with the "already in a different game" error.
+- A part number in a title ("Game 4.1", "Game 4.2", "Game 4 1") means one game recorded in parts. Part 1, or a lone part, is the game's video. Later parts are `video` rows in the same session, listed in the report, for the person to link in the app. So the game count stays right.
+- It writes titles that are not "A vs B" as `video` rows.
+- It splits a first load that passes 300 rows at day boundaries, so no match is split.
+- You keep your own CSV. The script prints a full draft, and you take the new rows from the diff. Fix title typos in your CSV, not in the script.
+- It never stops on a problem and never drops a row. What a person should read goes in the row's `comments` column: a game numbered by a choice (no number in the title, with other games in its match), a year worth checking (uploaded long after the game), a name not in the names file, and why a title became an unlinked video. A row with no day is written with a blank date, so the file step stops at it until one is written. The terminal report only counts them. Only a missing key or an API error stops the run.
 
 ## Video sources
 - The app is written against one idea of a video: a link, a stable key (`youtube:<id>`), a length, a thumbnail and a way to play it. Nothing outside the source folders names YouTube.

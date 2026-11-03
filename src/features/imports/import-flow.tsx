@@ -9,7 +9,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { Spinner } from "@/src/components/ui/spinner";
 import type { Account, ImportReport } from "@/src/contract";
 import { BURNING_MARS_TEMPLATE } from "@/src/features/imports/burning-mars";
-import type { Choice } from "@/src/features/imports/import-input";
+import { alsoCalled, guestsFromFile, type Choice } from "@/src/features/imports/import-input";
 import { PersonSheet } from "@/src/features/imports/person-sheet";
 import { useImportFlow } from "@/src/features/imports/use-import-flow";
 import { ZoneSheet } from "@/src/features/sessions/zone-sheet";
@@ -55,11 +55,14 @@ function FileStep({ flow }: { flow: Flow }) {
   const problems = adapted?.problems ?? [];
   const ready = adapted !== null && problems.length === 0;
   const sessions = ready ? new Set(adapted.rows.map((r) => `${r.date}\u0000${r.session ?? r.date}`)).size : 0;
+  const games = ready ? adapted.rows.filter((r) => r.sides).length : 0;
+  const unlinked = ready ? adapted.rows.length - games : 0;
 
   return (
     <>
       <p className="px-1 text-subhead text-muted-foreground">
-        Bring in a list of games and their videos from a file. Each row is one game. Nothing is saved until you confirm.
+        Bring in a list of games and their videos from a file. Each row is one game, or an unlinked video that waits in its session. Nothing is
+        saved until you confirm.
       </p>
 
       <section aria-labelledby="settings-heading" className="flex flex-col gap-2">
@@ -148,14 +151,15 @@ function FileStep({ flow }: { flow: Flow }) {
             <Check className="size-4" strokeWidth={3} />
           </span>
           <p className="text-subhead">
-            <span className="font-semibold">{flow.fileName}</span> has {plural(adapted.rows.length, "game")} in {plural(sessions, "session")},
-            with {plural(adapted.names.length, "name")}.
+            <span className="font-semibold">{flow.fileName}</span> has {plural(games, "game")}
+            {unlinked > 0 && ` and ${plural(unlinked, "unlinked video")}`} in {plural(sessions, "session")}, with{" "}
+            {plural(adapted.names.length, "name")}.
           </p>
         </div>
       )}
 
       <Footer>
-        <Button type="button" size="lg" className="w-full" disabled={!ready} onClick={() => flow.setStep("people")}>
+        <Button type="button" size="lg" className="w-full" disabled={!ready} onClick={flow.next}>
           Continue
         </Button>
       </Footer>
@@ -170,7 +174,7 @@ const describe = (choice: Choice) =>
 
 function PeopleStep({ flow, known }: { flow: Flow; known: Account[] }) {
   const [editing, setEditing] = useState<string | null>(null);
-  const games = (name: string) => flow.adapted!.rows.filter((r) => [...r.sides[0], ...r.sides[1]].includes(name)).length;
+  const games = (name: string) => flow.adapted!.rows.filter((r) => [...(r.sides?.[0] ?? []), ...(r.sides?.[1] ?? [])].includes(name)).length;
 
   return (
     <>
@@ -178,12 +182,14 @@ function PeopleStep({ flow, known }: { flow: Flow; known: Account[] }) {
         <h2 className="section-title">Who is who?</h2>
         <p className="text-subhead text-muted-foreground">
           The file uses first names. Tap a name to link it to someone you know, or keep it as a guest. Each name is linked once for the whole file.
+          If the file spells one person two ways, link both names to the same person.
         </p>
       </div>
 
       <ul className="group-list">
         {flow.names.map((name) => {
           const choice = flow.choices[name];
+          const also = alsoCalled(name, flow.names, flow.choices);
           const person =
             choice.kind === "account"
               ? choice.account
@@ -194,7 +200,10 @@ function PeopleStep({ flow, known }: { flow: Flow; known: Account[] }) {
                 <PersonAvatar person={person} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-body font-semibold tracking-tight">{name}</span>
-                  <span className="block truncate text-sm text-muted-foreground">{describe(choice)}</span>
+                  <span className="block truncate text-sm text-muted-foreground">
+                    {describe(choice)}
+                    {also.length > 0 && `, also ${also.join(" and ")}`}
+                  </span>
                 </span>
                 <span className="text-sm text-muted-foreground">{plural(games(name), "game")}</span>
                 <RowChevron />
@@ -208,6 +217,7 @@ function PeopleStep({ flow, known }: { flow: Flow; known: Account[] }) {
         name={editing}
         current={editing ? flow.choices[editing] : undefined}
         people={known}
+        fromFile={editing ? guestsFromFile(editing, flow.names, flow.choices) : []}
         onChoose={(choice) => {
           if (editing) flow.setChoice(editing, choice);
           setEditing(null);
@@ -229,6 +239,13 @@ function PeopleStep({ flow, known }: { flow: Flow; known: Account[] }) {
 
 // ---------------------------------------------------------------- 3. preview
 
+/** What an import adds, in words: "250 games and 14 unlinked videos". */
+function whatIn({ games, unlinked }: ImportReport["created"]) {
+  return [games > 0 || unlinked === 0 ? plural(games, "game") : null, unlinked > 0 ? plural(unlinked, "unlinked video") : null]
+    .filter(Boolean)
+    .join(" and ");
+}
+
 function Summary({ report }: { report: ImportReport }) {
   const { created } = report;
   const facts = [
@@ -236,6 +253,7 @@ function Summary({ report }: { report: ImportReport }) {
     plural(created.sessions, "new session"),
     created.guests ? plural(created.guests, "new guest") : null,
     plural(created.videos, "video"),
+    created.unlinked ? `${created.unlinked} unlinked` : null,
   ].filter(Boolean);
   // The dot stays with the fact before it, so a wrapped line never starts with one.
   return (
@@ -268,8 +286,8 @@ function PreviewStep({ flow }: { flow: Flow }) {
           ))}
         </ul>
         <Footer>
-          <Button type="button" size="lg" className="w-full" onClick={() => flow.setStep("people")}>
-            Back to people
+          <Button type="button" size="lg" className="w-full" onClick={flow.back}>
+            {flow.names.length === 0 ? "Back" : "Back to people"}
           </Button>
           <Button type="button" variant="ghost" onClick={flow.restart}>
             Choose another file
@@ -287,7 +305,7 @@ function PreviewStep({ flow }: { flow: Flow }) {
     );
   }
 
-  const nothingNew = report.created.games === 0;
+  const nothingNew = report.created.games === 0 && report.created.unlinked === 0;
   return (
     <>
       <div className="flex flex-col gap-1 px-1">
@@ -309,7 +327,10 @@ function PreviewStep({ flow }: { flow: Flow }) {
                     {dayShort(s.date)} · {s.existing ? "Adds to your existing session" : "New session"}
                   </span>
                 </span>
-                <span className="text-sm text-muted-foreground">{plural(s.games, "game")}</span>
+                <span className="text-right text-sm text-muted-foreground">
+                  {(s.games > 0 || s.videos === 0) && <span className="block">{plural(s.games, "game")}</span>}
+                  {s.videos > 0 && <span className="block">{plural(s.videos, "unlinked video")}</span>}
+                </span>
               </li>
             ))}
           </ul>
@@ -337,9 +358,9 @@ function PreviewStep({ flow }: { flow: Flow }) {
       <Footer>
         <Button type="button" size="lg" className="w-full" disabled={nothingNew || pending} onClick={flow.confirm}>
           {pending && <Spinner />}
-          {pending ? "Importing" : `Import ${plural(report.created.games, "game")}`}
+          {pending ? "Importing" : `Import ${whatIn(report.created)}`}
         </Button>
-        <Button type="button" variant="ghost" disabled={pending} onClick={() => flow.setStep("people")}>
+        <Button type="button" variant="ghost" disabled={pending} onClick={flow.back}>
           Back
         </Button>
       </Footer>
@@ -357,7 +378,7 @@ function DoneStep({ report, onAnother }: { report: ImportReport; onAnother: () =
           <EmptyMedia variant="icon" className="bg-accent text-primary">
             <Check />
           </EmptyMedia>
-          <EmptyTitle>Imported {plural(report.created.games, "game")}</EmptyTitle>
+          <EmptyTitle>Imported {whatIn(report.created)}</EmptyTitle>
           <EmptyDescription>
             <Summary report={report} />
           </EmptyDescription>

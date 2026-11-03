@@ -1,0 +1,23 @@
+{
+  "_about": "Each key is the name to use. The list beside it holds other spellings of the same person. Matching ignores case. Edit this file, then run the script again.",
+  "names": {
+    "Aadit": ["Dit"],
+    "Alex": [],
+    "Brian": [],
+    "Chris": [],
+    "Dam": [],
+    "Daud": [],
+    "Far": [],
+    "Gar": ["Gart"],
+    "Ian": [],
+    "Jeev": [],
+    "Jit": [],
+    "Jus": ["Justin"],
+    "Keith": [],
+    "Nad": ["Nadree", "Nard"],
+    "Soong": [],
+    "Zaaq": ["Zaq", "Izaaq"],
+    "Zard": []
+  },
+  "ignore": ["Sober"]
+}

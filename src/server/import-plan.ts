@@ -2,12 +2,14 @@
  * Turns import rows into sessions, matches and games. Pure: no database, so every rule is easy to test.
  * The use case in `imports.ts` looks things up, calls this, and writes the result.
  */
-import { MATCH_FORMAT_MAX_GAMES, type ImportRow, type Issue, type MatchFormat, type MatchType } from "../contract";
-import { sourceKeyOf } from "../lib/video-sources";
+import { MATCH_FORMAT_MAX_GAMES, type ImportPerson, type ImportRow, type Issue, type MatchFormat, type MatchType } from "../contract";
+import { checkImportRows, checkMatchPlayers, dateLabel, sameNames, sessionLabelOf } from "../lib/import-rules";
 
 export type PlannedGame = {
   /** Index of the row in the input. */
   row: number;
+  /** The game's number in its match, as the sheet gave it. A game on its own is game 1. */
+  number: number;
   /** Scores in the order of the match's sides, after swapping a game that was written the other way round. */
   scores: [number, number] | null;
 };
@@ -19,25 +21,28 @@ export type PlannedMatch = {
   matchType: MatchType;
   /** Who plays on each team, as names. Taken from the match already saved, else from the first game. */
   sides: [string[], string[]];
-  /** Games already in the match when the sheet joins one. New games are numbered after them. */
-  heldGames: number;
   games: PlannedGame[];
 };
 
-/** A match that is already saved, found by session and sheet number, so a new row joins it. */
-export type HeldMatch = { sides: [string[], string[]]; games: number; format: MatchFormat };
+/** A match that is already saved, found by session and sheet name, so a new row joins it. `gameNumbers` are the games it has. */
+export type HeldMatch = { sides: [string[], string[]]; gameNumbers: number[]; format: MatchFormat };
 
 export type PlannedSession = {
   date: string;
   label: string;
+  /** Index of the first row that lands in this session, to point a failure at. */
+  row: number;
   matches: PlannedMatch[];
+  /** Rows with no game: videos for the session's pool. */
+  videos: number[];
 };
+
+/** A game row, once the sides are known to be there. */
+type GameRow = ImportRow & { sides: [string[], string[]] };
 
 type Parsed = ImportRow & { session?: string; match?: string };
 
 const rowIssue = (row: number, field: string, message: string): Issue => ({ path: ["rows", row, field], message });
-
-const sameNames = (a: string[], b: string[]) => a.length === b.length && [...a].sort().join("\n") === [...b].sort().join("\n");
 
 /** How many games make which format. More than five is a free format. */
 export function formatFor(games: number): MatchFormat {
@@ -54,22 +59,86 @@ export function matchTypeFor(sides: [string[], string[]]): MatchType {
   return "OTHER";
 }
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "2026-10-24" as "24 Oct 2026". */
-export function dateLabel(date: string): string {
-  const [year, month, day] = date.split("-").map(Number);
-  return `${day} ${MONTHS[month - 1]} ${year}`;
-}
-
-/** The name of a row's session: the one it gives, else its day. */
-export const sessionLabelOf = (row: Pick<ImportRow, "date" | "session">) => row.session ?? dateLabel(row.date);
-
 /** What finds a saved match again: its session's day and name, and the number the sheet gives it. */
 export const heldKey = (date: string, label: string, match: string) => `${date}\u0000${label}\u0000${match}`;
 
-/** A video that appears twice in a file is a mistake, so say so. The key is the video, however the link is written. */
-export const videoKeyOf = (url: string) => sourceKeyOf(url) ?? url;
+/**
+ * Names that point at one person are one person. "Wen" and "Soong" can both be @wensoong, or both the same new
+ * guest (the same handle). The first name listed stands for them, and every row is rewritten to use it, so the
+ * rest of the import sees one name per person. `index` is where that person sits in the input's `people`.
+ */
+export function mergeAliases<R extends { sides?: [string[], string[]] }>(
+  rows: R[],
+  people: ImportPerson[],
+): { rows: R[]; people: { person: ImportPerson; index: number }[] } {
+  const firstOf = new Map<string, string>();
+  const canonOf = new Map<string, string>();
+  const kept: { person: ImportPerson; index: number }[] = [];
+  people.forEach((person, index) => {
+    const who = person.accountId ? `account:${person.accountId}` : `guest:${person.guest?.handle.toLowerCase()}`;
+    const first = firstOf.get(who);
+    if (first === undefined) {
+      firstOf.set(who, person.name);
+      canonOf.set(person.name, person.name);
+      kept.push({ person, index });
+    } else {
+      canonOf.set(person.name, first);
+    }
+  });
+  const rename = (names: string[]) => names.map((name) => canonOf.get(name) ?? name);
+  return {
+    rows: rows.map((row) => (row.sides ? { ...row, sides: [rename(row.sides[0]), rename(row.sides[1])] as [string[], string[]] } : row)),
+    people: kept,
+  };
+}
+
+/** Where a saved game sits, as far as the import needs to tell. */
+export type Placement = { sessionId: string; sessionLabel: string; date: string; matchLabel: string; gameNumber: number };
+
+/** A video the actor already has: the games it is in, and the sessions whose pool holds it. */
+export type KnownVideo = { id: string; games: Placement[]; pools: string[] };
+
+const placeOf = (p: Placement) =>
+  `${p.sessionLabel === dateLabel(p.date) ? p.sessionLabel : `${p.sessionLabel} (${dateLabel(p.date)})`}, ${p.matchLabel}, game ${p.gameNumber}`;
+
+/**
+ * What to do with rows whose video is already saved, by where it is. A row never removes a link, so one
+ * can finish what an earlier import left.
+ * - The row's own game, or the row's session pool for a video with no game: nothing to do, the row is left out.
+ * - Saved, but in no game, while the row names a game: the saved video is linked to that game (`reuse`).
+ * - Saved, but not in the row's session pool, for a video with no game: the saved video joins that pool (`reuse`).
+ * - Saved in a different game: an error that says where, so the person fixes it there and not by guessing.
+ * `known` is by row index. `sessionIdOf` is the saved session a row lands in, if there is one.
+ */
+export function classifyKnownVideos(
+  rows: ImportRow[],
+  known: Map<number, KnownVideo>,
+  sessionIdOf: (row: ImportRow) => string | undefined,
+): { skip: Set<number>; reuse: Map<number, string>; issues: Issue[] } {
+  const skip = new Set<number>();
+  const reuse = new Map<number, string>();
+  const issues: Issue[] = [];
+
+  for (const [index, video] of known) {
+    const row = rows[index];
+    const session = sessionIdOf(row);
+    if (!row.sides) {
+      if (session !== undefined && video.pools.includes(session)) skip.add(index);
+      else reuse.set(index, video.id);
+      continue;
+    }
+    const label = row.match === undefined ? null : `Match ${row.match}`;
+    const number = row.game ?? 1;
+    const same = video.games.some(
+      (g) => g.sessionId === session && g.gameNumber === number && (label === null ? /^Game \d+$/.test(g.matchLabel) : g.matchLabel === label),
+    );
+    if (same) skip.add(index);
+    else if (video.games.length > 0) {
+      issues.push(rowIssue(index, "videoUrl", `This video is already in ${placeOf(video.games[0])}. Change it there, or delete that session and import again.`));
+    } else reuse.set(index, video.id);
+  }
+  return { skip, reuse, issues };
+}
 
 /**
  * `skip` holds rows left out (the video is already there). `known` holds the names that have a person.
@@ -83,28 +152,27 @@ export function planImport(
   known: Set<string>,
   held: Map<string, HeldMatch> = new Map(),
 ): { sessions: PlannedSession[]; issues: Issue[] } {
-  const issues: Issue[] = [];
-
-  const seenVideo = new Map<string, number>();
-  rows.forEach((row, index) => {
-    const key = videoKeyOf(row.videoUrl);
-    const first = seenVideo.get(key);
-    if (first !== undefined) issues.push(rowIssue(index, "videoUrl", `Same video as row ${first + 1}`));
-    else seenVideo.set(key, index);
-  });
+  // What needs no database: a video twice, a player twice, a game number twice, two sets of players in one match.
+  // The names are already merged here, so the last rule can tell two names for one person from two people.
+  const issues: Issue[] = [...checkImportRows(rows, undefined, skip), ...checkMatchPlayers(rows, undefined, skip)];
 
   const sessions = new Map<string, { session: PlannedSession; groups: Map<string, number[]> }>();
   rows.forEach((row, index) => {
     if (skip.has(index)) return;
+    const label = sessionLabelOf(row);
+    const key = `${row.date}\u0000${label}`;
+    const fresh: PlannedSession = { date: row.date, label, row: index, matches: [], videos: [] };
+    const entry = sessions.get(key) ?? { session: fresh, groups: new Map<string, number[]>() };
+    sessions.set(key, entry);
+    if (!row.sides) {
+      entry.session.videos.push(index);
+      return;
+    }
+
     const names = [...row.sides[0], ...row.sides[1]];
     const missing = names.find((name) => !known.has(name));
     if (missing) issues.push(rowIssue(index, "sides", `${missing} is not linked to a person`));
-    else if (new Set(names).size !== names.length) issues.push(rowIssue(index, "sides", "A player appears twice in one game"));
 
-    const label = sessionLabelOf(row);
-    const key = `${row.date}\u0000${label}`;
-    const entry = sessions.get(key) ?? { session: { date: row.date, label, matches: [] }, groups: new Map() };
-    sessions.set(key, entry);
     // A row with no match number is a game on its own, so it gets a group of its own.
     const group = row.match !== undefined ? `match:${row.match}` : `row:${index}`;
     entry.groups.set(group, [...(entry.groups.get(group) ?? []), index]);
@@ -112,43 +180,39 @@ export function planImport(
 
   for (const { session, groups } of sessions.values()) {
     for (const [group, indexes] of groups) {
-      const first = rows[indexes[0]];
+      const first = rows[indexes[0]] as GameRow;
       const alone = group.startsWith("row:");
       const key = alone ? null : first.match!;
       const saved = key === null ? undefined : held.get(heldKey(session.date, session.label, key));
       const sides: [string[], string[]] = saved ? saved.sides : [first.sides[0], first.sides[1]];
 
       const games: PlannedGame[] = indexes.map((index) => {
-        const row = rows[index];
+        const row = rows[index] as GameRow;
         const swapped = !sameNames(row.sides[0], sides[0]) && sameNames(row.sides[0], sides[1]) && sameNames(row.sides[1], sides[0]);
         const same = sameNames(row.sides[0], sides[0]) && sameNames(row.sides[1], sides[1]);
-        if (!same && !swapped) {
-          issues.push(rowIssue(index, "sides", `Different players from the rest of match ${row.match}`));
+        // Rows that differ from the rest of the file were reported above. Here only the saved match can disagree.
+        if (saved && !same && !swapped) {
+          issues.push(rowIssue(index, "sides", `Different players from match ${row.match}, already saved in this session`));
+        }
+        // A game on its own is game 1 of its own match. Any other game says which one it is.
+        const number = row.game ?? 1;
+        if (saved?.gameNumbers.includes(number)) {
+          issues.push(rowIssue(index, "game", `Game ${number} of match ${row.match} is already saved in this session`));
         }
         const scores = row.scores ? (swapped ? [row.scores[1], row.scores[0]] : [row.scores[0], row.scores[1]]) : null;
-        return { row: index, scores: scores as [number, number] | null };
+        return { row: index, number, scores: scores as [number, number] | null };
       });
 
-      const named = indexes.filter((index) => rows[index].format !== undefined);
-      const explicit = named.length ? rows[named[0]].format : undefined;
-      for (const index of named) {
-        if (rows[index].format !== explicit) issues.push(rowIssue(index, "format", `Match ${rows[index].match} has two formats`));
-      }
-      const heldGames = saved?.games ?? 0;
-      const total = heldGames + games.length;
+      const total = (saved?.gameNumbers.length ?? 0) + games.length;
       // A saved match keeps its format while it still fits. Otherwise the new count decides.
       const kept = saved && MATCH_FORMAT_MAX_GAMES[saved.format] >= total ? saved.format : undefined;
-      const format = explicit ?? kept ?? formatFor(total);
-      if (alone && format !== "BO1") {
-        issues.push(rowIssue(indexes[0], "format", "A game with no match number is Best of 1"));
-      } else if (total > MATCH_FORMAT_MAX_GAMES[format]) {
-        const over = indexes[MATCH_FORMAT_MAX_GAMES[format] - heldGames];
-        issues.push(rowIssue(over, "format", `Match ${rows[over].match} has more games than ${format} allows`));
-      }
+      const format = kept ?? formatFor(total);
 
-      session.matches.push({ key, format, matchType: matchTypeFor(sides), sides, heldGames, games });
+      session.matches.push({ key, format, matchType: matchTypeFor(sides), sides, games });
     }
   }
 
+  // In file order, whichever rule found them.
+  issues.sort((a, b) => Number(a.path[1]) - Number(b.path[1]));
   return { sessions: [...sessions.values()].map((s) => s.session), issues };
 }

@@ -7,7 +7,7 @@ export default async function ImportPage() {
   const known = await loadPeople();
   return (
     <main>
-      <PageHeader title="Import games" back="/profile" />
+      <PageHeader title="Import games" back="/sessions" />
       <ImportFlow known={known} />
     </main>
   );

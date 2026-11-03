@@ -55,6 +55,17 @@ export function useImportFlow(known: Account[]) {
     });
   }
 
+  /** The people step has nothing to ask when the file names nobody (only unlinked videos), so go straight to the check. */
+  function next() {
+    if (names.length === 0) preview();
+    else setStep("people");
+  }
+
+  /** Back from the check to the step before it. */
+  function back() {
+    setStep(names.length === 0 ? "file" : "people");
+  }
+
   function confirm() {
     start(async () => {
       const result = await send(false);
@@ -89,6 +100,8 @@ export function useImportFlow(known: Account[]) {
     problems,
     pending,
     chooseFile,
+    next,
+    back,
     preview,
     confirm,
     restart,
