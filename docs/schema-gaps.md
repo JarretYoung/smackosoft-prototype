@@ -6,7 +6,6 @@ What the schema does not cover yet, and what we chose not to add. The migration 
 
 | Gap | Today | Fix when needed |
 |---|---|---|
-| `match_games.start_time` and `end_time` are `NOT NULL`, but no screen asks for them | The match editor fills in a default of 20 minutes (`DEFAULT_GAME_MINUTES` in `src/features/matches/match-draft.ts`) | Make both columns nullable. A game does not need clock times. |
 | Real video upload | `videos.video_url` holds a link. The contract allows an `r2` scheme as a placeholder. | Add storage key, size, type, duration and upload status when you choose storage. |
 
 ## Decided: not done on purpose

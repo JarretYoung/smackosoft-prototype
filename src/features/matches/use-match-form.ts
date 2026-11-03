@@ -35,11 +35,10 @@ import { undoToast } from "@/src/lib/undo-toast";
  * Form state for one match. Everything is staged here and Save sends the changes in dependency
  * order. Every call is replay safe, so if one fails you can press save again.
  */
-export function useMatchForm({ sessionId, timezone, match }: { sessionId: string; timezone: string; match: Match }) {
+export function useMatchForm({ sessionId, match }: { sessionId: string; match: Match }) {
   const router = useRouter();
   const [saved, setSaved] = useState(() => toValues(match));
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
-  const [openTimes, setOpenTimes] = useState<Set<string>>(new Set());
 
   const app = useAppForm({
     defaultValues: saved,
@@ -116,18 +115,13 @@ export function useMatchForm({ sessionId, timezone, match }: { sessionId: string
     saveDisabled: app.pending || !app.dirty,
     editingTeam: values.teams.find((t) => t.id === editingTeam),
     editTeam: setEditingTeam,
-    openTimes,
-    showTimes: (gameId: string) => setOpenTimes((s) => new Set(s).add(gameId)),
     winnerOf: (game: GameDraft) => winnerOf(game, values.teams),
     setScore,
     removeGame,
-    setGameTime: (gameId: string, field: "startTime" | "endTime", time: string) =>
-      changeGames({ type: "time", gameId, field, time, timezone }),
     addGame: () =>
       changeGames({
         type: "add",
         id: crypto.randomUUID(),
-        now: new Date(),
         savedNumbers: match.games.map((g) => g.gameNumber),
         format: values.format,
       }),

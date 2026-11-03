@@ -44,6 +44,10 @@ export interface Matches {
   id: Generated<string>;
   label: string;
   match_type: MatchType;
+  /**
+   * Where the match sits in its session, in the order played. The backend gives a new match the next number. Gaps are fine and nothing renumbers.
+   */
+  position: number;
   session_id: string;
   updated_at: Timestamp | null;
   updated_by: string | null;
@@ -67,11 +71,9 @@ export interface MatchGameHighlights {
 export interface MatchGames {
   created_at: Generated<Timestamp>;
   created_by: string;
-  end_time: Timestamp;
   game_number: number;
   id: Generated<string>;
   match_id: string;
-  start_time: Timestamp;
   updated_at: Timestamp | null;
   updated_by: string | null;
 }
@@ -173,6 +175,10 @@ export interface Videos {
   duration_seconds: number | null;
   id: Generated<string>;
   label: string;
+  /**
+   * Which video this link points at, independent of how the link is written, for example youtube:dQw4w9WgXcQ. Set by the app from video_url. NULL for a link the app does not recognise. Not unique: the same video may be added again by hand.
+   */
+  source_key: string | null;
   thumbnail_url: string | null;
   updated_at: Timestamp | null;
   updated_by: string | null;

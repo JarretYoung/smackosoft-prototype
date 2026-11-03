@@ -3,6 +3,7 @@
  *
  * - `read` and `write` wrap a use case: validate input, resolve the actor, run, map errors.
  * - `write` runs the handler in one transaction. An error rolls everything back.
+ * - `act` is `write` that returns a value. A handler can throw `Rollback` to return a value and keep nothing.
  * - Handlers throw `Failure` for expected errors. Anything else is a bug and propagates.
  */
 import { cache } from "react";
@@ -11,7 +12,7 @@ import { fail, ok, type ErrorCode, type Issue, type Result } from "../contract";
 import { getDb, type Db } from "./db/client";
 
 export type Actor = { accountId: string };
-type Ctx = { db: Db; actor: Actor };
+export type Ctx = { db: Db; actor: Actor };
 type Path = (string | number)[];
 
 export class Failure extends Error {
@@ -21,6 +22,14 @@ export class Failure extends Error {
   ) {
     super(code);
   }
+}
+
+/**
+ * Throw inside an `act` handler to roll the transaction back and still return `value`.
+ * A dry run uses it: the real rules run, then nothing is kept.
+ */
+export class Rollback<T> {
+  constructor(readonly value: T) {}
 }
 
 /** Throws a Failure that points at one input item. */
@@ -121,12 +130,18 @@ export function read<S extends z.ZodType, T>(
     });
 }
 
+/**
+ * A use case that can also run inside a transaction the caller already holds.
+ * `within` validates the input, runs the same handler on the caller's connection and throws a
+ * Failure on error, so a bigger use case (the import) composes the real rules in one transaction.
+ */
+type Composable<S extends z.ZodType, T> = ((input: z.input<S>) => Promise<Result<T>>) & {
+  within: (ctx: Ctx, input: z.input<S>) => Promise<T | undefined>;
+};
+
 /** A write use case. One transaction. An empty array is a successful no-op. */
-export function write<S extends z.ZodType>(
-  schema: S,
-  handler: Handler<S, void>,
-): (input: z.input<S>) => Promise<Result<void>> {
-  return (input) =>
+export function write<S extends z.ZodType>(schema: S, handler: Handler<S, void>): Composable<S, void> {
+  const run = (input: z.input<S>) =>
     guard(async () => {
       const parsed = parse(schema, input);
       if (Array.isArray(parsed) && parsed.length === 0) return;
@@ -134,20 +149,30 @@ export function write<S extends z.ZodType>(
       const actor = await actorOrStop();
       await db.transaction().execute((tx) => handler({ db: tx, actor }, parsed));
     });
+  const within = async (ctx: Ctx, input: z.input<S>) => {
+    const parsed = parse(schema, input);
+    if (Array.isArray(parsed) && parsed.length === 0) return;
+    await handler(ctx, parsed);
+  };
+  return Object.assign(run, { within });
 }
 
 /** A write use case that returns a value. One transaction. */
-export function act<S extends z.ZodType, T>(
-  schema: S,
-  handler: Handler<S, T>,
-): (input: z.input<S>) => Promise<Result<T>> {
-  return (input) =>
+export function act<S extends z.ZodType, T>(schema: S, handler: Handler<S, T>): Composable<S, T> {
+  const run = (input: z.input<S>) =>
     guard(async () => {
       const parsed = parse(schema, input);
       const db = getDb();
       const actor = await actorOrStop();
-      return db.transaction().execute((tx) => handler({ db: tx, actor }, parsed));
+      try {
+        return await db.transaction().execute((tx) => handler({ db: tx, actor }, parsed));
+      } catch (error) {
+        if (error instanceof Rollback) return error.value as T;
+        throw error;
+      }
     });
+  const within = (ctx: Ctx, input: z.input<S>) => handler(ctx, parse(schema, input));
+  return Object.assign(run, { within });
 }
 
 // ------------------------------------------------------------------ helpers

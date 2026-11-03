@@ -1,6 +1,6 @@
 import { describe, expect } from "vitest";
 import type { Backend } from "../src/contract";
-import { endTime, newSession, scoredMatch, startTime } from "./support/builders";
+import { newSession, scoredMatch } from "./support/builders";
 import { id, test } from "./support/fixtures";
 import { code, failure, ok, whileLocked } from "./support/helpers";
 
@@ -107,8 +107,52 @@ describe("matches, teams, games and scores", () => {
     expect(game.scores.map((s) => s.score)).toEqual([21]);
   });
 
+  describe("the order of matches in a session", () => {
+    const newMatch = (sessionId: string, label: string, position?: number) => ({
+      id: id(),
+      sessionId,
+      label,
+      matchType: "MD" as const,
+      format: "BO1" as const,
+      position,
+    });
+    const order = async (w: { b: Backend }, sessionId: string) =>
+      ok(await w.b.sessions.get({ sessionId })).matches.map((m) => [m.label, m.position]);
+
+    test("a new match goes last, even when several arrive in one call", async ({ world: w }) => {
+      const sessionId = await newSession(w);
+      ok(await w.b.matches.save([newMatch(sessionId, "A"), newMatch(sessionId, "B")]));
+      ok(await w.b.matches.save([newMatch(sessionId, "C")]));
+      expect(await order(w, sessionId)).toEqual([["A", 1], ["B", 2], ["C", 3]]);
+    });
+
+    test("a saved match keeps its place unless told to move", async ({ world: w }) => {
+      const sessionId = await newSession(w);
+      const [a, b] = [newMatch(sessionId, "A"), newMatch(sessionId, "B")];
+      ok(await w.b.matches.save([a, b]));
+      ok(await w.b.matches.save([{ ...a, label: "A renamed" }]));
+      expect(await order(w, sessionId)).toEqual([["A renamed", 1], ["B", 2]]);
+
+      ok(await w.b.matches.save([{ ...a, label: "A renamed", position: 5 }]));
+      expect(await order(w, sessionId)).toEqual([["B", 2], ["A renamed", 5]]);
+    });
+
+    test("an explicit position pushes the next new match after it", async ({ world: w }) => {
+      const sessionId = await newSession(w);
+      ok(await w.b.matches.save([newMatch(sessionId, "A", 10), newMatch(sessionId, "B")]));
+      expect(await order(w, sessionId)).toEqual([["A", 10], ["B", 11]]);
+    });
+
+    test("each session counts on its own", async ({ world: w }) => {
+      const [one, two] = [await newSession(w), await newSession(w)];
+      ok(await w.b.matches.save([newMatch(one, "A"), newMatch(two, "B")]));
+      expect(await order(w, one)).toEqual([["A", 1]]);
+      expect(await order(w, two)).toEqual([["B", 1]]);
+    });
+  });
+
   describe("a match holds the games its format allows", () => {
-    const game = (matchId: string, gameNumber: number) => ({ id: id(), matchId, gameNumber, startTime, endTime });
+    const game = (matchId: string, gameNumber: number) => ({ id: id(), matchId, gameNumber });
 
     test("a free format match takes any number of games", async ({ world: w }) => {
       const sessionId = await newSession(w);
@@ -139,7 +183,7 @@ describe("matches, teams, games and scores", () => {
       ok(await w.b.matches.save([{ id: matchId, sessionId, label: "One-off", matchType: "MS", format: "BO1" }]));
       const first = game(matchId, 1);
       ok(await w.b.matches.saveGames([first]));
-      ok(await w.b.matches.saveGames([{ ...first, endTime: "2026-10-18T10:30:00Z" }]));
+      ok(await w.b.matches.saveGames([{ ...first, gameNumber: 2 }]));
     });
 
     test("a format cannot shrink below the games already played", async ({ world: w }) => {
@@ -165,8 +209,8 @@ describe("matches, teams, games and scores", () => {
     const { matchId } = await scoredMatch(w);
     const fresh = id();
     const result = await w.b.matches.saveGames([
-      { id: fresh, matchId, gameNumber: 3, startTime, endTime },
-      { id: id(), matchId: id(), gameNumber: 1, startTime, endTime }, // match does not exist
+      { id: fresh, matchId, gameNumber: 3 },
+      { id: id(), matchId: id(), gameNumber: 1 }, // match does not exist
     ]);
     expect(failure(result)).toEqual({ code: "NOT_FOUND", paths: [[1, "matchId"]] });
     expect((await w.admin.query("select 1 from smackosoft.match_games where id = $1", [fresh])).rowCount).toBe(0);

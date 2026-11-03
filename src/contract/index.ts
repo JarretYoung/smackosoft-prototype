@@ -5,10 +5,11 @@
  * Rules and guidelines: docs/use-cases.md.
  *
  * One file per feature, each with its inputs, outputs and interface:
- * accounts, sessions, members, matches, videos, stats.
+ * accounts, sessions, members, matches, videos, imports, stats.
  * Call sites read `backend.videos.save(...)`.
  */
 import type { AccountsApi } from "./accounts";
+import type { ImportsApi } from "./imports";
 import type { MatchesApi } from "./matches";
 import type { MembersApi } from "./members";
 import type { SessionsApi } from "./sessions";
@@ -22,6 +23,7 @@ export * from "./sessions";
 export * from "./members";
 export * from "./matches";
 export * from "./videos";
+export * from "./imports";
 export * from "./stats";
 
 export interface Backend {
@@ -30,5 +32,6 @@ export interface Backend {
   members: MembersApi;
   matches: MatchesApi;
   videos: VideosApi;
+  imports: ImportsApi;
   stats: StatsApi;
 }

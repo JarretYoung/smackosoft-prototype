@@ -9,7 +9,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/src/components/ui/f
 import { Input } from "@/src/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/src/components/ui/sheet";
 import { Spinner } from "@/src/components/ui/spinner";
-import { youtubeIdOf } from "@/src/features/videos/player";
+import { youtubeIdOf } from "@/src/lib/video-source";
 import { useAddVideoForm, type NewVideo } from "@/src/features/videos/use-add-video-form";
 import { DurationProbe } from "./duration-probe";
 

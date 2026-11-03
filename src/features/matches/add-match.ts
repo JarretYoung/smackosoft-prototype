@@ -1,6 +1,5 @@
 import { ok, type MatchFormat, type MatchType, type Result } from "@/src/contract";
 import { saveGames, saveMatches, saveTeams } from "@/src/features/matches/actions";
-import { DEFAULT_GAME_MINUTES } from "@/src/features/matches/match-draft";
 
 /** A game on its own (best of 1) is called a game. Anything longer is a match. */
 export const nounOf = (format: MatchFormat) => (format === "BO1" ? "game" : "match");
@@ -8,7 +7,7 @@ export const nounOf = (format: MatchFormat) => (format === "BO1" ? "game" : "mat
 /**
  * Adds a game or a match with its two teams. A game on its own (best of 1) also gets its one game,
  * so it can be scored at once. A match starts with no games. Returns the new id.
- * Each kind is numbered on its own: Game 1, Match 1, Game 2.
+ * Each kind is numbered on its own: Game 1, Match 1, Game 2. The match goes last in the session.
  * The type repeats the last one in the session, since a session is usually all singles or all doubles.
  */
 export async function addMatch(
@@ -29,16 +28,7 @@ export async function addMatch(
   ]);
   if (!teams.ok) return teams;
   if (format === "BO1") {
-    const now = new Date();
-    const game = await saveGames([
-      {
-        id: crypto.randomUUID(),
-        matchId: id,
-        gameNumber: 1,
-        startTime: now.toISOString(),
-        endTime: new Date(now.getTime() + DEFAULT_GAME_MINUTES * 60_000).toISOString(),
-      },
-    ]);
+    const game = await saveGames([{ id: crypto.randomUUID(), matchId: id, gameNumber: 1 }]);
     if (!game.ok) return game;
   }
   return ok(id);

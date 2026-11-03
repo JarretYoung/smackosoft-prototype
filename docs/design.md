@@ -181,6 +181,12 @@ Add a line when you make a decision, so later screens stay consistent.
 - **Sync sheet:** the 16:9 preview sits at the top of the sheet, then the readout, the one second steppers and the ruler. Play and pause the video and the readout follows it. Move the readout, steppers or ruler and the video jumps there and waits. The ruler is the fine control: a tick per frame step (a 30th of a second) and a label per second, 8px per step, so move far with the video's own bar. A video that cannot play in the page shows no preview, and its sheet is the same without it.
 - **Placeholder frame:** with no thumbnail the frame is the drawn court in brand red with the game number, never a photo stand-in in another color.
 
+### Import
+- **Four steps on one page** (`/import`, from Profile): file, people, check, done. The tab bar steps aside, as on edit screens. The primary button is pinned at the bottom, with Back as a ghost button under it.
+- **File step:** the format and the time zone for new sessions are two rows in a white list. A bad file lists every problem with its line number, and Continue stays gray until the file is clean.
+- **People step:** one row per name in the file, tapped to open a sheet. A name starts as the person you already know with that name, else a new guest. The sheet is for choosing: pick a person, find an @handle, or keep a guest.
+- **Check step:** runs the real import and rolls it back, so the counts and every error are exact. Errors say the line or the name. Nothing is saved until the person presses Import.
+
 ### Loading and errors
 - **Skeletons:** one `loading.tsx` per screen. Words that never change stay real ("Welcome back", "Upcoming", "Sessions"). Blocks are `Skeleton`, with the radius and height of what replaces them, and the hero stays red with white-tinted blocks. The agenda uses `AgendaRowsSkeleton` (same date column, same 100px rows). Check it against the real page at 390px: the next heading should sit at the same height.
 - **A tab opens at once.** The browser shows its cached copy and the new data swaps in with no skeleton. Do not add a spinner or a "refreshing" label for it.

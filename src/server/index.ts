@@ -16,6 +16,7 @@ import {
   saveCurrentAccount,
   saveGuests,
 } from "./accounts";
+import { importGames } from "./imports";
 import { removeGameScores, removeMatches, removeMatchPlayers, removeGames, removeTeams, saveGames, saveGameScores, saveMatches, saveMatchPlayers, saveTeams } from "./matches";
 import { removeMembers, saveMembers } from "./members";
 import { getSessionDetails, listSessions, removeSessions, saveSessions } from "./sessions";
@@ -64,6 +65,9 @@ export const backend: Backend = {
     removeVideoSessions,
     saveVideoGames,
     removeVideoGames,
+  },
+  imports: {
+    games: importGames,
   },
   stats: {
     get: getStats,

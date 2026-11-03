@@ -5,8 +5,6 @@ import { ok } from "./helpers";
 type Who = { b: Backend; owner: Person; mate: Person; stranger: Person };
 
 const today = () => new Date().toISOString().slice(0, 10);
-export const startTime = "2026-10-18T10:00:00Z";
-export const endTime = "2026-10-18T10:20:00Z";
 
 /** A session owned by the signed-in actor. */
 export async function newSession(w: Pick<Who, "b">, overrides: { label?: string } = {}) {
@@ -28,8 +26,8 @@ export async function scoredMatch(w: Who) {
     { id: team2, matchId, label: "Team 2" },
   ]));
   ok(await w.b.matches.saveGames([
-    { id: game1, matchId, gameNumber: 1, startTime, endTime },
-    { id: game2, matchId, gameNumber: 2, startTime, endTime },
+    { id: game1, matchId, gameNumber: 1 },
+    { id: game2, matchId, gameNumber: 2 },
   ]));
   ok(await w.b.matches.saveMatchPlayers([
     { matchTeamId: team1, accountId: w.owner.accountId },

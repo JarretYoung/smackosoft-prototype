@@ -20,6 +20,7 @@ import {
 } from "./access";
 import { sessionsOfGames, sessionsOfSessions } from "./queries/parents";
 import { expectAll, read, stop, unique, write } from "./core";
+import { sourceKeyOf } from "../lib/video-source";
 import type { Db } from "./db/client";
 
 const videoColumns = [
@@ -150,6 +151,7 @@ export const saveVideos = write(SaveVideosInput, async ({ db, actor }, items) =>
         video_url: v.videoUrl,
         thumbnail_url: v.thumbnailUrl ?? null,
         duration_seconds: v.durationSeconds ?? null,
+        source_key: sourceKeyOf(v.videoUrl),
         created_by: actor.accountId,
       })),
     )
@@ -161,6 +163,7 @@ export const saveVideos = write(SaveVideosInput, async ({ db, actor }, items) =>
           video_url: eb.ref("excluded.video_url"),
           thumbnail_url: eb.ref("excluded.thumbnail_url"),
           duration_seconds: eb.ref("excluded.duration_seconds"),
+          source_key: eb.ref("excluded.source_key"),
           updated_at: sql`now()`,
           updated_by: actor.accountId,
         }))

@@ -11,7 +11,6 @@ import {
   sameClock,
   searchZones,
   todayIn,
-  withTime,
   zoneAbbr,
   zoneCity,
   zonedToIso,
@@ -56,13 +55,6 @@ describe("session times around a clock change", () => {
     expect(addDays("2026-03-08", 1)).toBe("2026-03-09");
     expect(addDays("2026-11-01", 1)).toBe("2026-11-02");
     expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
-  });
-
-  it("changes a time of day and keeps the day on the session's clock", () => {
-    // 00:30 in Kuala Lumpur is still the day before in UTC.
-    const start = zonedToIso("2026-10-31", "00:30", KL);
-    expect(start).toBe("2026-10-30T16:30:00.000Z");
-    expect(withTime(start, "09:15", KL)).toBe(zonedToIso("2026-10-31", "09:15", KL));
   });
 });
 

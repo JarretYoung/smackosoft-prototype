@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { playableOf, thumbnailOf, youtubeIdOf } from "../src/features/videos/player";
+import { playableOf, thumbnailOf } from "../src/features/videos/player";
+import { sourceKeyOf, youtubeIdOf } from "../src/lib/video-source";
 
 const ID = "dQw4w9WgXcQ";
 
@@ -22,6 +23,12 @@ describe("which links play in the page", () => {
     expect(youtubeIdOf("https://www.youtube.com/watch?v=short")).toBeNull();
     expect(youtubeIdOf("not a link")).toBeNull();
     expect(youtubeIdOf(`javascript:alert('${ID}')`)).toBeNull();
+  });
+
+  it("names the same video the same way whatever the link looks like", () => {
+    expect(sourceKeyOf(`https://youtu.be/${ID}?si=abc`)).toBe(`youtube:${ID}`);
+    expect(sourceKeyOf(`https://www.youtube.com/watch?v=${ID}&list=PL1&t=30s`)).toBe(`youtube:${ID}`);
+    expect(sourceKeyOf("https://drive.google.com/file/d/abc/view")).toBeNull();
   });
 
   it("starts a YouTube video at the sync point, and never before the start", () => {

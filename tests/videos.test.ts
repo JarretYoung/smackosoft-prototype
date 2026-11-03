@@ -25,6 +25,21 @@ describe("videos", () => {
     expect(code(await w.b.videos.save([{ id: id(), label: "Zero", videoUrl: "r2://z", durationSeconds: 0 }]))).toBe("VALIDATION");
   });
 
+  test("names the video a link points at, however the link is written", async ({ world: w }) => {
+    const [a, b, c] = [id(), id(), id()];
+    ok(await w.b.videos.save([
+      { id: a, label: "Short link", videoUrl: "https://youtu.be/dQw4w9WgXcQ?si=x" },
+      { id: b, label: "Playlist link", videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1&t=30s" },
+      { id: c, label: "Other host", videoUrl: "https://example.com/game.mp4" },
+    ]));
+    const keys = (await w.admin.query("select label, source_key from smackosoft.videos where id = any($1) order by label", [[a, b, c]])).rows;
+    expect(keys).toEqual([
+      { label: "Other host", source_key: null },
+      { label: "Playlist link", source_key: "youtube:dQw4w9WgXcQ" },
+      { label: "Short link", source_key: "youtube:dQw4w9WgXcQ" },
+    ]);
+  });
+
   test("a sync point keeps its fraction of a second", async ({ world: w }) => {
     const { sessionId, game1 } = await scoredMatch(w);
     const video = id();

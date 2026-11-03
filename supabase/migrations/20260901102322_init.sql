@@ -166,19 +166,24 @@ CREATE TABLE smackosoft.matches (
   session_id uuid                    NOT NULL,
   match_type smackosoft.match_type   NOT NULL,
   format     smackosoft.match_format NOT NULL,
+  position   int                     NOT NULL,
   created_at timestamptz             NOT NULL DEFAULT now(),
   created_by uuid                   NOT NULL,
   updated_at timestamptz,
   updated_by uuid,
   CONSTRAINT matches_pkey PRIMARY KEY (id),
+  CONSTRAINT matches_position_check CHECK (position > 0),
   CONSTRAINT matches_session_id_fkey FOREIGN KEY (session_id) REFERENCES smackosoft.sessions(id) ON DELETE CASCADE,
   CONSTRAINT matches_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT matches_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
 );
 
+COMMENT ON COLUMN smackosoft.matches.position IS
+  'Where the match sits in its session, in the order played. The backend gives a new match the next number. Gaps are fine and nothing renumbers.';
+
 GRANT ALL ON TABLE smackosoft.matches TO smackosoft_service;
 
-CREATE INDEX matches_session_id_idx ON smackosoft.matches (session_id);
+CREATE INDEX matches_session_id_position_idx ON smackosoft.matches (session_id, position);
 
 -- ============================================================
 -- MATCH_TEAMS
@@ -210,8 +215,6 @@ CREATE TABLE smackosoft.match_games (
   id          uuid        NOT NULL DEFAULT gen_random_uuid(),
   match_id    uuid        NOT NULL,
   game_number int         NOT NULL,
-  start_time  timestamptz NOT NULL,
-  end_time    timestamptz NOT NULL,
   created_at  timestamptz NOT NULL DEFAULT now(),
   created_by  uuid        NOT NULL,
   updated_at  timestamptz,
@@ -219,7 +222,6 @@ CREATE TABLE smackosoft.match_games (
   CONSTRAINT match_games_pkey PRIMARY KEY (id),
   CONSTRAINT match_games_match_id_game_number_key UNIQUE (match_id, game_number),
   CONSTRAINT match_games_game_number_check CHECK (game_number > 0),
-  CONSTRAINT match_games_time_order_check CHECK (end_time > start_time),
   CONSTRAINT match_games_match_id_fkey FOREIGN KEY (match_id) REFERENCES smackosoft.matches(id) ON DELETE CASCADE,
   CONSTRAINT match_games_created_by_fkey FOREIGN KEY (created_by) REFERENCES smackosoft.accounts(id),
   CONSTRAINT match_games_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES smackosoft.accounts(id)
@@ -316,6 +318,7 @@ CREATE TABLE smackosoft.videos (
   video_url        text        NOT NULL,
   thumbnail_url    text,
   duration_seconds int,
+  source_key       text,
   created_at       timestamptz NOT NULL DEFAULT now(),
   created_by       uuid        NOT NULL,
   updated_at       timestamptz,
@@ -329,9 +332,13 @@ CREATE TABLE smackosoft.videos (
 COMMENT ON COLUMN smackosoft.videos.duration_seconds IS
   'Length of the video when it was added. A snapshot taken by the app from the player, so listing a session needs no player. NULL when it could not be read.';
 
+COMMENT ON COLUMN smackosoft.videos.source_key IS
+  'Which video this link points at, independent of how the link is written, for example youtube:dQw4w9WgXcQ. Set by the app from video_url. NULL for a link the app does not recognise. Not unique: the same video may be added again by hand.';
+
 GRANT ALL ON TABLE smackosoft.videos TO smackosoft_service;
 
 CREATE INDEX videos_created_by_idx ON smackosoft.videos (created_by);
+CREATE INDEX videos_created_by_source_key_idx ON smackosoft.videos (created_by, source_key) WHERE source_key IS NOT NULL;
 
 -- ============================================================
 -- VIDEO_SESSIONS

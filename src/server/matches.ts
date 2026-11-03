@@ -34,6 +34,35 @@ async function lockMatches(db: Db, matchIds: string[]) {
   await db.selectFrom("matches").select("id").where("id", "in", unique(matchIds)).orderBy("id").forUpdate().execute();
 }
 
+/**
+ * Serialises writers that add matches to the same sessions until the transaction ends, so two new
+ * matches never take the same next position. Sessions are locked before matches, in sorted order.
+ */
+async function lockSessions(db: Db, sessionIds: string[]) {
+  await db.selectFrom("sessions").select("id").where("id", "in", unique(sessionIds)).orderBy("id").forUpdate().execute();
+}
+
+/**
+ * The position each match is saved at. A position that is given wins. Otherwise a saved match keeps its
+ * place and a new one goes after the last in its session, in the order given.
+ */
+async function positionsOf(db: Db, items: { id: string; sessionId: string; position?: number }[]) {
+  const saved = await db.selectFrom("matches").select(["id", "position"]).where("id", "in", unique(items.map((m) => m.id))).execute();
+  const kept = new Map(saved.map((m) => [m.id, m.position]));
+  const lasts = await db
+    .selectFrom("matches")
+    .select(["session_id", (eb) => eb.fn.max<number>("position").as("last")])
+    .where("session_id", "in", unique(items.map((m) => m.sessionId)))
+    .groupBy("session_id")
+    .execute();
+  const last = new Map(lasts.map((l) => [l.session_id, Number(l.last)]));
+  return items.map((m) => {
+    const position = m.position ?? kept.get(m.id) ?? (last.get(m.sessionId) ?? 0) + 1;
+    last.set(m.sessionId, Math.max(last.get(m.sessionId) ?? 0, position));
+    return position;
+  });
+}
+
 /** How many games each match holds. A match with none is missing from the map. */
 async function gameCounts(db: Db, matchIds: string[]) {
   const rows = await db
@@ -52,16 +81,19 @@ export const saveMatches = write(SaveMatchesInput, async ({ db, actor }, items) 
   await requireOnParents(db, actor, items, (m) => m.sessionId, sessions, "EDITOR", "sessionId");
 
   // A new format must still hold the games the match has. Lock first so a parallel saveGames counts after us.
+  await lockSessions(db, items.map((m) => m.sessionId));
   await lockMatches(db, items.map((m) => m.id));
+  const positions = await positionsOf(db, items);
   const written = await db
     .insertInto("matches")
     .values(
-      items.map((m) => ({
+      items.map((m, index) => ({
         id: m.id,
         session_id: m.sessionId,
         label: m.label,
         match_type: m.matchType,
         format: m.format,
+        position: positions[index],
         created_by: actor.accountId,
       })),
     )
@@ -72,6 +104,7 @@ export const saveMatches = write(SaveMatchesInput, async ({ db, actor }, items) 
           label: eb.ref("excluded.label"),
           match_type: eb.ref("excluded.match_type"),
           format: eb.ref("excluded.format"),
+          position: eb.ref("excluded.position"),
           updated_at: sql`now()`,
           updated_by: actor.accountId,
         }))
@@ -283,8 +316,6 @@ export const saveGames = write(SaveGamesInput, async ({ db, actor }, items) => {
         id: g.id,
         match_id: g.matchId,
         game_number: g.gameNumber,
-        start_time: g.startTime,
-        end_time: g.endTime,
         created_by: actor.accountId,
       })),
     )
@@ -293,8 +324,6 @@ export const saveGames = write(SaveGamesInput, async ({ db, actor }, items) => {
         .column("id")
         .doUpdateSet((eb) => ({
           game_number: eb.ref("excluded.game_number"),
-          start_time: eb.ref("excluded.start_time"),
-          end_time: eb.ref("excluded.end_time"),
           updated_at: sql`now()`,
           updated_by: actor.accountId,
         }))
