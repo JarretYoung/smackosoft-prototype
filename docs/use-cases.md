@@ -181,7 +181,7 @@ Reads are one per screen or lookup. Writes follow one pattern: `save` and `remov
 | `sessions.list` | Sessions home | any member |
 | `sessions.get` | Session Details | `VIEWER` |
 | `accounts.getCurrent` | Dashboard header, onboarding check | signed in |
-| `sessions.list({ from?, to? })` | Sessions home, dashboard upcoming | signed in. Default window: last month through next month. The frontend may override. Ordered by date, then start time (no start last), then creation. The Sessions page asks for all time. |
+| `sessions.list({ from?, to? })` | Sessions home, dashboard upcoming | signed in. Default window: last month through next month. The frontend may override. Ordered by date, then start time (no start last), then creation. The Sessions page and the Home calendar ask for all time. |
 | `accounts.findByHandle` | Add members | signed in |
 | `accounts.isHandleFree` | Onboarding and Profile, checks a handle as it is typed. Your own handle counts as free. | signed in. Works before onboarding. |
 | `videos.listBySession` | Videos page, session videos row, Match Details video counts. Each row has a nullable `matchGameId` and `canonicalOffset`, plus `changedByName` and `changedAt` (the last editor of the offset, or the person who made the link). | `VIEWER` |

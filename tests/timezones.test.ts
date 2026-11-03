@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { byViewerDay, dayGroup, viewerDay } from "../src/features/sessions/session-days";
 import { sessionTimes } from "../src/features/sessions/session-times";
-import { addDays, monthWindow } from "../src/lib/format";
+import { addDays } from "../src/lib/format";
 import { whenOn } from "../src/features/sessions/when-on";
 import {
   allZones,
@@ -195,16 +195,5 @@ describe("the short name of a zone", () => {
     expect(zoneAbbr(KL, summer)).toBe("UTC+8");
     expect(zoneAbbr("Asia/Kolkata", summer)).toBe("UTC+5:30");
     expect(zoneAbbr("UTC", summer)).toBe("UTC");
-  });
-});
-
-describe("the calendar window follows the date the page calls today", () => {
-  it.each([
-    ["2026-11-01", "2026-10-01", "2026-12-31"],
-    ["2026-01-15", "2025-12-01", "2026-02-28"],
-    ["2026-12-31", "2026-11-01", "2027-01-31"],
-    ["2028-01-10", "2027-12-01", "2028-02-29"],
-  ])("%s covers %s through %s", (today, from, to) => {
-    expect(monthWindow(today)).toEqual({ from, to });
   });
 });

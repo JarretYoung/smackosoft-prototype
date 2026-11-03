@@ -71,16 +71,6 @@ export function monthFor(date: string, today: string): string {
   return year === parts(today).year ? name : `${name} ${year}`;
 }
 
-/** The first day of the month before `date` through the last day of the month after it. */
-export function monthWindow(date: string): { from: string; to: string } {
-  const { year, month } = parts(date);
-  const day = (d: Date) => d.toISOString().slice(0, 10);
-  return {
-    from: day(new Date(Date.UTC(year, month - 2, 1))),
-    to: day(new Date(Date.UTC(year, month + 1, 0))),
-  };
-}
-
 /** `date` moved by whole calendar days, as "YYYY-MM-DD". Pure date arithmetic, so no zone or clock change matters. */
 export function addDays(date: string, days: number): string {
   const { year, month, day } = parts(date);

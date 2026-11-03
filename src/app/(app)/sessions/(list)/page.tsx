@@ -7,6 +7,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { AgendaRows, MonthLists, TodayCard } from "@/src/features/sessions/session-list";
 import { SessionsMenu } from "@/src/features/sessions/sessions-menu";
 import {
+  ALL_TIME,
   byViewerDay,
   dayGroup,
   groupByDay,
@@ -25,8 +26,6 @@ import { backend } from "@/src/server";
 // that the legacy mode and asks the target route to say it is meant (see docs/architecture.md).
 export const instant = false;
 
-/** The whole calendar. This page lists everything the person can see, not a month around today. */
-const ALL_TIME = { from: "1970-01-01", to: "2999-12-31" };
 /** How many past sessions show before "Show older". A day is never cut in two. */
 const PAST_SHOWN = 20;
 
